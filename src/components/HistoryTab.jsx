@@ -94,7 +94,22 @@ function HistoryTab({ savedReceipts, historyFilter, setHistoryFilter, expandedRe
                     <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.6rem 0', borderBottom: idx === receipt.items.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)' }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: '0.9rem', color: '#e2e8f0', fontWeight: 500 }}>{item.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{item.qty} x R$ {item.unitPrice}</div>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '2px' }}>
+                          <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{item.qty} x R$ {item.unitPrice}</div>
+                          {item.category && (
+                            <span style={{ 
+                              fontSize: '0.65rem', 
+                              background: item.category === 'Geral' ? 'rgba(255,255,255,0.03)' : 'rgba(16, 185, 129, 0.1)', 
+                              color: item.category === 'Geral' ? '#64748b' : 'var(--success)', 
+                              padding: '1px 6px', 
+                              borderRadius: '4px', 
+                              border: `1px solid ${item.category === 'Geral' ? 'rgba(255,255,255,0.05)' : 'rgba(16, 185, 129, 0.2)'}`,
+                              fontWeight: item.category === 'Geral' ? 400 : 600
+                            }}>
+                              {item.category}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div style={{ color: '#cbd5e1', fontWeight: 600, fontSize: '0.9rem' }}>R$ {item.total}</div>
                     </div>

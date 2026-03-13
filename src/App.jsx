@@ -38,6 +38,7 @@ function App() {
   const [availableModels, setAvailableModels] = useState([]);
   const [selectedModel, setSelectedModel] = useState('');
   const [isSwitchingModel, setIsSwitchingModel] = useState(false);
+  const [isCategorizing, setIsCategorizing] = useState(false);
 
   useEffect(() => {
     const storedTab = localStorage.getItem('@MyMercado:tab');
@@ -148,6 +149,28 @@ function App() {
     }
   };
 
+  const categorizeReceipt = async (receipt) => {
+    if (llmStatus !== 'on') return receipt;
+    
+    setIsCategorizing(true);
+    try {
+      const res = await fetch('http://localhost:3001/api/categorize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: receipt.items })
+      });
+      const data = await res.json();
+      if (data.items) {
+        return { ...receipt, items: data.items };
+      }
+    } catch (e) {
+      console.warn('Falha na categorização:', e);
+    } finally {
+      setIsCategorizing(false);
+    }
+    return receipt;
+  };
+
   const handleScanSuccess = async (decodedText) => {
     setScanning(false);
     setLoading(true);
@@ -157,8 +180,9 @@ function App() {
       if (!extractedData || !extractedData.items || extractedData.items.length === 0) {
         setError('Não conseguimos ler os itens dessa nota. Verifique se o QR Code é de uma NFC-e válida.');
       } else {
-        setCurrentReceipt(extractedData);
-        saveReceipt(extractedData);
+        const categorizedData = await categorizeReceipt(extractedData);
+        setCurrentReceipt(categorizedData);
+        saveReceipt(categorizedData);
       }
     } catch (err) {
       setError('Erro de processamento. Tente novamente ou insira manualmente.');
@@ -207,13 +231,18 @@ function App() {
     }
   };
 
-  const handleSaveManualReceipt = () => {
+  const handleSaveManualReceipt = async () => {
     if (manualData.items.length === 0) return;
+    setLoading(true);
     const finalData = { ...manualData, establishment: manualData.establishment || 'Compra Manual' };
-    saveReceipt(finalData);
+    
+    const categorizedData = await categorizeReceipt(finalData);
+    
+    saveReceipt(categorizedData);
     setManualMode(false);
     setManualData({ establishment: '', date: new Date().toLocaleDateString('pt-BR'), items: [] });
-    setCurrentReceipt(finalData);
+    setCurrentReceipt(categorizedData);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -253,6 +282,7 @@ function App() {
             startCamera={startCamera} handleFileUpload={handleFileUpload}
             loading={loading} scanning={scanning} error={error}
             currentReceipt={currentReceipt} setCurrentReceipt={setCurrentReceipt}
+            isCategorizing={isCategorizing}
           />
         )}
         

@@ -5,9 +5,10 @@ function ScannerTab({
   manualData, setManualData, 
   manualItem, setManualItem, 
   handleSaveManualReceipt, 
-  startCamera, handleFileUpload, 
+  startCamera, handleFileUpload,
   loading, scanning, error, 
-  currentReceipt, setCurrentReceipt 
+  currentReceipt, setCurrentReceipt,
+  isCategorizing
 }) {
   
   const handleAddManualItem = () => {
@@ -131,8 +132,14 @@ function ScannerTab({
       {loading && (
         <div className="glass-card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
           <Loader size={48} className="spin" color="var(--primary)" style={{ margin: '0 auto' }} />
-          <h3 style={{ marginTop: '2rem', color: '#e2e8f0' }}>Processando Inteligência...</h3>
-          <p style={{ color: '#94a3b8', marginTop: '0.5rem' }}>Estamos extraindo os dados da Sefaz para o seu histórico.</p>
+          <h3 style={{ marginTop: '2rem', color: '#e2e8f0' }}>
+            {isCategorizing ? 'Inteligência Categorizando...' : 'Processando Nota...'}
+          </h3>
+          <p style={{ color: '#94a3b8', marginTop: '0.5rem' }}>
+            {isCategorizing 
+              ? 'A IA está analisando os nomes dos produtos.' 
+              : 'Estamos extraindo os dados da Sefaz para o seu histórico.'}
+          </p>
         </div>
       )}
 
@@ -152,7 +159,22 @@ function ScannerTab({
                <div key={idx} className="item-row" style={{ background: 'rgba(255,255,255,0.02)' }}>
                  <div className="item-details">
                    <span className="item-name" style={{ fontSize: '0.9rem' }}>{item.name}</span>
-                   <span className="item-meta">R$ {item.unitPrice} un x {item.qty}</span>
+                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '2px' }}>
+                     <span className="item-meta">R$ {item.unitPrice} un x {item.qty}</span>
+                     {item.category && (
+                        <span style={{ 
+                          fontSize: '0.65rem', 
+                          background: item.category === 'Geral' ? 'rgba(255,255,255,0.03)' : 'rgba(16, 185, 129, 0.1)', 
+                          color: item.category === 'Geral' ? '#64748b' : 'var(--success)', 
+                          padding: '1px 6px', 
+                          borderRadius: '4px', 
+                          border: `1px solid ${item.category === 'Geral' ? 'rgba(255,255,255,0.05)' : 'rgba(16, 185, 129, 0.2)'}`,
+                          fontWeight: item.category === 'Geral' ? 400 : 600
+                        }}>
+                          {item.category}
+                        </span>
+                      )}
+                   </div>
                  </div>
                  <div className="item-total" style={{ fontSize: '1rem' }}>R$ {item.total}</div>
                </div>

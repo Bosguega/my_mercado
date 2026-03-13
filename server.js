@@ -269,6 +269,62 @@ INSTRUÇÕES:
   }
 });
 
+// 🏷️ Rota: Categorizar itens da nota
+app.post('/api/categorize', async (req, res) => {
+  try {
+    const { items } = req.body;
+    console.log(`🏷️ Categorizando ${items?.length} itens...`);
+    if (!items || !Array.isArray(items)) {
+      return res.status(400).json({ error: 'Itens são obrigatórios' });
+    }
+
+    if (!llamaReady || !currentModel) {
+      return res.json({ items: items.map(i => ({ ...i, category: 'Geral' })) });
+    }
+
+    const itemsList = items.map(i => i.name).join(', ');
+    const systemPrompt = `Você é um classificador de produtos de mercado. 
+Categorize os produtos fornecidos em uma das seguintes categorias: 
+Açougue, Bebidas, Higiene, Limpeza, Hortifruti, Mercearia, Padaria, Laticínios.
+Responda APENAS um JSON no formato: {"categorizacao": [{"item": "NOME", "categoria": "CATEGORIA"}]}`;
+
+    const response = await axios.post('http://127.0.0.1:8080/v1/chat/completions', {
+      model: currentModel,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Categorize estes itens: ${itemsList}` }
+      ],
+      temperature: 0.1,
+      stream: false
+    });
+
+    if (response.data && response.data.choices?.[0]?.message?.content) {
+      const content = response.data.choices[0].message.content.trim();
+      console.log('🤖 Resposta da IA:', content);
+      try {
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        const categorization = JSON.parse(jsonMatch ? jsonMatch[0] : content);
+        console.log('📦 Categorização processada:', categorization);
+        
+        const categorizedItems = items.map(item => {
+          const found = categorization.categorizacao?.find(c => c.item === item.name);
+          return { ...item, category: found ? found.categoria : 'Geral' };
+        });
+        
+        res.json({ items: categorizedItems });
+      } catch (e) {
+        console.error('Erro ao parsear JSON da IA:', e);
+        res.json({ items: items.map(i => ({ ...i, category: 'Geral' })) });
+      }
+    } else {
+      res.json({ items: items.map(i => ({ ...i, category: 'Geral' })) });
+    }
+  } catch (error) {
+    console.error('❌ Erro ao categorizar:', error.message);
+    res.json({ items: items.map(i => ({ ...i, category: 'Geral' })) });
+  }
+});
+
 // 🧾 Receipts CRUD
 app.get('/api/receipts', async (req, res) => {
   try {
