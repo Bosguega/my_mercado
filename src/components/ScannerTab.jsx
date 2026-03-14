@@ -1,4 +1,27 @@
-import { Scan, Camera, Image as ImageIcon, Edit3, Loader, ShoppingCart, Save, Plus, X } from 'lucide-react';
+import { Scan, Camera, Image as ImageIcon, Edit3, ShoppingCart, Save, Plus, X } from 'lucide-react';
+import PropTypes from 'prop-types';
+import { toast } from 'react-hot-toast';
+
+// Skeleton para loading durante extração
+const ScannerSkeleton = () => (
+  <div className="glass-card" style={{ padding: '2rem' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+      <div className="skeleton-line" style={{ width: '60px', height: '60px', borderRadius: '50%' }} />
+      <div style={{ flex: 1 }}>
+        <div className="skeleton-line" style={{ width: '200px', height: '24px', marginBottom: '8px' }} />
+        <div className="skeleton-line" style={{ width: '120px', height: '18px' }} />
+      </div>
+    </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {[...Array(5)].map((_, i) => (
+        <div key={i} className="skeleton-item">
+          <div className="skeleton-line" style={{ width: '70%', height: '16px', marginBottom: '6px' }} />
+          <div className="skeleton-line" style={{ width: '50%', height: '14px' }} />
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
 function ScannerTab({ 
   manualMode, setManualMode, 
@@ -11,21 +34,31 @@ function ScannerTab({
 }) {
   
   const handleAddManualItem = () => {
-    if (!manualItem.name || !manualItem.unitPrice) return;
-    const priceNum = parseFloat(manualItem.unitPrice.replace(',', '.'));
-    if (isNaN(priceNum)) return;
-    const qtyNum = parseFloat(manualItem.qty) || 1;
+    if (!manualItem.name?.trim() || !manualItem.unitPrice) {
+      toast.error('Preencha nome e preço do item');
+      return;
+    }
     
+    // Validar preço
+    const priceNum = parseFloat(manualItem.unitPrice.toString().replace(',', '.'));
+    if (isNaN(priceNum) || priceNum < 0) {
+      toast.error('Preço inválido! Use apenas números');
+      return;
+    }
+    
+    const qtyNum = parseFloat(manualItem.qty?.toString().replace(',', '.')) || 1;
     const totalNum = priceNum * qtyNum;
+    
     const newItem = {
-      name: manualItem.name,
-      qty: manualItem.qty,
+      name: manualItem.name.trim(),
+      qty: qtyNum,
       unitPrice: priceNum.toFixed(2).replace('.', ','),
       total: totalNum.toFixed(2).replace('.', ',')
     };
     
     setManualData(prev => ({...prev, items: [newItem, ...prev.items]}));
     setManualItem({ name: '', qty: '1', unitPrice: '' });
+    toast.success('Item adicionado!');
   };
 
   if (manualMode) {
@@ -78,6 +111,17 @@ function ScannerTab({
            <Save size={20} />
            Finalizar e Salvar
         </button>
+        
+        {manualData.items.length > 0 && (
+          <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+            <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+              Total: R$ {manualData.items.reduce((acc, curr) => {
+                const value = parseFloat((curr.total || '').toString().replace(',', '.'));
+                return acc + (isNaN(value) ? 0 : value);
+              }, 0).toFixed(2).replace('.', ',')}
+            </p>
+          </div>
+        )}
       </div>
     );
   }
@@ -129,15 +173,12 @@ function ScannerTab({
       <div id="reader" className="scanner-container" style={{ display: scanning ? 'block' : 'none', minHeight: '300px', background: '#000', borderRadius: '1rem' }}></div>
 
       {loading && (
-        <div className="glass-card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-          <Loader size={48} className="spin" color="var(--primary)" style={{ margin: '0 auto' }} />
-          <h3 style={{ marginTop: '2rem', color: '#e2e8f0' }}>
-            Processando Nota...
-          </h3>
-          <p style={{ color: '#94a3b8', marginTop: '0.5rem' }}>
-            Estamos extraindo os dados da Sefaz para o seu histórico.
+        <>
+          <ScannerSkeleton />
+          <p style={{ textAlign: 'center', color: '#94a3b8', marginTop: '1rem', fontSize: '0.9rem' }}>
+            Extraindo dados da nota fiscal...
           </p>
-        </div>
+        </>
       )}
 
       {currentReceipt && (
@@ -181,5 +222,35 @@ function ScannerTab({
     </>
   );
 }
+
+ScannerTab.propTypes = {
+  manualMode: PropTypes.bool.isRequired,
+  setManualMode: PropTypes.func.isRequired,
+  manualData: PropTypes.shape({
+    establishment: PropTypes.string,
+    date: PropTypes.string,
+    items: PropTypes.arrayOf(PropTypes.object)
+  }).isRequired,
+  setManualData: PropTypes.func.isRequired,
+  manualItem: PropTypes.shape({
+    name: PropTypes.string,
+    qty: PropTypes.string,
+    unitPrice: PropTypes.string
+  }).isRequired,
+  setManualItem: PropTypes.func.isRequired,
+  handleSaveManualReceipt: PropTypes.func.isRequired,
+  startCamera: PropTypes.func.isRequired,
+  handleFileUpload: PropTypes.func.isRequired,
+  loading: PropTypes.bool.isRequired,
+  scanning: PropTypes.bool.isRequired,
+  error: PropTypes.string.isRequired,
+  currentReceipt: PropTypes.shape({
+    id: PropTypes.string,
+    establishment: PropTypes.string,
+    date: PropTypes.string,
+    items: PropTypes.arrayOf(PropTypes.object)
+  }),
+  setCurrentReceipt: PropTypes.func.isRequired
+};
 
 export default ScannerTab;

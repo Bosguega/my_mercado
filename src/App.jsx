@@ -5,6 +5,7 @@ import { parseNFCeSP } from './services/receiptParser';
 import SearchTab from './components/SearchTab';
 import HistoryTab from './components/HistoryTab';
 import ScannerTab from './components/ScannerTab';
+import { Toaster, toast } from 'react-hot-toast';
 import './index.css';
 
 function App() {
@@ -15,7 +16,8 @@ function App() {
   const [currentReceipt, setCurrentReceipt] = useState(null);
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
+  const [duplicateReceipt, setDuplicateReceipt] = useState(null);
   const qrCodeRef = useRef(null);
 
   // Manual Mode State
@@ -26,9 +28,21 @@ function App() {
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState('recent'); 
+  
+  // Loading state para HistoryTab (skeleton loading)
+  const [historyLoading, setHistoryLoading] = useState(false); 
 
   // History filter state
   const [historyFilter, setHistoryFilter] = useState('');
+  
+  // Advanced filters for HistoryTab
+  const [historyFilters, setHistoryFilters] = useState({
+    period: 'all', // all, this-month, last-3-months, custom
+    sortBy: 'date', // date, value, store
+    sortOrder: 'desc', // asc, desc
+    startDate: '', // for custom period
+    endDate: '' // for custom period
+  });
   const [expandedReceipts, setExpandedReceipts] = useState([]);
 
   useEffect(() => {
@@ -53,11 +67,26 @@ function App() {
   };
 
   const handleChangeTab = (nextTab) => {
+    // Simular loading quando mudar para histórico
+    if (nextTab === 'history' && savedReceipts.length > 0) {
+      setHistoryLoading(true);
+      setTimeout(() => {
+        setHistoryLoading(false);
+      }, 800); // Loading por 800ms para UX
+    }
     setTab(nextTab);
     localStorage.setItem('@MyMercado:tab', nextTab);
   };
 
-  const saveReceipt = async (receipt) => {
+  const saveReceipt = async (receipt, forceReplace = false) => {
+    // Check for duplicates
+    const existingReceipt = savedReceipts.find(r => r.id === receipt.id);
+    if (existingReceipt && !forceReplace) {
+      setDuplicateReceipt(receipt);
+      toast.warning(`Esta nota já está no seu histórico desde ${existingReceipt.date.split(' ')[0]}`);
+      return false;
+    }
+
     const newReceipt = { id: Date.now().toString(), ...receipt };
     const newList = [newReceipt, ...savedReceipts];
     setSavedReceipts(newList);
@@ -69,33 +98,46 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newReceipt),
       });
+      setDuplicateReceipt(null);
+      return true;
     } catch {
       console.warn('Backup local apenas.');
+      setDuplicateReceipt(null);
+      return true;
     }
   };
 
   const handleScanSuccess = async (decodedText) => {
     setScanning(false);
     setLoading(true);
-    setError('');
     try {
       const extractedData = await parseNFCeSP(decodedText);
       if (!extractedData || !extractedData.items || extractedData.items.length === 0) {
-        setError('Não conseguimos ler os itens dessa nota. Verifique se o QR Code é de uma NFC-e válida.');
+        toast.error('Não conseguimos ler os itens dessa nota. Verifique se o QR Code é de uma NFC-e válida.');
       } else {
-        setCurrentReceipt(extractedData);
-        saveReceipt(extractedData);
+        const saved = await saveReceipt(extractedData);
+        if (saved) {
+          setCurrentReceipt(extractedData);
+          toast.success('Nota fiscal salva com sucesso!');
+        }
       }
     } catch {
-      setError('Erro de processamento. Tente novamente ou insira manualmente.');
+      toast.error('Erro ao processar nota. Tente novamente.');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleForceSaveDuplicate = () => {
+    if (duplicateReceipt) {
+      saveReceipt(duplicateReceipt, true);
+      setCurrentReceipt(duplicateReceipt);
+      toast.success('Nota atualizada com sucesso!');
+    }
+  };
+
   const startCamera = async () => {
     if (scanning || loading) return;
-    setError('');
     setScanning(true);
     setTimeout(() => {
       try {
@@ -111,7 +153,7 @@ function App() {
           () => {}
         ).catch(() => {
           setScanning(false);
-          setError('Câmera bloqueada ou indisponível.');
+          toast.error('Câmera não disponível. Verifique as permissões.');
         });
       } catch {
         setScanning(false);
@@ -128,20 +170,55 @@ function App() {
       const text = await scanner.scanFile(file, true);
       handleScanSuccess(text);
     } catch {
-      setError('QR Code não detectado na imagem.');
+      toast.error('QR Code não detectado na imagem.');
       setLoading(false);
     }
   };
 
   const handleSaveManualReceipt = async () => {
-    if (manualData.items.length === 0) return;
-    setLoading(true);
-    const finalData = { ...manualData, establishment: manualData.establishment || 'Compra Manual' };
+    if (manualData.items.length === 0) {
+      toast.error('Adicione pelo menos um item');
+      return;
+    }
+    if (!manualData.establishment?.trim()) {
+      toast.error('Informe o nome do mercado');
+      return;
+    }
     
-    saveReceipt(finalData);
-    setManualMode(false);
-    setManualData({ establishment: '', date: new Date().toLocaleDateString('pt-BR'), items: [] });
-    setCurrentReceipt(finalData);
+    // Validar data
+    const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+    if (!dateRegex.test(manualData.date)) {
+      toast.error('Data inválida! Use DD/MM/AAAA');
+      return;
+    }
+    
+    // Validar itens (preços e quantidades)
+    const hasInvalidItems = manualData.items.some(item => {
+      const price = parseFloat((item.unitPrice || '').toString().replace(',', '.'));
+      const qty = parseFloat((item.qty || '').toString().replace(',', '.'));
+      return isNaN(price) || isNaN(qty) || price < 0 || qty < 0;
+    });
+    
+    if (hasInvalidItems) {
+      toast.error('Existem itens com valores inválidos. Verifique os preços e quantidades.');
+      return;
+    }
+    
+    // Generate a unique ID for manual receipts based on date + store
+    const manualId = `manual_${manualData.date}_${manualData.establishment.replace(/\s/g, '')}`;
+    const finalData = { 
+      ...manualData, 
+      id: manualId,
+      establishment: manualData.establishment.trim() || 'Compra Manual' 
+    };
+    
+    const saved = await saveReceipt(finalData);
+    if (saved) {
+      setManualMode(false);
+      setManualData({ establishment: '', date: new Date().toLocaleDateString('pt-BR'), items: [] });
+      setCurrentReceipt(finalData);
+      toast.success('Nota manual salva com sucesso!');
+    }
     setLoading(false);
   };
 
@@ -153,8 +230,9 @@ function App() {
 
       try {
         await fetch(`http://localhost:3001/api/receipts/${id}`, { method: 'DELETE' });
+        toast.success('Nota removida com sucesso!');
       } catch {
-        // Ignore errors
+        toast.error('Erro ao remover nota.');
       }
     }
   };
@@ -194,8 +272,10 @@ function App() {
           <HistoryTab 
             savedReceipts={savedReceipts}
             historyFilter={historyFilter} setHistoryFilter={setHistoryFilter}
+            historyFilters={historyFilters} setHistoryFilters={setHistoryFilters}
             expandedReceipts={expandedReceipts} setExpandedReceipts={setExpandedReceipts}
             deleteReceipt={deleteReceipt}
+            loading={historyLoading}
           />
         )}
 
@@ -207,6 +287,69 @@ function App() {
           />
         )}
       </main>
+
+      {duplicateReceipt && (
+        <div className="model-selector-overlay" style={{ zIndex: 3000 }}>
+          <div className="glass-card model-selector-card">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '1.5rem' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(245, 158, 11, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: '24px' }}>⚠️</span>
+              </div>
+              <h2 style={{ color: '#fff', fontSize: '1.25rem' }}>Nota Já Existente</h2>
+            </div>
+
+            <p style={{ color: '#94a3b8', fontSize: '0.95rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
+              Esta nota fiscal já está no seu histórico desde <strong style={{ color: '#fbbf24' }}>{duplicateReceipt.date}</strong>.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <button 
+                className="btn" 
+                onClick={() => setDuplicateReceipt(null)}
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)' }}
+              >
+                Cancelar
+              </button>
+              <button 
+                className="btn btn-success" 
+                onClick={handleForceSaveDuplicate}
+              >
+                Atualizar Nota
+              </button>
+            </div>
+
+            <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '1rem', textAlign: 'center' }}>
+              Isso substituirá a nota anterior
+            </p>
+          </div>
+        </div>
+      )}
+
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: 'rgba(15, 23, 42, 0.95)',
+            color: '#fff',
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(8px)',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
 
       <nav className="bottom-nav">
         <button className={`nav-item ${tab === 'scan' ? 'active' : ''}`} onClick={() => handleChangeTab('scan')}>

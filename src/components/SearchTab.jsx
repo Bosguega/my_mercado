@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { LineChart as LineChartIcon, ArrowLeft, Search } from 'lucide-react';
 import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import PropTypes from 'prop-types';
 
 function SearchTab({ savedReceipts, searchQuery, setSearchQuery, sortOrder, setSortOrder }) {
   const [showChart, setShowChart] = useState(false);
@@ -207,5 +208,13 @@ function SearchTab({ savedReceipts, searchQuery, setSearchQuery, sortOrder, setS
     </div>
   );
 }
+
+SearchTab.propTypes = {
+  savedReceipts: PropTypes.arrayOf(PropTypes.object).isRequired,
+  searchQuery: PropTypes.string.isRequired,
+  setSearchQuery: PropTypes.func.isRequired,
+  sortOrder: PropTypes.string.isRequired,
+  setSortOrder: PropTypes.func.isRequired
+};
 
 export default SearchTab;
