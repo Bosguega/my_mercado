@@ -1,6 +1,6 @@
 # 🛒 My Mercado - Gestão Inteligente de Compras
 
-O **My Mercado** é uma aplicação completa para acompanhamento de preços e gestão de gastos de supermercado. Ele permite escanear notas fiscais (NFC-e), manter um histórico de compras organizado e utilizar Inteligência Artificial local para analisar economias.
+O **My Mercado** é uma aplicação completa para acompanhamento de preços e gestão de gastos de supermercado. Ele permite escanear notas fiscais (NFC-e), manter um histórico de compras organizado e analisar economias.
 
 ---
 
@@ -17,7 +17,7 @@ Abaixo está a estrutura completa dos arquivos que compõem o sistema, incluindo
 
 ### 🖥️ Backend (Node.js & Banco de Dados)
 
-*   **`server.js`**: O coração do servidor Express. Gerencia as rotas de API, faz o *scraping* (parsing) das notas fiscais da Sefaz, serve de ponte para o banco de dados e controla o ciclo de vida do motor de IA (`llama-server.exe`).
+*   **`server.js`**: O coração do servidor Express. Gerencia as rotas de API, faz o *scraping* (parsing) das notas fiscais da Sefaz e serve de ponte para o banco de dados.
 *   **`db.js`**: Configuração e utilitários do **SQLite**. Contém as funções para criar tabelas, inserir, buscar e deletar registros de compras (receipts).
 *   **`data.db`**: Arquivo do banco de dados SQLite onde todas as suas compras e itens ficam armazenados localmente de forma segura.
 
@@ -32,7 +32,6 @@ Abaixo está a estrutura completa dos arquivos que compõem o sistema, incluindo
 *   **`src/components/ScannerTab.jsx`**: Interface de captura via câmera (QR Code), upload de fotos de notas e cadastro manual.
 *   **`src/components/HistoryTab.jsx`**: Lista cronológica de compras com detalhes expansíveis e opção de exclusão.
 *   **`src/components/SearchTab.jsx`**: Pesquisa de itens por nome e **gráficos de tendência** de preços entre diferentes mercados e datas.
-*   **`src/components/AIChatTab.jsx`**: Interface de chat para o Assistente I.A., incluindo indicadores de status (online/offline) do motor local.
 
 #### 🛠️ Serviços e Auxiliares
 
@@ -44,14 +43,12 @@ Abaixo está a estrutura completa dos arquivos que compõem o sistema, incluindo
 
 - **Frontend**: React, Vite, Lucide React, Recharts, Html5-QRCode.
 - **Backend**: Node.js, Express, Cheerio (Web Scraping).
-- **IA**: Llama.cpp (Execução local de modelos GGUF).
-- **IA Modelos**: Qwen (0.8B e 2B) otimizados para baixo consumo.
 - **Dados**: SQLite3.
 
 ---
 
 ## 🚀 Como Rodar o Projeto
 
-1.  **Backend e IA**: Execute `node server.js` na raiz.
+1.  **Backend**: Execute `node server.js` na raiz.
 2.  **Frontend**: Execute `npm run dev` na raiz.
 3.  **Acesso**: Abra `http://localhost:5173` no seu navegador.
