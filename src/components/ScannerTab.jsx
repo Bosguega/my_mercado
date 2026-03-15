@@ -209,7 +209,10 @@ function ScannerTab({
            <div className="total-summary" style={{ fontSize: '1.25rem', marginBottom: '2rem' }}>
              <span style={{ color: '#94a3b8', fontWeight: 500 }}>Total</span>
              <span style={{ color: 'var(--success)' }}>
-               R$ {currentReceipt.items.reduce((acc, curr) => acc + parseFloat(curr.total.replace(',', '.')), 0).toFixed(2).replace('.', ',')}
+               R$ {currentReceipt.items.reduce((acc, curr) => {
+                 const value = parseFloat((curr.total || '').toString().replace(',', '.'));
+                 return acc + (isNaN(value) ? 0 : value);
+               }, 0).toFixed(2).replace('.', ',')}
              </span>
            </div>
 
@@ -243,7 +246,7 @@ ScannerTab.propTypes = {
   handleFileUpload: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired,
   scanning: PropTypes.bool.isRequired,
-  error: PropTypes.string.isRequired,
+  error: PropTypes.string,
   currentReceipt: PropTypes.shape({
     id: PropTypes.string,
     establishment: PropTypes.string,

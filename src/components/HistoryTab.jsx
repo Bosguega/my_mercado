@@ -24,23 +24,6 @@ const SkeletonReceipt = () => (
 );
 
 function HistoryTab({ savedReceipts, setSavedReceipts, historyFilter, setHistoryFilter, historyFilters, setHistoryFilters, expandedReceipts, setExpandedReceipts, deleteReceipt, loading }) {
-  if (savedReceipts.length === 0) {
-    return (
-      <div className="glass-card" style={{ textAlign: 'center', padding: '4rem 1rem' }}>
-         <div style={{ position: 'relative', display: 'inline-block' }}>
-           <History size={64} color="var(--primary)" style={{ opacity: 0.2 }} />
-           <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-             <History size={32} color="var(--primary)" />
-           </div>
-         </div>
-         <h2 style={{ marginTop: '1.5rem', color: '#e2e8f0' }}>Histórico Vazio</h2>
-         <p style={{ color: '#94a3b8', marginTop: '0.5rem', maxWidth: '300px', margin: '0.5rem auto' }}>
-           Suas notas fiscais escaneadas aparecerão aqui para você acompanhar preços e economizar.
-         </p>
-      </div>
-    );
-  }
-
   const filteredReceipts = historyFilter.trim()
     ? savedReceipts.filter((receipt) =>
         receipt.establishment?.toLowerCase().includes(historyFilter.toLowerCase())
@@ -97,9 +80,25 @@ function HistoryTab({ savedReceipts, setSavedReceipts, historyFilter, setHistory
       const totalA = a.items.reduce((acc, item) => acc + parseFloat((item.total || '').replace(',', '.')), 0);
       const totalB = b.items.reduce((acc, item) => acc + parseFloat((item.total || '').replace(',', '.')), 0);
       
+      const parseDate = (d) => {
+        if (!d) return new Date(0);
+        const parts = d.split(' ');
+        const dateParts = parts[0].split('/');
+        if (dateParts.length < 3) return new Date(0);
+        const year = dateParts[2];
+        const month = dateParts[1] - 1;
+        const day = dateParts[0];
+        
+        if (parts[1]) {
+          const timeParts = parts[1].split(':');
+          return new Date(year, month, day, timeParts[0] || 0, timeParts[1] || 0, timeParts[2] || 0);
+        }
+        return new Date(year, month, day);
+      };
+
       if (historyFilters.sortBy === 'date') {
-        const dateA = new Date(a.date.split('/').reverse().join('-'));
-        const dateB = new Date(b.date.split('/').reverse().join('-'));
+        const dateA = parseDate(a.date);
+        const dateB = parseDate(b.date);
         return historyFilters.sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
       }
       
@@ -357,8 +356,30 @@ function HistoryTab({ savedReceipts, setSavedReceipts, historyFilter, setHistory
         </div>
       </div>
 
-      {/* Search Input */}
-      <div className="glass-card" style={{ padding: '0.75rem', marginBottom: '1.5rem' }}>
+      {loading ? (
+        <div className="items-list" style={{ gap: '1.25rem' }}>
+          {[...Array(3)].map((_, i) => <SkeletonReceipt key={i} />) }
+        </div>
+      ) : savedReceipts.length === 0 ? (
+        <div className="glass-card" style={{ textAlign: 'center', padding: '4rem 1rem' }}>
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            <History size={64} color="var(--primary)" style={{ opacity: 0.2 }} />
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+              <History size={32} color="var(--primary)" />
+            </div>
+          </div>
+          <h2 style={{ marginTop: '1.5rem', color: '#e2e8f0' }}>Histórico Vazio</h2>
+          <p style={{ color: '#94a3b8', marginTop: '0.5rem', maxWidth: '300px', margin: '0.5rem auto' }}>
+            Suas notas fiscais escaneadas aparecerão aqui para você acompanhar preços e economizar.
+          </p>
+          <p style={{ color: 'var(--primary)', fontSize: '0.85rem', marginTop: '1.5rem', fontWeight: 500 }}>
+            Você também pode restaurar um backup JSON acima ⬆️
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Search Input */}
+          <div className="glass-card" style={{ padding: '0.75rem', marginBottom: '1.5rem' }}>
         <input
           type="text"
           className="search-input"
@@ -445,10 +466,7 @@ function HistoryTab({ savedReceipts, setSavedReceipts, historyFilter, setHistory
       </div>
 
       <div className="items-list" style={{ gap: '1.25rem' }}>
-        {loading ? (
-          // Mostrar skeletons durante loading
-          [...Array(3)].map((_, i) => <SkeletonReceipt key={i} />)
-        ) : filteredReceipts.length === 0 ? (
+        {filteredReceipts.length === 0 ? (
           // Mensagem quando filtro não retorna nada
           <div className="glass-card" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
             <Search size={48} color="var(--primary)" style={{ opacity: 0.3, margin: '0 auto 1rem' }} />
@@ -525,6 +543,8 @@ function HistoryTab({ savedReceipts, setSavedReceipts, historyFilter, setHistory
           })
         )}
       </div>
+        </>
+      )}
     </>
   );
 }

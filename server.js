@@ -11,6 +11,8 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const api = axios.create({
+  // ⚠️ Nota: rejectUnauthorized: false é usado aqui para permitir a conexão com servidores Sefaz 
+  // que podem ter problemas de certificado em ambientes de desenvolvimento ou proxies específicos.
   httpsAgent: new https.Agent({ rejectUnauthorized: false }),
   headers: {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -161,6 +163,18 @@ app.get('/api/status', (req, res) => {
   res.json({
     status: 'online'
   });
+});
+
+// Middleware para rotas não encontradas
+app.use((req, res) => {
+  res.status(404).json({ error: 'Rota não encontrada' });
+});
+
+// Middleware de erro global
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, _next) => {
+  console.error('❌ Erro não tratado:', err);
+  res.status(500).json({ error: 'Erro interno do servidor' });
 });
 
 const port = 3001;

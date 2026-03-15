@@ -29,8 +29,9 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState('recent'); 
   
-  // Loading state para HistoryTab (skeleton loading)
+  // Loading states para skeletons
   const [historyLoading, setHistoryLoading] = useState(false); 
+  const [searchLoading, setSearchLoading] = useState(false); 
 
   // History filter state
   const [historyFilter, setHistoryFilter] = useState('');
@@ -70,9 +71,11 @@ function App() {
     // Simular loading quando mudar para histórico
     if (nextTab === 'history' && savedReceipts.length > 0) {
       setHistoryLoading(true);
-      setTimeout(() => {
-        setHistoryLoading(false);
-      }, 800); // Loading por 800ms para UX
+      setTimeout(() => setHistoryLoading(false), 600);
+    }
+    if (nextTab === 'search' && savedReceipts.length > 0) {
+      setSearchLoading(true);
+      setTimeout(() => setSearchLoading(false), 600);
     }
     setTab(nextTab);
     localStorage.setItem('@MyMercado:tab', nextTab);
@@ -87,7 +90,7 @@ function App() {
       return false;
     }
 
-    const newReceipt = { id: Date.now().toString(), ...receipt };
+    const newReceipt = { id: receipt.id || Date.now().toString(), ...receipt };
     const newList = [newReceipt, ...savedReceipts];
     setSavedReceipts(newList);
     localStorage.setItem('@MyMercado:receipts', JSON.stringify(newList));
@@ -99,9 +102,10 @@ function App() {
         body: JSON.stringify(newReceipt),
       });
       setDuplicateReceipt(null);
+      setError(null);
       return true;
-    } catch {
-      console.warn('Backup local apenas.');
+    } catch (err) {
+      console.warn('Backup local apenas:', err);
       setDuplicateReceipt(null);
       return true;
     }
@@ -111,9 +115,11 @@ function App() {
     setScanning(false);
     setLoading(true);
     try {
+      setError(null);
       const extractedData = await parseNFCeSP(decodedText);
       if (!extractedData || !extractedData.items || extractedData.items.length === 0) {
         toast.error('Não conseguimos ler os itens dessa nota. Verifique se o QR Code é de uma NFC-e válida.');
+        setError('Falha ao extrair itens da nota.');
       } else {
         const saved = await saveReceipt(extractedData);
         if (saved) {
@@ -121,8 +127,9 @@ function App() {
           toast.success('Nota fiscal salva com sucesso!');
         }
       }
-    } catch {
+    } catch (err) {
       toast.error('Erro ao processar nota. Tente novamente.');
+      setError('Erro de conexão ou processamento: ' + (err.message || 'Desconhecido'));
     } finally {
       setLoading(false);
     }
@@ -285,6 +292,7 @@ function App() {
             savedReceipts={savedReceipts}
             searchQuery={searchQuery} setSearchQuery={setSearchQuery}
             sortOrder={sortOrder} setSortOrder={setSortOrder}
+            loading={searchLoading}
           />
         )}
       </main>

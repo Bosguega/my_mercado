@@ -2,8 +2,21 @@ import { useState } from 'react';
 import { LineChart as LineChartIcon, ArrowLeft, Search } from 'lucide-react';
 import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import PropTypes from 'prop-types';
+// Skeleton para itens da pesquisa
+const SkeletonSearch = () => (
+  <div className="item-row" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+    <div style={{ flex: 1 }}>
+      <div className="skeleton-line" style={{ width: '60%', height: '18px', marginBottom: '8px' }} />
+      <div className="skeleton-line" style={{ width: '40%', height: '14px' }} />
+    </div>
+    <div style={{ textAlign: 'right' }}>
+      <div className="skeleton-line" style={{ width: '80px', height: '20px', marginBottom: '4px' }} />
+      <div className="skeleton-line" style={{ width: '40px', height: '12px', marginLeft: 'auto' }} />
+    </div>
+  </div>
+);
 
-function SearchTab({ savedReceipts, searchQuery, setSearchQuery, sortOrder, setSortOrder }) {
+function SearchTab({ savedReceipts, searchQuery, setSearchQuery, sortOrder, setSortOrder, loading }) {
   const [showChart, setShowChart] = useState(false);
 
   // Flatten all items across all receipts
@@ -165,7 +178,11 @@ function SearchTab({ savedReceipts, searchQuery, setSearchQuery, sortOrder, setS
       </div>
 
       <div className="items-list">
-        {searchQuery && filtered.length > 0 && (
+        {loading ? (
+          [...Array(6)].map((_, i) => <SkeletonSearch key={i} />)
+        ) : (
+          <>
+            {searchQuery && filtered.length > 0 && (
           <button
             className="btn btn-success"
             style={{ width: '100%', marginBottom: '0.5rem', borderRadius: '1rem' }}
@@ -201,8 +218,10 @@ function SearchTab({ savedReceipts, searchQuery, setSearchQuery, sortOrder, setS
           </div>
         ))}
 
-        {searchQuery && filtered.length === 0 && (
-          <p style={{ color: '#64748b', textAlign: 'center', padding: '2rem' }}>Nenhum item encontrado.</p>
+            {searchQuery && filtered.length === 0 && (
+              <p style={{ color: '#64748b', textAlign: 'center', padding: '2rem' }}>Nenhum item encontrado.</p>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -214,7 +233,8 @@ SearchTab.propTypes = {
   searchQuery: PropTypes.string.isRequired,
   setSearchQuery: PropTypes.func.isRequired,
   sortOrder: PropTypes.string.isRequired,
-  setSortOrder: PropTypes.func.isRequired
+  setSortOrder: PropTypes.func.isRequired,
+  loading: PropTypes.bool.isRequired
 };
 
 export default SearchTab;
