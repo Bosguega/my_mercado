@@ -1,5 +1,6 @@
-import { History, Trash2, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { History, Trash2, ChevronDown, ChevronUp, Search, Download, Upload, Save } from 'lucide-react';
 import PropTypes from 'prop-types';
+import { toast } from 'react-hot-toast';
 
 // Skeleton Loading Component
 const SkeletonReceipt = () => (
@@ -22,7 +23,7 @@ const SkeletonReceipt = () => (
   </div>
 );
 
-function HistoryTab({ savedReceipts, historyFilter, setHistoryFilter, historyFilters, setHistoryFilters, expandedReceipts, setExpandedReceipts, deleteReceipt, loading }) {
+function HistoryTab({ savedReceipts, setSavedReceipts, historyFilter, setHistoryFilter, historyFilters, setHistoryFilters, expandedReceipts, setExpandedReceipts, deleteReceipt, loading }) {
   if (savedReceipts.length === 0) {
     return (
       <div className="glass-card" style={{ textAlign: 'center', padding: '4rem 1rem' }}>
@@ -130,8 +131,232 @@ function HistoryTab({ savedReceipts, historyFilter, setHistoryFilter, historyFil
     );
   };
 
+  // Export to CSV function
+  const handleExportCSV = () => {
+    if (finalFilteredReceipts.length === 0) {
+      toast.error('Não há dados para exportar');
+      return;
+    }
+
+    // CSV Header
+    const headers = ['Data', 'Mercado', 'Produto', 'Quantidade', 'Unidade', 'Preço Unitário', 'Total'];
+    
+    // CSV Rows - flatten receipts and items
+    const rows = finalFilteredReceipts.flatMap(receipt => 
+      receipt.items.map(item => [
+        receipt.date,
+        receipt.establishment,
+        item.name,
+        item.qty || '1',
+        item.unit || 'un',
+        item.unitPrice || '0,00',
+        item.total || '0,00'
+      ])
+    );
+
+    // Combine all CSV content
+    const csvContent = [
+      headers.join(';'), // Use semicolon for Brazilian Excel
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(';')) // Quote cells
+    ].join('\n');
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    // Generate filename with current date
+    const date = new Date().toISOString().split('T')[0];
+    link.download = `my_mercado_${date}.csv`;
+    
+    // Trigger download
+    link.href = url;
+    link.click();
+    
+    // Cleanup
+    URL.revokeObjectURL(url);
+    
+    toast.success(`Planilha exportada com ${rows.length} itens!`);
+  };
+
+  // Backup to JSON function
+  const handleBackupJSON = () => {
+    if (savedReceipts.length === 0) {
+      toast.error('Não há dados para backup');
+      return;
+    }
+
+    // Create backup object with metadata
+    const backupData = {
+      version: '1.0',
+      exportDate: new Date().toISOString(),
+      totalReceipts: savedReceipts.length,
+      receipts: savedReceipts
+    };
+
+    // Convert to JSON string
+    const jsonString = JSON.stringify(backupData, null, 2);
+    
+    // Create blob and download
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    // Generate filename with current date
+    const date = new Date().toISOString().split('T')[0];
+    link.download = `my_mercado_backup_${date}.json`;
+    
+    // Trigger download
+    link.href = url;
+    link.click();
+    
+    // Cleanup
+    URL.revokeObjectURL(url);
+    
+    toast.success(`Backup criado com ${savedReceipts.length} notas!`);
+  };
+
+  // Restore from JSON function
+  const handleRestoreJSON = (event) => {
+    const file = event.target.files[0];
+    
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.name.endsWith('.json')) {
+      toast.error('Arquivo inválido! Selecione um arquivo .json');
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const backupData = JSON.parse(e.target.result);
+        
+        // Validate backup structure
+        if (!backupData.receipts || !Array.isArray(backupData.receipts)) {
+          toast.error('Arquivo de backup inválido ou corrompido');
+          return;
+        }
+        
+        // Confirm restore
+        const confirmRestore = window.confirm(
+          `⚠️ Atenção! Isso irá substituir suas ${savedReceipts.length} notas atuais por ${backupData.receipts.length} notas do backup.\n\nTem certeza que deseja continuar?`
+        );
+        
+        if (!confirmRestore) {
+          // Reset file input
+          event.target.value = '';
+          return;
+        }
+        
+        // Restore receipts
+        const restoredReceipts = backupData.receipts;
+        setSavedReceipts(restoredReceipts);
+        localStorage.setItem('@MyMercado:receipts', JSON.stringify(restoredReceipts));
+        
+        toast.success(`Backup restaurado com ${restoredReceipts.length} notas!`);
+        
+        // Reset file input
+        event.target.value = '';
+        
+      } catch (error) {
+        console.error('Error restoring backup:', error);
+        toast.error('Erro ao ler arquivo de backup');
+      }
+    };
+    
+    reader.onerror = () => {
+      toast.error('Erro ao ler arquivo');
+    };
+    
+    reader.readAsText(file);
+  };
+
   return (
     <>
+      {/* Header with Actions */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
+        <h2 style={{ color: '#e2e8f0', fontSize: '1.4rem' }}>📊 Histórico de Compras</h2>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {/* Restore Button (Hidden file input) */}
+          <input
+            type="file"
+            id="restore-input"
+            accept=".json"
+            onChange={handleRestoreJSON}
+            style={{ display: 'none' }}
+          />
+          <button 
+            onClick={() => document.getElementById('restore-input').click()}
+            className="btn"
+            style={{ 
+              padding: '0.6rem 1.2rem',
+              background: 'rgba(16, 185, 129, 0.2)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              color: '#10b981',
+              cursor: 'pointer',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              fontSize: '0.9rem',
+              fontWeight: '500'
+            }}
+            title="Restaurar backup JSON"
+          >
+            <Upload size={18} />
+            Restaurar
+          </button>
+          
+          {/* Backup Button */}
+          <button 
+            onClick={handleBackupJSON}
+            className="btn"
+            style={{ 
+              padding: '0.6rem 1.2rem',
+              background: 'rgba(59, 130, 246, 0.2)',
+              border: '1px solid rgba(59, 130, 246, 0.3)',
+              color: '#60a5fa',
+              cursor: 'pointer',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              fontSize: '0.9rem',
+              fontWeight: '500'
+            }}
+            title="Salvar backup JSON"
+          >
+            <Save size={18} />
+            Backup
+          </button>
+          
+          {/* Export CSV Button */}
+          <button 
+            onClick={handleExportCSV}
+            className="btn"
+            style={{ 
+              padding: '0.6rem 1.2rem',
+              background: 'rgba(245, 158, 11, 0.2)',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+              color: '#f59e0b',
+              cursor: 'pointer',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              fontSize: '0.9rem',
+              fontWeight: '500'
+            }}
+            title="Exportar planilha CSV"
+          >
+            <Download size={18} />
+            CSV
+          </button>
+        </div>
+      </div>
+
       {/* Search Input */}
       <div className="glass-card" style={{ padding: '0.75rem', marginBottom: '1.5rem' }}>
         <input
@@ -306,6 +531,7 @@ function HistoryTab({ savedReceipts, historyFilter, setHistoryFilter, historyFil
 
 HistoryTab.propTypes = {
   savedReceipts: PropTypes.arrayOf(PropTypes.object).isRequired,
+  setSavedReceipts: PropTypes.func.isRequired,
   historyFilter: PropTypes.string.isRequired,
   setHistoryFilter: PropTypes.func.isRequired,
   historyFilters: PropTypes.shape({

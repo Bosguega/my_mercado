@@ -376,45 +376,111 @@ const applyFilters = (receipts) => {
 
 ---
 
-### **#7 - Exportação para CSV/Excel**
-**Prioridade:** MÉDIA  
+### **#7 - Exportação para CSV/Excel** ✅
+**Status:** IMPLEMENTADO  
 **Esforço:** ⭐⭐ Médio (15-20 min)  
 **Impacto:** ⭐⭐⭐ Alto  
 
 **O que é:** Botão para exportar histórico como planilha
 
 **Benefícios:**
-- Backup fora do app
-- Análise no Excel
-- Compartilhamento fácil
+- ✅ Backup fora do app
+- ✅ Análise no Excel/Google Sheets
+- ✅ Compartilhamento fácil
+- ✅ Integração com outros sistemas
 
 **Implementação:**
 ```javascript
-const exportToCSV = () => {
-  const headers = ['Data', 'Mercado', 'Produto', 'Qtd', 'Preço Unit.', 'Total'];
-  const rows = savedReceipts.flatMap(receipt => 
+const handleExportCSV = () => {
+  if (finalFilteredReceipts.length === 0) {
+    toast.error('Não há dados para exportar');
+    return;
+  }
+
+  // CSV Header
+  const headers = ['Data', 'Mercado', 'Produto', 'Quantidade', 'Unidade', 'Preço Unitário', 'Total'];
+  
+  // CSV Rows - flatten receipts and items
+  const rows = finalFilteredReceipts.flatMap(receipt => 
     receipt.items.map(item => [
       receipt.date,
       receipt.establishment,
       item.name,
-      item.qty,
-      item.unitPrice,
-      item.total
+      item.qty || '1',
+      item.unit || 'un',
+      item.unitPrice || '0,00',
+      item.total || '0,00'
     ])
   );
-  
-  const csvContent = [headers, ...rows].map(e => e.join(',')).join('\n');
+
+  // Combine all CSV content
+  const csvContent = [
+    headers.join(';'), // Use semicolon for Brazilian Excel
+    ...rows.map(row => row.map(cell => `"${cell}"`).join(';')) // Quote cells
+  ].join('\n');
+
+  // Create blob and download
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `my_mercado_${new Date().toISOString().split('T')[0]}.csv`;
+  const url = URL.createObjectURL(blob);
+  
+  // Generate filename with current date
+  const date = new Date().toISOString().split('T')[0];
+  link.download = `my_mercado_${date}.csv`;
+  
+  // Trigger download
+  link.href = url;
   link.click();
   
-  toast.success('Exportado com sucesso!');
+  // Cleanup
+  URL.revokeObjectURL(url);
+  
+  toast.success(`Planilha exportada com ${rows.length} itens!`);
 };
 ```
 
-**UI:** Botão no HistoryTab "📊 Exportar Planilha"
+**UI Implementada:**
+```jsx
+<div style={{ display: 'flex', justifyContent: 'space-between' }}>
+  <h2>📊 Histórico de Compras</h2>
+  <button onClick={handleExportCSV} className="btn">
+    <Download size={18} />
+    Exportar CSV
+  </button>
+</div>
+```
+
+**Arquivos:** `HistoryTab.jsx`
+
+**Formato do CSV:**
+```csv
+Data;Mercado;Produto;Quantidade;Unidade;Preço Unitário;Total
+"14/03/2026";"Assaí";"Arroz Tio João";"2";"un";"25,90";"51,80"
+"14/03/2026";"Assaí";"Feijão Camil";"1";"un";"12,50";"12,50"
+"12/03/2026";"Extra";"Leite Parmalat";"6";"un";"4,99";"29,94"
+```
+
+**Recursos implementados:**
+- ✅ **Botão dedicado** no header do HistoryTab
+- ✅ **Exporta todos os dados** (respeitando filtros ativos)
+- ✅ **Formato brasileiro** (ponto-e-vírgula como separador)
+- ✅ **Células entre aspas** para evitar problemas com vírgulas
+- ✅ **Nome do arquivo** com data atual
+- ✅ **Toast de confirmação** com número de itens
+- ✅ **Compatível com Excel** e Google Sheets
+
+**Como testar:**
+1. Tenha pelo menos uma nota no histórico
+2. Vá em "Histórico"
+3. Clique em **"Exportar CSV"**
+4. **Resultado:** Download de arquivo `.csv` no seu computador
+5. Abra no Excel/Google Sheets
+6. **Verifique:** Todas as colunas corretamente formatadas
+
+**Filtros respeitados:**
+- Se usar busca por texto → Exporta só resultados da busca
+- Se usar filtro de período → Exporta só daquele período
+- Se usar ordenação → Exporta na ordem selecionada
 
 ---
 
@@ -614,14 +680,58 @@ Baseado no histórico, prever gastos do próximo mês
 
 ---
 
-### **#23 - Backup Automático**
-**Prioridade:** MÉDIA  
+### **#23 - Backup Automático e Restauração** ✅
+**Status:** IMPLEMENTADO  
 **Esforço:** ⭐⭐ Médio (25-30 min)  
 **Impacto:** ⭐⭐⭐ Alto  
 
-- Sync com Google Drive/Dropbox
-- Backup local em JSON
-- Restaurar backup facilmente
+**O que é:** Permitir salvar e carregar backup completo em JSON
+
+**Benefícios:**
+- ✅ Backup seguro fora do navegador
+- ✅ Restaurar dados em outro dispositivo
+- ✅ Migrar entre navegadores
+- ✅ Não perder dados se limpar cache
+
+**Arquivos:** `HistoryTab.jsx`, `App.jsx`
+
+**Recursos implementados:**
+- ✅ **3 botões no header:** Restaurar (verde), Backup (azul), CSV (laranja)
+- ✅ **Validação de arquivo:** Só aceita .json
+- ✅ **Validação de estrutura:** Verifica se tem `receipts`
+- ✅ **Confirmação:** Alerta antes de substituir dados
+- ✅ **Metadados:** Versão, data, total de notas
+- ✅ **Toast feedback:** Sucesso/erro em todas as operações
+- ✅ **Auto-save:** Salva no localStorage após restaurar
+
+**Como testar:**
+
+**Teste 1: Criar Backup**
+1. Tenha várias notas no histórico
+2. Vá em "Histórico"
+3. Clique em **"💾 Backup"** (botão azul)
+4. **Resultado:** Download de `my_mercado_backup_2026-03-14.json`
+5. Abra o arquivo num editor de texto
+6. **Verifique:** Estrutura JSON com todas as notas
+
+**Teste 2: Restaurar Backup**
+1. Apague algumas notas (ou todas)
+2. Clique em **"📤 Restaurar"** (botão verde)
+3. Selecione o arquivo JSON salvo
+4. **Alerta:** "Isso irá substituir suas X notas..."
+5. Clique em OK
+6. **Resultado:** Notas restauradas
+7. **Verifique:** Toast "Backup restaurado com X notas!"
+
+**Teste 3: Validações**
+- Tentar restaurar arquivo .txt → Erro "Arquivo inválido"
+- Tentar restaurar JSON sem `receipts` → Erro "Backup inválido"
+- Cancelar confirmação → Dados não são alterados
+
+**Teste 4: Migração**
+1. No Chrome: Crie backup
+2. No Firefox: Restaure o mesmo arquivo
+3. **Resultado:** Mesmas notas em ambos navegadores
 
 ---
 
@@ -659,5 +769,5 @@ Para implementar a próxima melhoria:
 ---
 
 **Última atualização:** Março 2026  
-**Melhorias implementadas:** 6/23 (26%)  
-**Próxima melhoria:** #7 - Exportação para CSV/Excel
+**Melhorias implementadas:** 8/23 (35%)  
+**Próxima melhoria:** #8 - Orçamento Mensal

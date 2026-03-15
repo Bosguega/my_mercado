@@ -271,6 +271,7 @@ function App() {
         {tab === 'history' && (
           <HistoryTab 
             savedReceipts={savedReceipts}
+            setSavedReceipts={setSavedReceipts}
             historyFilter={historyFilter} setHistoryFilter={setHistoryFilter}
             historyFilters={historyFilters} setHistoryFilters={setHistoryFilters}
             expandedReceipts={expandedReceipts} setExpandedReceipts={setExpandedReceipts}
