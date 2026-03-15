@@ -140,10 +140,17 @@ function HistoryTab({
           historyFilters.startDate &&
           historyFilters.endDate
         ) {
-          const startDate = new Date(historyFilters.startDate);
-          startDate.setHours(0, 0, 0, 0);
-          const endDate = new Date(historyFilters.endDate);
-          endDate.setHours(23, 59, 59, 999); // Incluir o dia final completo
+          // Parse strings AAAA-MM-DD para componentes numéricos para evitar problemas de fuso horário/UTC
+          const [sYear, sMonth, sDay] = historyFilters.startDate
+            .split("-")
+            .map(Number);
+          const startDate = new Date(sYear, sMonth - 1, sDay, 0, 0, 0, 0);
+
+          const [eYear, eMonth, eDay] = historyFilters.endDate
+            .split("-")
+            .map(Number);
+          const endDate = new Date(eYear, eMonth - 1, eDay, 23, 59, 59, 999);
+
           passes = receiptDate >= startDate && receiptDate <= endDate;
         } else {
           passes = true;

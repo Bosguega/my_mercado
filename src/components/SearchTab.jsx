@@ -108,8 +108,8 @@ function SearchTab({
       const dB = b.split("/");
       if (dA.length < 3 || dB.length < 3) return 0;
       return (
-        new Date(`${dA[2]}-${dA[1]}-${dA[0]}`).getTime() -
-        new Date(`${dB[2]}-${dB[1]}-${dB[0]}`).getTime()
+        new Date(dA[2], dA[1] - 1, dA[0]).getTime() -
+        new Date(dB[2], dB[1] - 1, dB[0]).getTime()
       );
     });
 
