@@ -164,6 +164,19 @@ function App() {
     }
   };
 
+  const stopCamera = async () => {
+    if (qrCodeRef.current) {
+      try {
+        await qrCodeRef.current.stop();
+      } catch (err) {
+        console.warn("Erro ao parar câmera:", err);
+      } finally {
+        qrCodeRef.current = null;
+        setScanning(false);
+      }
+    }
+  };
+
   const startCamera = async () => {
     if (scanning || loading) return;
     setScanning(true);
@@ -176,19 +189,14 @@ function App() {
             { facingMode: "environment" },
             { fps: 12, qrbox: { width: 250, height: 250 } },
             (text) => {
-              scanner
-                .stop()
-                .then(() => {
-                  qrCodeRef.current = null;
-                })
-                .catch(() => {});
+              stopCamera();
               handleScanSuccess(text);
             },
             () => {},
           )
           .catch(() => {
             setScanning(false);
-            toast.error("Câmera não disponível. Verifique as permissões.");
+            toast.error("Câmera não disponível. Verifique as permissões ou se o site usa HTTPS.");
           });
       } catch {
         setScanning(false);
@@ -243,8 +251,28 @@ function App() {
       return;
     }
 
-    // Generate a unique ID for manual receipts based on date + store
-    const manualId = `manual_${manualData.date}_${manualData.establishment.replace(/\s/g, "")}`;
+    const toStoreSlug = (value) => {
+      const base = (value || "")
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "_")
+        .replace(/[^a-z0-9_]/g, "");
+      return base || "mercado";
+    };
+
+    const normalizeManualDate = (value) => {
+      const match = (value || "").toString().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (!match) return "data";
+      const [, dd, mm, yyyy] = match;
+      return `${yyyy}${mm}${dd}`;
+    };
+
+    // Manual IDs must be URL-safe (no `/`) and unique to avoid collisions and broken DELETE routes.
+    const randomSuffix =
+      (globalThis.crypto?.randomUUID?.() ||
+        `${Date.now()}_${Math.random().toString(16).slice(2)}`).replace(/-/g, "");
+    const manualId = `manual_${normalizeManualDate(manualData.date)}_${toStoreSlug(manualData.establishment)}_${randomSuffix.slice(0, 12)}`;
     const finalData = {
       ...manualData,
       id: manualId,
@@ -276,7 +304,7 @@ function App() {
       localStorage.setItem("@MyMercado:receipts", JSON.stringify(newList));
 
       try {
-        await fetch(`${API_URL}/api/receipts/${id}`, {
+        await fetch(`${API_URL}/api/receipts/${encodeURIComponent(id)}`, {
           method: "DELETE",
         });
         toast.success("Nota removida com sucesso!");
@@ -318,6 +346,7 @@ function App() {
             setManualItem={setManualItem}
             handleSaveManualReceipt={handleSaveManualReceipt}
             startCamera={startCamera}
+            stopCamera={stopCamera}
             handleFileUpload={handleFileUpload}
             loading={loading}
             scanning={scanning}

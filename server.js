@@ -14,21 +14,75 @@ import {
 const app = express();
 app.use(
   cors({
-    origin:
-      process.env.NODE_ENV === "production"
-        ? process.env.ALLOWED_ORIGIN
-        : "http://localhost:5173",
+    origin: (origin, callback) => {
+      // Permite qualquer origem em desenvolvimento ou se for localhost/IP
+      if (process.env.NODE_ENV !== "production" || !origin) {
+        callback(null, true);
+      } else {
+        const allowed = process.env.ALLOWED_ORIGIN || "http://localhost:5173";
+        callback(null, allowed === origin);
+      }
+    },
+    credentials: true,
   }),
 );
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+function isAllowedSefazUrl(rawUrl) {
+  let urlObj;
+  try {
+    urlObj = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+
+  if (urlObj.protocol !== "https:" && urlObj.protocol !== "http:") return false;
+
+  const hostname = urlObj.hostname.toLowerCase();
+  // Allow only Sefaz SP domains (and subdomains) to prevent SSRF.
+  return hostname === "fazenda.sp.gov.br" || hostname.endsWith(".fazenda.sp.gov.br");
+}
+
+async function fetchHtmlWithValidatedRedirects(axiosInstance, startUrl, maxHops = 5) {
+  let currentUrl = startUrl;
+
+  for (let hop = 0; hop <= maxHops; hop++) {
+    const response = await axiosInstance.get(currentUrl, {
+      validateStatus: (status) =>
+        (status >= 200 && status < 300) || (status >= 300 && status < 400),
+    });
+
+    if (response.status >= 200 && response.status < 300) {
+      return response.data;
+    }
+
+    const location = response.headers?.location;
+    if (!location) throw new Error("Redirect sem header Location");
+
+    const nextUrl = new URL(location, currentUrl).toString();
+    if (!isAllowedSefazUrl(nextUrl)) {
+      throw new Error("Redirect para host não permitido");
+    }
+
+    currentUrl = nextUrl;
+  }
+
+  throw new Error("Muitos redirects");
+}
+
 const api = axios.create({
   // ⚠️ Nota: rejectUnauthorized: false é usado aqui para permitir a conexão com servidores Sefaz
   // que podem ter problemas de certificado em ambientes de desenvolvimento ou proxies específicos.
   httpsAgent: new https.Agent({
-    rejectUnauthorized: process.env.NODE_ENV !== "production",
+    // Dev: accept cert issues (proxies/legacy chains). Prod: verify TLS by default.
+    rejectUnauthorized:
+      process.env.NODE_ENV === "production" &&
+      process.env.ALLOW_INSECURE_TLS !== "true",
   }),
+  maxRedirects: 0, // handled manually to validate redirect targets
+  timeout: 15000,
+  maxContentLength: 5 * 1024 * 1024,
   headers: {
     "User-Agent":
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -48,10 +102,12 @@ app.post("/api/parse", async (req, res) => {
   try {
     const { url } = req.body;
     if (!url) return res.status(400).json({ error: "URL is required" });
+    if (!isAllowedSefazUrl(url)) {
+      return res.status(400).json({ error: "URL não permitida" });
+    }
 
     console.log("🔍 Fetching URL:", url);
-    const response = await api.get(url);
-    const html = response.data;
+    const html = await fetchHtmlWithValidatedRedirects(api, url);
     const $ = cheerio.load(html);
 
     const items = [];

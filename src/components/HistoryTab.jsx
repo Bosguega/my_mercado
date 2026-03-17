@@ -11,6 +11,7 @@ import {
 import PropTypes from "prop-types";
 import { toast } from "react-hot-toast";
 import { API_URL } from "../config";
+import { parseBRL } from "../utils/currency";
 
 // Moved to module scope: evita recriação a cada par comparado no sort
 const parseDate = (d) => {
@@ -162,14 +163,8 @@ function HistoryTab({
 
     // Sort
     filtered.sort((a, b) => {
-      const totalA = a.items.reduce(
-        (acc, item) => acc + parseFloat((item.total || "").replace(",", ".")),
-        0,
-      );
-      const totalB = b.items.reduce(
-        (acc, item) => acc + parseFloat((item.total || "").replace(",", ".")),
-        0,
-      );
+      const totalA = a.items.reduce((acc, item) => acc + parseBRL(item.total), 0);
+      const totalB = b.items.reduce((acc, item) => acc + parseBRL(item.total), 0);
 
       if (historyFilters.sortBy === "date") {
         const dateA = parseDate(a.date);

@@ -64,6 +64,7 @@ function ScannerTab({
   setManualItem,
   handleSaveManualReceipt,
   startCamera,
+  stopCamera,
   handleFileUpload,
   loading,
   scanning,
@@ -411,6 +412,24 @@ function ScannerTab({
         </div>
       )}
 
+      {scanning && (
+        <div style={{ marginBottom: "1rem" }}>
+          <button
+            className="btn"
+            style={{
+              width: "100%",
+              background: "rgba(239, 68, 68, 0.2)",
+              border: "1px solid rgba(239, 68, 68, 0.3)",
+              color: "#f87171",
+            }}
+            onClick={stopCamera}
+          >
+            <X size={20} />
+            Cancelar Escaneamento
+          </button>
+        </div>
+      )}
+
       <div
         id="reader"
         className="scanner-container"
@@ -419,6 +438,8 @@ function ScannerTab({
           minHeight: "300px",
           background: "#000",
           borderRadius: "1rem",
+          overflow: "hidden",
+          border: "2px solid var(--primary)",
         }}
       ></div>
 
@@ -555,6 +576,7 @@ ScannerTab.propTypes = {
   setManualItem: PropTypes.func.isRequired,
   handleSaveManualReceipt: PropTypes.func.isRequired,
   startCamera: PropTypes.func.isRequired,
+  stopCamera: PropTypes.func.isRequired,
   handleFileUpload: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired,
   scanning: PropTypes.bool.isRequired,

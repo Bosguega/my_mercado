@@ -31,7 +31,13 @@ export function getAllReceipts() {
           id: row.id,
           establishment: row.establishment,
           date: row.date,
-          items: JSON.parse(row.items_json || "[]"),
+          items: (() => {
+            try {
+              return JSON.parse(row.items_json || "[]");
+            } catch {
+              return [];
+            }
+          })(),
         }));
         resolve(mapped);
       },
@@ -65,22 +71,45 @@ export function deleteReceiptById(id) {
 export function restoreAllReceipts(receipts) {
   return new Promise((resolve, reject) => {
     db.serialize(() => {
+      db.run("BEGIN TRANSACTION");
       db.run("DELETE FROM receipts", [], (err) => {
-        if (err) return reject(err);
+        if (err) {
+          db.run("ROLLBACK");
+          return reject(err);
+        }
+
         const stmt = db.prepare(
           "INSERT INTO receipts (id, establishment, date, items_json) VALUES (?, ?, ?, ?)",
         );
+
+        let hadError = false;
         for (const receipt of receipts) {
-          stmt.run([
-            receipt.id,
-            receipt.establishment,
-            receipt.date,
-            JSON.stringify(receipt.items || []),
-          ]);
+          stmt.run(
+            [
+              receipt.id,
+              receipt.establishment,
+              receipt.date,
+              JSON.stringify(receipt.items || []),
+            ],
+            (runErr) => {
+              if (runErr) hadError = true;
+            },
+          );
         }
-        stmt.finalize((err) => {
-          if (err) return reject(err);
-          resolve();
+
+        stmt.finalize((finalizeErr) => {
+          if (finalizeErr || hadError) {
+            db.run("ROLLBACK");
+            return reject(finalizeErr || new Error("Falha ao restaurar recibos"));
+          }
+
+          db.run("COMMIT", (commitErr) => {
+            if (commitErr) {
+              db.run("ROLLBACK");
+              return reject(commitErr);
+            }
+            resolve();
+          });
         });
       });
     });
