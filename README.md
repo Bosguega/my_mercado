@@ -64,5 +64,11 @@ O **My Mercado** é uma aplicação completa para acompanhamento de preços e ge
 1.  **Instalação**: `npm install`
 2.  **Backend**: `node server.js`
 3.  **Frontend**: `npm run dev`
-4.  **Acesso**: Localmente em `http://localhost:5173`. Para testar a câmera em outros dispositivos na mesma rede, use o IP da sua máquina.
+4.  **Acesso**: Localmente em `http://localhost:5173`.
 
+### 🔐 HTTPS (mobile / câmera)
+
+Em **celulares** (acessando pela rede, ex: `http://192.168.x.x:5173`), a câmera geralmente exige **HTTPS**.
+
+- **Sem aviso de “conexão não segura” (recomendado):** gere um certificado local (ex.: `mkcert`) e aponte o Vite para ele via `VITE_SSL_CERT_PATH` e `VITE_SSL_KEY_PATH`.
+- **Rápido (mas com certificado autoassinado / aviso no navegador):** rode `npm run dev:https` para servir em HTTPS.

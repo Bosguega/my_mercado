@@ -6,7 +6,7 @@ import SearchTab from "./components/SearchTab";
 import HistoryTab from "./components/HistoryTab";
 import ScannerTab from "./components/ScannerTab";
 import { Toaster, toast } from "react-hot-toast";
-import { API_URL } from "./config";
+import { getAllReceiptsFromDB, insertReceiptToDB, deleteReceiptFromDB } from "./services/dbMethods";
 import "./index.css";
 
 function App() {
@@ -66,13 +66,13 @@ function App() {
     setHistoryLoading(true);
     setSearchLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/receipts`);
-      const data = await res.json();
-      if (Array.isArray(data.receipts)) {
-        setSavedReceipts(data.receipts);
+      const data = await getAllReceiptsFromDB();
+      if (Array.isArray(data)) {
+        setSavedReceipts(data);
+        localStorage.setItem("@MyMercado:receipts", JSON.stringify(data));
       }
     } catch (err) {
-      console.error("API offline, usando localStorage:", err);
+      console.error("Supabase offline ou erro. Usando localStorage:", err);
       try {
         const stored = localStorage.getItem("@MyMercado:receipts");
         if (stored) setSavedReceipts(JSON.parse(stored));
@@ -109,16 +109,12 @@ function App() {
     localStorage.setItem("@MyMercado:receipts", JSON.stringify(newList));
 
     try {
-      await fetch(`${API_URL}/api/receipts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newReceipt),
-      });
+      await insertReceiptToDB(newReceipt);
       setDuplicateReceipt(null);
       setError(null);
       return true;
     } catch (err) {
-      console.warn("Backup local apenas:", err);
+      console.warn("Erro ao salvar no Supabase, backup local:", err);
       setDuplicateReceipt(null);
       return true;
     }
@@ -304,12 +300,10 @@ function App() {
       localStorage.setItem("@MyMercado:receipts", JSON.stringify(newList));
 
       try {
-        await fetch(`${API_URL}/api/receipts/${encodeURIComponent(id)}`, {
-          method: "DELETE",
-        });
+        await deleteReceiptFromDB(id);
         toast.success("Nota removida com sucesso!");
       } catch {
-        toast.error("Erro ao remover nota.");
+        toast.error("Erro ao remover nota no banco remoto.");
       }
     }
   };

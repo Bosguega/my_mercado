@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import PropTypes from "prop-types";
 import { toast } from "react-hot-toast";
-import { API_URL } from "../config";
+import { restoreReceiptsToDB } from "../services/dbMethods";
 import { parseBRL } from "../utils/currency";
 
 // Moved to module scope: evita recriação a cada par comparado no sort
@@ -339,16 +339,12 @@ function HistoryTab({
           JSON.stringify(restoredReceipts),
         );
 
-        // Sincronizar com o backend (banco SQLite)
+        // Sincronizar com o backend Supabase
         try {
-          await fetch(`${API_URL}/api/receipts/restore`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ receipts: restoredReceipts }),
-          });
+          await restoreReceiptsToDB(restoredReceipts);
         } catch (syncErr) {
           console.warn(
-            "Não foi possível sincronizar backup com o servidor:",
+            "Não foi possível sincronizar backup com o Supabase:",
             syncErr,
           );
         }
