@@ -1,15 +1,21 @@
 import { useState, useEffect, useRef } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { Scan, History as HistoryIcon, Search } from "lucide-react";
+import { Scan, History as HistoryIcon, Search, LogOut } from "lucide-react";
 import { parseNFCeSP } from "./services/receiptParser";
 import SearchTab from "./components/SearchTab";
 import HistoryTab from "./components/HistoryTab";
 import ScannerTab from "./components/ScannerTab";
+import Login from "./components/Login";
 import { Toaster, toast } from "react-hot-toast";
 import { getAllReceiptsFromDB, insertReceiptToDB, deleteReceiptFromDB } from "./services/dbMethods";
+import { logout } from "./services/auth";
+import { supabase } from "./services/supabaseClient";
 import "./index.css";
 
 function App() {
+  const [sessionUser, setSessionUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
   const [tab, setTab] = useState("scan"); // 'scan', 'history', 'search'
   const [savedReceipts, setSavedReceipts] = useState([]);
 
@@ -59,7 +65,26 @@ function App() {
     const storedTab = localStorage.getItem("@MyMercado:tab");
     if (storedTab) setTab(storedTab);
 
-    loadReceipts();
+    // Initial session fetch
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSessionUser(session?.user ?? null);
+      if (session?.user) {
+        loadReceipts();
+      }
+      setAuthLoading(false);
+    });
+
+    // Listen to changes (login, logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSessionUser(session?.user ?? null);
+      if (session?.user) {
+        loadReceipts();
+      } else {
+        setSavedReceipts([]);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const loadReceipts = async () => {
@@ -320,6 +345,23 @@ function App() {
     }
   }, [tab]);
 
+  if (authLoading) {
+    return (
+      <div className="app-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <h2 style={{ color: '#fff' }}>Carregando...</h2>
+      </div>
+    );
+  }
+
+  if (!sessionUser) {
+    return (
+      <>
+        <Login setSessionUser={setSessionUser} />
+        <Toaster position="top-center" toastOptions={{ style: { background: "rgba(15, 23, 42, 0.95)", color: "#fff", borderRadius: "12px" } }} />
+      </>
+    );
+  }
+
   return (
     <div className="app-container">
       <header className="header">
@@ -327,6 +369,16 @@ function App() {
           <h1>My Mercado</h1>
           <p>Economize comparando preços e gerenciando compras.</p>
         </div>
+        <button
+           onClick={async () => {
+             await logout();
+             toast.success('Sessão encerrada.');
+           }}
+           style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.5rem' }}
+           title="Sair"
+        >
+          <LogOut size={24} />
+        </button>
       </header>
 
       <main style={{ minHeight: "60vh" }}>

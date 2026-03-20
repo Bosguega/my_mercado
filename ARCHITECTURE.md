@@ -197,9 +197,7 @@ graph TD
 
 <a id="estrutura-de-dados-principal"></a>
 
-# Estrutura de Dados Principal
-
-**Schema Supabase (Nuven)**:
+**Schema Supabase (Nuvem)** com RLS e Autenticação Atrelada:
 
 ```sql
 create table public.receipts (
@@ -207,11 +205,31 @@ create table public.receipts (
   establishment text,
   date text,
   items_json jsonb,
+  user_id uuid references auth.users(id) default auth.uid() not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+alter table public.receipts enable row level security;
+
+create policy "Usuário vê as próprias notas" 
+on public.receipts for select 
+using (auth.uid() = user_id);
+
+create policy "Usuário insere as próprias notas" 
+on public.receipts for insert 
+with check (auth.uid() = user_id);
+
+create policy "Usuário atualiza as próprias notas" 
+on public.receipts for update 
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+create policy "Usuário deleta as próprias notas" 
+on public.receipts for delete 
+using (auth.uid() = user_id);
 ```
 
-> **Atenção:** Em código, os valores de `items_json` são serializados/deserializados pelo `dbMethods.js` para um array de objetos `Item { name, qty, unitPrice, total }`.
+> **Atenção:** Os dados inseridos no banco são protegidos de forma segura e estrita usando Políticas de Segurança por Nível de Linha (RLS), garantindo a isolação entre inquilinos onde o Supabase injeta o `default auth.uid()` com o valor associado ao JWT. Em código web, os valores de `items_json` são serializados/deserializados pelo `dbMethods.js` para um array de objetos `Item { name, qty, unitPrice, total }`.
 
 [↑ Voltar ao índice](#índice)
 
@@ -224,6 +242,7 @@ create table public.receipts (
 | Quero alterar | Arquivo principal | Arquivo de apoio |
 |---|---|---|
 | Lógica de escaneamento da câmera | `src/App.jsx` | `src/components/ScannerTab.jsx` |
+| Autenticação (Login / Registro) | `src/components/Login.jsx` | `src/services/auth.js` |
 | Scraping / Captura de dados da nota | `src/services/receiptParser.js` | — |
 | Comunicação com banco de dados | `src/services/dbMethods.js` | `src/services/supabaseClient.js` |
 | Entrada manual de nota | `src/components/ScannerTab.jsx` | `src/App.jsx` — `handleSaveManualReceipt` |
@@ -290,7 +309,7 @@ O histórico de localStorage é atualizado e o App renderiza a nova nota
 
 # Não-Objetivos
 
-- **Autenticação Complexa de Usuários:** Por ora o repositório permite acesso anônimo usando a Row Level Security (RLS) habilitada para leitura/escrita pública no Supabase, simulando a liberdade que tínhamos na era do SQLite local.
+- **Confirmação de E-mail:** A autenticação é simples ("Email / Senha" nativo do Supabase) e a confirmação de e-mail deve estar sempre desativada no painel web do Supabase para facilitar a usabilidade contínua.
 - **Portais Governamentais Adicionais:** A estrutura da Sefaz SP é hardcoded e delicada. Expandir de cara para MT, PR, RJ implicaria em muitos if/elses de parsers distintos.
 
 [↑ Voltar ao índice](#índice)
@@ -303,11 +322,13 @@ O histórico de localStorage é atualizado e o App renderiza a nova nota
 
 | Funcionalidade | Status | Observação |
 |---|---|---|
-| Escaneamento via Câmera/Upload | ✅ Estável | Depende de HTTPS |
-| Banco de dados Serverless (Supabase) | ✅ Concluído | App 100% Frontend |
+| Autenticação Simples | ✅ Estável | Usa `Supabase Auth` e bloqueia acesso do App |
+| Banco Seguro (Multi-inquilino) | ✅ Estável | Controle de Acesso Restrito via Supabase RLS |
+| Escaneamento via Câmera/Upload | ✅ Estável | Depende de HTTPS para rodar |
+| Banco de dados Serverless | ✅ Concluído | App 100% Frontend |
 | Instalação PWA | ✅ Concluído | Falta gerar e customizar imagens na pasta `public/` caso necessário |
 | Fetch Sefaz Frontend-only | ✅ Estável | Dependência do `corsproxy.io` funcionar |
-| Histórico de Preços e Exportações | ✅ Estável | Comunica muito bem com o DB novo |
+| Histórico de Preços | ✅ Estável | Comunica muito bem com o DB novo |
 
 [↑ Voltar ao índice](#índice)
 
