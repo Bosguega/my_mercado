@@ -31,6 +31,7 @@ export default defineConfig(({ mode }) => {
       useBasicSsl ? basicSsl() : null,
       VitePWA({
         registerType: 'autoUpdate',
+        includeAssets: ['apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
         manifest: {
           name: 'My Mercado',
           short_name: 'Mercado',
@@ -38,6 +39,8 @@ export default defineConfig(({ mode }) => {
           theme_color: '#ffffff',
           background_color: '#ffffff',
           display: 'standalone',
+          start_url: '/',
+          scope: '/',
           icons: [
              {
               src: 'pwa-192x192.png',
@@ -48,6 +51,7 @@ export default defineConfig(({ mode }) => {
               src: 'pwa-512x512.png',
               sizes: '512x512',
               type: 'image/png',
+              purpose: 'any maskable',
             }
           ]
         }
