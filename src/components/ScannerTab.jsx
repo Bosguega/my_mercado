@@ -444,7 +444,7 @@ function ScannerTab({
           position: "relative"
         }}
       >
-        <video
+         <video
            id="reader-video"
            style={{
              width: "100%",
@@ -452,7 +452,6 @@ function ScannerTab({
              display: "block",
              objectFit: "cover",
              minHeight: "300px",
-             transform: "scaleX(-1)", /* opcional para efeito espelho frontal, mas back camera não precisa */
            }}
         />
         <div style={{
