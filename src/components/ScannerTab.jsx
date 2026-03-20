@@ -431,17 +431,45 @@ function ScannerTab({
       )}
 
       <div
-        id="reader"
         className="scanner-container"
         style={{
           display: scanning ? "block" : "none",
-          minHeight: "300px",
           background: "#000",
           borderRadius: "1rem",
           overflow: "hidden",
           border: "2px solid var(--primary)",
+          width: "100%",
+          maxWidth: "500px",
+          margin: "0 auto",
+          position: "relative"
         }}
-      ></div>
+      >
+        <video
+           id="reader-video"
+           style={{
+             width: "100%",
+             height: "auto",
+             display: "block",
+             objectFit: "cover",
+             minHeight: "300px",
+             transform: "scaleX(-1)", /* opcional para efeito espelho frontal, mas back camera não precisa */
+           }}
+        />
+        <div style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: "220px",
+          height: "220px",
+          border: "2px solid var(--success)",
+          borderRadius: "1rem",
+          boxShadow: "0 0 0 4000px rgba(15, 23, 42, 0.7)",
+          pointerEvents: "none"
+        }}>
+           <div style={{ position: "absolute", top: -25, width: "100%", textAlign: "center", color: "#fff", fontSize: "0.85rem", fontWeight: "bold" }}>Alinhe o QR Code</div>
+        </div>
+      </div>
 
       {loading && (
         <>

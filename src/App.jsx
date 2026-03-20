@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Html5Qrcode } from "html5-qrcode";
+import { BrowserMultiFormatReader, DecodeHintType } from "@zxing/library";
 import { Scan, History as HistoryIcon, Search, LogOut } from "lucide-react";
 import { parseNFCeSP } from "./services/receiptParser";
 import SearchTab from "./components/SearchTab";
@@ -25,7 +25,7 @@ function App() {
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState(null);
   const [duplicateReceipt, setDuplicateReceipt] = useState(null);
-  const qrCodeRef = useRef(null);
+  const codeReaderRef = useRef(null);
 
   // Manual Mode State
   const [manualMode, setManualMode] = useState(false);
@@ -191,13 +191,13 @@ function App() {
   };
 
   const stopCamera = async () => {
-    if (qrCodeRef.current) {
+    if (codeReaderRef.current) {
       try {
-        await qrCodeRef.current.stop();
+        codeReaderRef.current.reset();
       } catch (err) {
         console.warn("Erro ao parar câmera:", err);
       } finally {
-        qrCodeRef.current = null;
+        codeReaderRef.current = null;
         setScanning(false);
       }
     }
@@ -206,26 +206,36 @@ function App() {
   const startCamera = async () => {
     if (scanning || loading) return;
     setScanning(true);
-    setTimeout(() => {
+    
+    setTimeout(async () => {
       try {
-        const scanner = new Html5Qrcode("reader");
-        qrCodeRef.current = scanner;
-        scanner
-          .start(
-            { facingMode: "environment" },
-            { fps: 12, qrbox: { width: 250, height: 250 } },
-            (text) => {
-              stopCamera();
-              handleScanSuccess(text);
-            },
-            () => {},
-          )
-          .catch(() => {
-            setScanning(false);
-            toast.error("Câmera não disponível. Verifique as permissões ou se o site usa HTTPS.");
-          });
-      } catch {
+        const hints = new Map();
+        hints.set(DecodeHintType.TRY_HARDER, true);
+
+        const codeReader = new BrowserMultiFormatReader(hints);
+        codeReaderRef.current = codeReader;
+
+        const constraints = {
+          audio: false,
+          video: {
+            facingMode: "environment",
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          }
+        };
+
+        // decodeFromConstraints aceita (constraints, videoElementId, callbackFn)
+        await codeReader.decodeFromConstraints(constraints, "reader-video", (result, error) => {
+          if (result) {
+            const text = result.getText();
+            stopCamera();
+            handleScanSuccess(text);
+          }
+        });
+      } catch (err) {
         setScanning(false);
+        toast.error("Câmera não disponível. Verifique as permissões ou se o site usa HTTPS.");
+        console.error("Camera fail:", err);
       }
     }, 150);
   };
@@ -235,10 +245,19 @@ function App() {
     if (!file) return;
     setLoading(true);
     try {
-      const scanner = new Html5Qrcode("reader");
-      const text = await scanner.scanFile(file, true);
-      await handleScanSuccess(text);
-    } catch {
+      const hints = new Map();
+      hints.set(DecodeHintType.TRY_HARDER, true);
+      const codeReader = new BrowserMultiFormatReader(hints);
+
+      const imageUrl = URL.createObjectURL(file);
+      const result = await codeReader.decodeFromImageUrl(imageUrl);
+      
+      if (result) {
+        await handleScanSuccess(result.getText());
+      } else {
+        throw new Error("Não detectado");
+      }
+    } catch (err) {
       toast.error("QR Code não detectado na imagem.");
       setLoading(false);
     }
@@ -339,14 +358,12 @@ function App() {
   };
 
   useEffect(() => {
-    if (tab !== "scan" && qrCodeRef.current) {
-      qrCodeRef.current
-        .stop()
-        .catch(() => {})
-        .finally(() => {
-          qrCodeRef.current = null;
-          setScanning(false);
-        });
+    if (tab !== "scan" && codeReaderRef.current) {
+      try {
+        codeReaderRef.current.reset();
+      } catch(e) {}
+      codeReaderRef.current = null;
+      setScanning(false);
     }
   }, [tab]);
 
