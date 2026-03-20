@@ -7,7 +7,7 @@ import HistoryTab from "./components/HistoryTab";
 import ScannerTab from "./components/ScannerTab";
 import Login from "./components/Login";
 import { Toaster, toast } from "react-hot-toast";
-import { getAllReceiptsFromDB, insertReceiptToDB, deleteReceiptFromDB } from "./services/dbMethods";
+import { getAllReceiptsFromDB, upsertReceiptToDB, deleteReceiptFromDB } from "./services/dbMethods";
 import { logout } from "./services/auth";
 import { supabase } from "./services/supabaseClient";
 import "./index.css";
@@ -134,7 +134,7 @@ function App() {
     localStorage.setItem("@MyMercado:receipts", JSON.stringify(newList));
 
     try {
-      await insertReceiptToDB(newReceipt);
+      await upsertReceiptToDB(newReceipt);
       setDuplicateReceipt(null);
       setError(null);
       return true;
