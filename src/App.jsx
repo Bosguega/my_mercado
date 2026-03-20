@@ -9,7 +9,7 @@ import Login from "./components/Login";
 import { Toaster, toast } from "react-hot-toast";
 import { getAllReceiptsFromDB, upsertReceiptToDB, deleteReceiptFromDB } from "./services/dbMethods";
 import { logout } from "./services/auth";
-import { supabase } from "./services/supabaseClient";
+import { isSupabaseConfigured, supabase } from "./services/supabaseClient";
 import "./index.css";
 
 function App() {
@@ -64,6 +64,11 @@ function App() {
   useEffect(() => {
     const storedTab = localStorage.getItem("@MyMercado:tab");
     if (storedTab) setTab(storedTab);
+
+    if (!supabase) {
+      setAuthLoading(false);
+      return;
+    }
 
     // Initial session fetch
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -344,6 +349,30 @@ function App() {
         });
     }
   }, [tab]);
+
+  if (!isSupabaseConfigured) {
+    return (
+      <div className="app-container" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", padding: "1.5rem" }}>
+        <div className="glass-card" style={{ maxWidth: "720px", width: "100%" }}>
+          <h2 style={{ color: "#fff", marginBottom: "0.75rem" }}>Configuração necessária</h2>
+          <p style={{ color: "#94a3b8", lineHeight: "1.6", marginBottom: "1rem" }}>
+            Este deploy não tem o Supabase configurado. Para publicar no GitHub Pages, defina as variáveis
+            <strong style={{ color: "#e2e8f0" }}> VITE_SUPABASE_URL</strong> e
+            <strong style={{ color: "#e2e8f0" }}> VITE_SUPABASE_ANON_KEY</strong> como <strong style={{ color: "#e2e8f0" }}>Secrets</strong> do repositório.
+          </p>
+          <div style={{ color: "#94a3b8", lineHeight: "1.6" }}>
+            <p style={{ marginBottom: "0.5rem" }}><strong style={{ color: "#e2e8f0" }}>Passo a passo:</strong></p>
+            <ol style={{ paddingLeft: "1.25rem", margin: 0 }}>
+              <li>GitHub → Settings → Secrets and variables → Actions → New repository secret</li>
+              <li>Crie <code>VITE_SUPABASE_URL</code> e <code>VITE_SUPABASE_ANON_KEY</code></li>
+              <li>Vá em Actions e aguarde o workflow “Deploy to GitHub Pages” rodar novamente</li>
+              <li>Depois, limpe o cache do site (Application → Clear storage) se ainda ficar em branco</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (authLoading) {
     return (

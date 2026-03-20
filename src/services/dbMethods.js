@@ -1,8 +1,16 @@
 import { supabase } from './supabaseClient'
 
+function requireSupabase() {
+  if (!supabase) {
+    throw new Error("Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.")
+  }
+  return supabase
+}
+
 // 🔐 Centraliza auth (evita repetir código)
 async function getUserOrThrow() {
-  const { data, error } = await supabase.auth.getUser()
+  const client = requireSupabase()
+  const { data, error } = await client.auth.getUser()
   if (error || !data?.user) {
     throw new Error("Usuário não autenticado")
   }
@@ -13,7 +21,8 @@ async function getUserOrThrow() {
 export async function getAllReceiptsFromDB() {
   await getUserOrThrow() // só garante sessão
 
-  const { data, error } = await supabase
+  const client = requireSupabase()
+  const { data, error } = await client
     .from('receipts')
     .select('*')
     .order('created_at', { ascending: false })
@@ -32,7 +41,8 @@ export async function getAllReceiptsFromDB() {
 export async function upsertReceiptToDB(receipt) {
   await getUserOrThrow()
 
-  const { error } = await supabase
+  const client = requireSupabase()
+  const { error } = await client
     .from('receipts')
     .upsert([{
       id: receipt.id,
@@ -50,7 +60,8 @@ export async function upsertReceiptToDB(receipt) {
 export async function deleteReceiptFromDB(id) {
   await getUserOrThrow()
 
-  const { error } = await supabase
+  const client = requireSupabase()
+  const { error } = await client
     .from('receipts')
     .delete()
     .eq('id', id)
@@ -72,7 +83,8 @@ export async function restoreReceiptsToDB(receipts) {
     items_json: r.items
   }))
 
-  const { error: insertError } = await supabase
+  const client = requireSupabase()
+  const { error: insertError } = await client
     .from('receipts')
     .upsert(rows)
 
