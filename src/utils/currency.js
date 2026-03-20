@@ -6,7 +6,18 @@
  */
 export function parseBRL(value) {
   if (value === null || value === undefined || value === '') return 0;
+  
+  // Se já for um número, não mexe
+  if (typeof value === 'number') return value;
+  
   const cleaned = String(value).replace(/[^\d.,]/g, '');
+
+  // Se não tem vírgula, e tem ponto, provavelmete é o formato decimal americano ("12.34")
+  if (!cleaned.includes(',') && cleaned.includes('.')) {
+    const num = parseFloat(cleaned);
+    return Number.isNaN(num) ? 0 : num;
+  }
+
   // Remove thousand separators (dots) then replace decimal comma with dot
   const normalized = cleaned.replace(/\./g, '').replace(',', '.');
   const num = parseFloat(normalized);
