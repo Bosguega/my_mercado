@@ -13,6 +13,23 @@ export default defineConfig(({ mode }) => {
   const sslCertPath = env.VITE_SSL_CERT_PATH;
   const sslKeyPath = env.VITE_SSL_KEY_PATH;
 
+  const normalizeBase = (value) => {
+    if (!value) return undefined;
+    let base = value.trim();
+    if (!base) return undefined;
+    if (!base.startsWith('/')) base = `/${base}`;
+    if (!base.endsWith('/')) base += '/';
+    return base;
+  };
+
+  const baseOverride = normalizeBase(env.VITE_BASE_URL);
+  const githubRepo = process.env.GITHUB_REPOSITORY?.split('/')[1];
+  const isGitHubPagesBuild =
+    process.env.GITHUB_ACTIONS === 'true' &&
+    Boolean(githubRepo) &&
+    !githubRepo.endsWith('.github.io');
+  const base = baseOverride ?? (isGitHubPagesBuild ? `/${githubRepo}/` : '/');
+
   let https;
   if (sslCertPath && sslKeyPath) {
     https = {
@@ -26,6 +43,7 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
+    base,
     plugins: [
       react(), 
       useBasicSsl ? basicSsl() : null,
@@ -39,8 +57,8 @@ export default defineConfig(({ mode }) => {
           theme_color: '#ffffff',
           background_color: '#ffffff',
           display: 'standalone',
-          start_url: '/',
-          scope: '/',
+          start_url: base,
+          scope: base,
           icons: [
              {
               src: 'pwa-192x192.png',
