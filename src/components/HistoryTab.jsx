@@ -16,9 +16,12 @@ import { parseBRL } from "../utils/currency";
 // Moved to module scope: evita recriação a cada par comparado no sort
 const parseDate = (d) => {
   if (!d) return new Date(0);
-  const parts = d.split(" ");
-  const dateParts = parts[0].split("/");
-  if (dateParts.length < 3) return new Date(0);
+  const parts = typeof d === 'string' ? d.split(" ") : [];
+  const dateParts = (parts[0] || "").split("/");
+  if (dateParts.length < 3) {
+    const fallback = new Date(d);
+    return isNaN(fallback.getTime()) ? new Date(0) : fallback;
+  }
   const year = parseInt(dateParts[2], 10);
   const month = parseInt(dateParts[1], 10) - 1;
   const day = parseInt(dateParts[0], 10);
@@ -125,9 +128,18 @@ function HistoryTab({
 
       filtered = filtered.filter((receipt) => {
         // Converter data DD/MM/AAAA HH:mm:ss ou DD/MM/AAAA para Date de forma confiável
-        const dateParts = receipt.date.split(" ");
-        const [day, month, year] = dateParts[0].split("/");
-        const receiptDate = new Date(year, month - 1, day);
+        const dateParts = typeof receipt.date === 'string' ? receipt.date.split(" ") : [];
+        const [day, month, year] = (dateParts[0] || "").split("/");
+        let receiptDate;
+        
+        if (day && month && year && day.length <= 2 && month.length <= 2 && year.length === 4) {
+          receiptDate = new Date(year, month - 1, day);
+        } else {
+          receiptDate = new Date(receipt.date);
+        }
+        
+        if (isNaN(receiptDate.getTime())) receiptDate = new Date(0);
+
         receiptDate.setHours(0, 0, 0, 0); // Normalizar hora para meia-noite
 
         let passes = false;

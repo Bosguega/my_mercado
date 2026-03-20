@@ -75,7 +75,9 @@ export async function parseNFCeSP(url) {
       if (p) {
         accessKey = p.split("|")[0];
       }
-    } catch {}
+    } catch {
+      // Ignore URL parsing errors
+    }
 
     return {
       id: accessKey || Date.now().toString(),

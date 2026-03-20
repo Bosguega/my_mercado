@@ -104,13 +104,14 @@ function SearchTab({
     });
 
     const sortedDates = Array.from(allDates).sort((a, b) => {
-      const dA = a.split("/");
-      const dB = b.split("/");
-      if (dA.length < 3 || dB.length < 3) return 0;
-      return (
-        new Date(dA[2], dA[1] - 1, dA[0]).getTime() -
-        new Date(dB[2], dB[1] - 1, dB[0]).getTime()
-      );
+      const getTime = (dateStr) => {
+        if (dateStr.includes("/")) {
+          const parts = dateStr.split("/");
+          return new Date(parts[2], parts[1] - 1, parts[0]).getTime();
+        }
+        return new Date(dateStr).getTime();
+      };
+      return getTime(a) - getTime(b);
     });
 
     const chartData = sortedDates.map((dateStr) => {

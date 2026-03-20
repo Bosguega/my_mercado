@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { login, register } from '../services/auth';
 import { toast } from 'react-hot-toast';
+import PropTypes from 'prop-types';
 
 export default function Login({ setSessionUser }) {
   const [email, setEmail] = useState('');
@@ -86,3 +87,7 @@ export default function Login({ setSessionUser }) {
     </div>
   );
 }
+
+Login.propTypes = {
+  setSessionUser: PropTypes.func.isRequired,
+};
