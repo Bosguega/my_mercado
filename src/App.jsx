@@ -225,7 +225,7 @@ function App() {
         };
 
         // decodeFromConstraints aceita (constraints, videoElementId, callbackFn)
-        await codeReader.decodeFromConstraints(constraints, "reader-video", (result, error) => {
+        await codeReader.decodeFromConstraints(constraints, "reader-video", (result) => {
           if (result) {
             const text = result.getText();
             stopCamera();
@@ -257,7 +257,7 @@ function App() {
       } else {
         throw new Error("Não detectado");
       }
-    } catch (err) {
+    } catch {
       toast.error("QR Code não detectado na imagem.");
       setLoading(false);
     }
@@ -361,7 +361,9 @@ function App() {
     if (tab !== "scan" && codeReaderRef.current) {
       try {
         codeReaderRef.current.reset();
-      } catch(e) {}
+      } catch {
+        // ignore
+      }
       codeReaderRef.current = null;
       setScanning(false);
     }
@@ -444,6 +446,7 @@ function App() {
             scanning={scanning}
             error={error}
             currentReceipt={currentReceipt}
+            handleUrlSubmit={handleScanSuccess}
             setCurrentReceipt={setCurrentReceipt}
           />
         )}

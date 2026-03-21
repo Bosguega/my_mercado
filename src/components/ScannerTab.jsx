@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Scan,
   Camera,
@@ -7,6 +8,7 @@ import {
   Save,
   Plus,
   X,
+  Link as LinkIcon,
 } from "lucide-react";
 import PropTypes from "prop-types";
 import { toast } from "react-hot-toast";
@@ -71,7 +73,20 @@ function ScannerTab({
   error,
   currentReceipt,
   setCurrentReceipt,
+  handleUrlSubmit,
 }) {
+  const [pasteMode, setPasteMode] = useState(false);
+  const [pastedUrl, setPastedUrl] = useState("");
+
+  const handleLinkSubmit = () => {
+    if (!pastedUrl.trim()) {
+      toast.error("Cole um link válido");
+      return;
+    }
+    handleUrlSubmit(pastedUrl.trim());
+    setPastedUrl("");
+    setPasteMode(false);
+  };
   const handleAddManualItem = () => {
     if (!manualItem.name?.trim() || !manualItem.unitPrice) {
       toast.error("Preencha nome e preço do item");
@@ -378,6 +393,45 @@ function ScannerTab({
             </label>
           </div>
 
+          <div style={{ marginBottom: "1rem" }}>
+            {!pasteMode ? (
+              <button
+                className="btn"
+                style={{
+                  width: "100%",
+                  height: "50px",
+                  background: "rgba(59, 130, 246, 0.1)",
+                  border: "1px solid rgba(59, 130, 246, 0.2)",
+                  color: "var(--primary)",
+                }}
+                onClick={() => setPasteMode(true)}
+                disabled={loading || scanning}
+              >
+                <LinkIcon size={18} />
+                Colar Link da Nota
+              </button>
+            ) : (
+              <div className="glass-card" style={{ padding: "1rem", background: "rgba(15, 23, 42, 0.4)" }}>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <input
+                    type="text"
+                    className="search-input"
+                    placeholder="Cole a URL da NFC-e aqui..."
+                    value={pastedUrl}
+                    onChange={(e) => setPastedUrl(e.target.value)}
+                    autoFocus
+                  />
+                  <button className="btn btn-success" onClick={handleLinkSubmit} style={{ padding: "0 1rem" }}>
+                    <Plus size={20} />
+                  </button>
+                  <button className="btn" onClick={() => setPasteMode(false)} style={{ padding: "0 1rem", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.2)", color: "#f87171" }}>
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             className="btn"
             style={{
@@ -615,6 +669,7 @@ ScannerTab.propTypes = {
     items: PropTypes.arrayOf(PropTypes.object),
   }),
   setCurrentReceipt: PropTypes.func.isRequired,
+  handleUrlSubmit: PropTypes.func.isRequired,
 };
 
 export default ScannerTab;
