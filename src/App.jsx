@@ -121,25 +121,39 @@ function App() {
   };
 
   const saveReceipt = async (receipt, forceReplace = false) => {
-    // Check for duplicates
-    const existingReceipt = savedReceipts.find((r) => r.id === receipt.id);
-    if (existingReceipt && !forceReplace) {
+    const receiptId = receipt.id || Date.now().toString();
+    
+    // Verificamos duplicação usando o estado mais atualizado
+    let isDuplicate = false;
+    setSavedReceipts(prev => {
+      const existing = prev.find(r => r.id === receiptId);
+      if (existing && !forceReplace) {
+        isDuplicate = true;
+      }
+      return prev;
+    });
+
+    if (isDuplicate && !forceReplace) {
+      const existing = savedReceipts.find(r => r.id === receiptId);
       setDuplicateReceipt(receipt);
       toast.warning(
-        `Esta nota já está no seu histórico desde ${existingReceipt.date.split(" ")[0]}`,
+        `Esta nota já está no seu histórico desde ${existing ? existing.date.split(" ")[0] : "recentemente"}`,
       );
       return false;
     }
 
-    const newReceipt = { id: receipt.id || Date.now().toString(), ...receipt };
-    // Filtrar o antigo antes de adicionar o novo (evita duplicatas ao forçar substituição)
-    const filteredList = savedReceipts.filter((r) => r.id !== newReceipt.id);
-    const newList = [newReceipt, ...filteredList];
-    setSavedReceipts(newList);
-    localStorage.setItem("@MyMercado:receipts", JSON.stringify(newList));
+    const newReceipt = { ...receipt, id: receiptId };
 
     try {
       await upsertReceiptToDB(newReceipt);
+      
+      setSavedReceipts((prev) => {
+        const filtered = prev.filter((r) => r.id !== newReceipt.id);
+        const newList = [newReceipt, ...filtered];
+        localStorage.setItem("@MyMercado:receipts", JSON.stringify(newList));
+        return newList;
+      });
+
       setDuplicateReceipt(null);
       setError(null);
       return true;

@@ -394,7 +394,7 @@ function HistoryTab({
         }}
       >
         <h2 style={{ color: "#e2e8f0", fontSize: "1.4rem" }}>
-          📊 Histórico de Compras
+          📊 Histórico de Compras ({finalFilteredReceipts.length} {finalFilteredReceipts.length === 1 ? 'nota' : 'notas'})
         </h2>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           {/* Restore Button (Hidden file input) */}

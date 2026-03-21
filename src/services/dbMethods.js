@@ -26,6 +26,7 @@ export async function getAllReceiptsFromDB() {
     .from('receipts')
     .select('*')
     .order('created_at', { ascending: false })
+    .limit(2000)
 
   if (error) throw error
 
