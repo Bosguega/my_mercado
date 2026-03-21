@@ -123,21 +123,13 @@ function App() {
   const saveReceipt = async (receipt, forceReplace = false) => {
     const receiptId = receipt.id || Date.now().toString();
     
-    // Verificamos duplicação usando o estado mais atualizado
-    let isDuplicate = false;
-    setSavedReceipts(prev => {
-      const existing = prev.find(r => r.id === receiptId);
-      if (existing && !forceReplace) {
-        isDuplicate = true;
-      }
-      return prev;
-    });
-
-    if (isDuplicate && !forceReplace) {
-      const existing = savedReceipts.find(r => r.id === receiptId);
+    // Verificamos duplicação contra o estado atual da memória
+    const existing = savedReceipts.find(r => r.id === receiptId);
+    
+    if (existing && !forceReplace) {
       setDuplicateReceipt(receipt);
       toast.warning(
-        `Esta nota já está no seu histórico desde ${existing ? existing.date.split(" ")[0] : "recentemente"}`,
+        `Esta nota já está no seu histórico desde ${existing.date.split(" ")[0]}`,
       );
       return false;
     }
@@ -477,6 +469,7 @@ function App() {
             setExpandedReceipts={setExpandedReceipts}
             deleteReceipt={deleteReceipt}
             loading={historyLoading}
+            loadReceipts={loadReceipts}
           />
         )}
 

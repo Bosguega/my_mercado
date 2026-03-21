@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   History,
   Trash2,
@@ -10,8 +11,9 @@ import {
 } from "lucide-react";
 import PropTypes from "prop-types";
 import { toast } from "react-hot-toast";
-import { restoreReceiptsToDB } from "../services/dbMethods";
+import { restoreReceiptsToDB, getAllReceiptsFromDB } from "../services/dbMethods";
 import { parseBRL } from "../utils/currency";
+import { supabase } from "../services/supabaseClient";
 
 // Moved to module scope: evita recriação a cada par comparado no sort
 const parseDate = (d) => {
@@ -95,7 +97,17 @@ function HistoryTab({
   setExpandedReceipts,
   deleteReceipt,
   loading,
+  loadReceipts,
 }) {
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    if (supabase) {
+      supabase.auth.getUser().then(({ data }) => {
+        setCurrentUser(data?.user);
+      });
+    }
+  }, []);
   const filteredReceipts = historyFilter.trim()
     ? savedReceipts.filter((receipt) =>
         receipt.establishment
@@ -393,10 +405,40 @@ function HistoryTab({
           flexWrap: "wrap",
         }}
       >
-        <h2 style={{ color: "#e2e8f0", fontSize: "1.4rem" }}>
-          📊 Histórico de Compras ({finalFilteredReceipts.length} {finalFilteredReceipts.length === 1 ? 'nota' : 'notas'})
-        </h2>
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+        <div style={{ flex: 1 }}>
+          <h2 style={{ color: "#e2e8f0", fontSize: "1.4rem", marginBottom: "4px" }}>
+            📊 Histórico ({finalFilteredReceipts.length} de {savedReceipts.length})
+          </h2>
+          {currentUser && (
+            <div style={{ fontSize: "0.7rem", color: "#64748b" }}>
+               ID: {currentUser.id.slice(0, 8)}...
+            </div>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+          {/* Sync/Reload Button */}
+          <button
+            onClick={loadReceipts}
+            className="btn"
+            style={{
+              padding: "0.6rem 1.2rem",
+              background: "rgba(148, 163, 184, 0.1)",
+              border: "1px solid rgba(148, 163, 184, 0.2)",
+              color: "#94a3b8",
+              cursor: "pointer",
+              borderRadius: "8px",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              fontSize: "0.9rem",
+              fontWeight: "500",
+            }}
+            title="Sincronizar com banco de dados"
+            disabled={loading}
+          >
+            <History size={18} className={loading ? "spin" : ""} />
+            Sincronizar
+          </button>
           {/* Restore Button (Hidden file input) */}
           <input
             type="file"
@@ -933,6 +975,7 @@ HistoryTab.propTypes = {
   setExpandedReceipts: PropTypes.func.isRequired,
   deleteReceipt: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired,
+  loadReceipts: PropTypes.func.isRequired,
 };
 
 export default HistoryTab;

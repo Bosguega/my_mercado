@@ -42,6 +42,8 @@ export async function getAllReceiptsFromDB() {
 export async function upsertReceiptToDB(receipt) {
   await getUserOrThrow()
 
+  const user = await getUserOrThrow()
+
   const client = requireSupabase()
   const { error } = await client
     .from('receipts')
@@ -49,8 +51,8 @@ export async function upsertReceiptToDB(receipt) {
       id: receipt.id,
       establishment: receipt.establishment,
       date: receipt.date,
-      items_json: receipt.items
-      // ❌ sem user_id → banco preenche via auth.uid()
+      items_json: receipt.items,
+      user_id: user.id
     }])
 
   if (error) throw error
@@ -73,7 +75,7 @@ export async function deleteReceiptFromDB(id) {
 
 // 🔄 RESTORE (melhorado)
 export async function restoreReceiptsToDB(receipts) {
-  await getUserOrThrow()
+  const user = await getUserOrThrow()
 
   // ⚠️ Estratégia mais segura:
   // 1. Inserir primeiro
@@ -81,7 +83,8 @@ export async function restoreReceiptsToDB(receipts) {
     id: r.id,
     establishment: r.establishment,
     date: r.date,
-    items_json: r.items
+    items_json: r.items,
+    user_id: user.id
   }))
 
   const client = requireSupabase()
