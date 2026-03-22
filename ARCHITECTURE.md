@@ -37,18 +37,20 @@ O usuário escaneia o QR Code de notas fiscais eletrônicas brasileiras (NFC-e),
 graph TD
     UI["Interface React (PWA)"]
     App["App.jsx — Orquestrador"]
-    Services["Camadas de Serviço (Supabase & Parsers)"]
-    CorsProxy["corsproxy.io (Proxy Público)"]
-    Sefaz["Sefaz SP (externo)"]
-    Supabase["Supabase (PostgreSQL Nuvem)"]
-    LocalStorage["localStorage (fallback offline)"]
+    Pipeline["Pipeline (productService.js)"]
+    Services["Conversão Sefaz (receiptParser.js)"]
+    AI["IA — Google Gemini / OpenAI (BYOK)"]
+    Dictionary["Tabela product_dictionary (Cache)"]
+    Supabase["Supabase (Relacional: receipts, items)"]
+    LocalStorage["localStorage (API Key & Fallback)"]
 
     UI --> App
-    App --> Services
+    App --> Pipeline
+    Pipeline --> Services
+    Pipeline --> Dictionary
+    Pipeline --> AI
     App --> LocalStorage
-    Services -- "Consultas" --> Supabase
-    Services -- "Requisição HTML" --> CorsProxy
-    CorsProxy --> Sefaz
+    Pipeline -- "Persistência" --> Supabase
 ```
 
 A regra principal de dependência é:
@@ -71,17 +73,17 @@ Arquivo principal: `src/App.jsx` — funções `saveReceipt`, `deleteReceipt`, `
 Fluxo de escaneamento:
 
 ```
-Usuário aponta câmera para o QR Code
+Usuário aponta câmera para o QR Code (ou cola link)
 ↓
-html5-qrcode decodifica a URL da NFC-e
+receiptParser.js extrai os itens brutos do HTML da Sefaz (via corsproxy.io)
 ↓
-receiptParser.js envia a URL via corsproxy.io
+productService.js (Pipeline): normaliza chaves e busca no Dicionário local
 ↓
-O HTML retornado é mastigado nativamente com DOMParser
+Itens desconhecidos são enviados em lote para a IA (Gemini 2.5 Flash Lite) via BYOK
 ↓
-Itens e dados do estabelecimento são retornados
+Dicionário é atualizado com novos nomes e categorias aprendidos
 ↓
-App.jsx verifica duplicata, salva no Supabase (dbMethods) e espelha no localStorage
+dbMethods.js persiste a nota em 'receipts' e itens em 'items' (Relacional)
 ```
 
 ---
@@ -98,22 +100,20 @@ A estrutura antiga em SQLite foi completamente suprimida a favor do Supabase (Ba
 
 ---
 
-## 4. Comparação de Preços
-
-Todos os itens de todas as notas são achatados em uma lista única para permitir busca e comparação de preços ao longo do tempo.
+Todos os itens são armazenados individualmente na tabela `items`. Isso permite uma normalização poderosa via IA, onde um item "ARROZ TIO JOAO 5KG" é vinculado a uma chave única, permitindo rastrear o menor preço de "Arroz" independente da variação do nome na nota.
 
 Arquivo principal: `src/components/SearchTab.jsx`
 Apoio: `src/utils/currency.js`
 
 Fluxo:
 ```
-Usuário digita nome do produto
+Usuário digita nome ou categoria
 ↓
-Itens de todas as notas do banco em nuvem são filtrados localmente
+Busca filtrada na tabela 'items' vinculada à 'receipts'
 ↓
-Resultados agrupados por nome do produto
+Agrupamento por 'normalized_key'
 ↓
-Gráfico de tendência de preço exibido (Recharts)
+Gráfico de tendência de preço e histórico exibido
 ```
 
 [↑ Voltar ao índice](#índice)
@@ -129,24 +129,27 @@ my_mercado/
 │
 ├── public/                     # Assets estáticos e ícones do PWA
 ├── src/                        # Frontend React (Vite)
-│   ├── components/             # Componentes de interface por aba
-│   │   ├── ScannerTab.jsx      # Escaneamento QR, upload e entrada manual
-│   │   ├── HistoryTab.jsx      # Histórico, filtros, export CSV e backup JSON
-│   │   └── SearchTab.jsx       # Pesquisa de itens e gráfico de preços
+│   ├── components/
+│   │   ├── ApiKeyModal.jsx     # Configuração de chave própria (BYOK)
+│   │   ├── ScannerTab.jsx      
+│   │   ├── HistoryTab.jsx      
+│   │   └── SearchTab.jsx       
+│   │
+│   ├── hooks/
+│   │   └── useApiKey.js        # Hook para gestão de estado da Key/IA
 │   │
 │   ├── services/
-│   │   ├── supabaseClient.js   # Instância do cliente Supabase
-│   │   ├── dbMethods.js        # Wrapper de operações do banco (CRUD)
-│   │   └── receiptParser.js    # Decodificação do HTML da Sefaz
+│   │   ├── productService.js   # Pipeline de IA, Dicionário e Normalização
+│   │   ├── dbMethods.js        # Persistência Relacional (CRUD)
+│   │   ├── receiptParser.js    # Decodificação do HTML da Sefaz
+│   │   └── auth.js             # Lógica Supabase Auth
 │   │
 │   ├── utils/
+│   │   ├── aiConfig.js         # Persistência local da API Key
 │   │   └── currency.js         # Parsing e formatação BRL
 │   │
-│   ├── config.js               # Legado ou utilitários config
-│   ├── App.jsx                 # Orquestrador: estado global e lógica
-│   ├── main.jsx                # Entry point
-│   └── index.css               # Design tokens
-│
+│   ├── App.jsx                 # Orquestrador global
+│   └── index.css               # Design System
 ├── .env                        # Chaves e URLs do Supabase (VITE_SUPABASE_...)
 ├── index.html                  # Entry point HTML & PWA manifest link
 └── vite.config.js              # Configuração Vite & vite-plugin-pwa
@@ -200,15 +203,34 @@ graph TD
 **Schema Supabase (Nuvem)** com RLS e Autenticação Atrelada:
 
 ```sql
+-- Tabela de Notas
 create table public.receipts (
   id text primary key,
   establishment text,
-  date text,
-  items_json jsonb,
+  date timestamp,
   user_id uuid references auth.users(id) default auth.uid() not null,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+  created_at timestamp with time zone default now() not null
 );
 
+-- Tabela de Itens (Relacional)
+create table public.items (
+  id uuid primary key default gen_random_uuid(),
+  receipt_id text references receipts(id) on delete cascade,
+  name text,
+  normalized_key text,
+  normalized_name text,
+  category text,
+  quantity numeric,
+  unit text,
+  price numeric
+);
+
+-- Tabela de Dicionário (Cache de IA)
+create table public.product_dictionary (
+  key text primary key,
+  normalized_name text,
+  category text
+);
 alter table public.receipts enable row level security;
 
 create policy "Usuário vê as próprias notas" 
@@ -229,7 +251,7 @@ on public.receipts for delete
 using (auth.uid() = user_id);
 ```
 
-> **Atenção:** Os dados inseridos no banco são protegidos de forma segura e estrita usando Políticas de Segurança por Nível de Linha (RLS), garantindo a isolação entre inquilinos onde o Supabase injeta o `default auth.uid()` com o valor associado ao JWT. Em código web, os valores de `items_json` são serializados/deserializados pelo `dbMethods.js` para um array de objetos `Item { name, qty, unitPrice, total }`.
+> **Migração Relacional:** O campo `items_json` foi removido. Agora os itens são entidades independentes, o que permite consultas complexas de cross-shopping e análise de categorias. O sistema utiliza um pipeline de IA para garantir que itens com nomes diferentes (ex: "ARROZ TIO JOAO" e "ARROZ T. JOAO") sejam agrupados sob a mesma `normalized_key`.
 
 [↑ Voltar ao índice](#índice)
 
@@ -242,13 +264,11 @@ using (auth.uid() = user_id);
 | Quero alterar | Arquivo principal | Arquivo de apoio |
 |---|---|---|
 | Lógica de escaneamento da câmera | `src/App.jsx` | `src/components/ScannerTab.jsx` |
-| Autenticação (Login / Registro) | `src/components/Login.jsx` | `src/services/auth.js` |
+| Configuração de IA (BYOK) | `src/components/ApiKeyModal.jsx` | `src/utils/aiConfig.js` |
+| Processamento de Itens / IA | `src/services/productService.js` | `src/hooks/useApiKey.js` |
 | Scraping / Captura de dados da nota | `src/services/receiptParser.js` | — |
 | Comunicação com banco de dados | `src/services/dbMethods.js` | `src/services/supabaseClient.js` |
-| Entrada manual de nota | `src/components/ScannerTab.jsx` | `src/App.jsx` — `handleSaveManualReceipt` |
-| Filtros e ordenação do histórico | `src/components/HistoryTab.jsx` | `src/App.jsx` |
-| Restaurar de Backup JSON | `src/components/HistoryTab.jsx` | `src/services/dbMethods.js` |
-| Gráfico de tendência de preços | `src/components/SearchTab.jsx` | `src/utils/currency.js` |
+| Gráfico de tendência de preços | `src/components/SearchTab.jsx` | `src/services/dbMethods.js` |
 | Arquitetura PWA/Manifest | `vite.config.js` | `index.html` |
 
 [↑ Voltar ao índice](#índice)
@@ -261,17 +281,17 @@ using (auth.uid() = user_id);
 
 ## Escaneamento da NFC-e
 ```
-Câmera → URL Sefaz decodificada
+Câmera ou Link → itens extraídos via receiptParser.js
 ↓
-receiptParser.js faz fetch em `https://corsproxy.io/?url...`
+productService.js: os itens são normalizados (remoção de KG, UN, etc)
 ↓
-Navegador processa o HTML com DOMParser nativo e filtra o conteúdo da nota
+Consulta ao product_dictionary via Supabase para identificar itens conhecidos
 ↓
-App.jsx verifica duplicatas em memória
+Itens desconhecidos são enviados em lote (max 10) para Google Gemini via BYOK
 ↓
-dbMethods.js executa 'upsert' no Supabase
+Novas categorizações são salvas no dicionário (aprendizagem contínua)
 ↓
-O histórico de localStorage é atualizado e o App renderiza a nova nota
+Nota é salva no banco relacional (receipts + items)
 ```
 
 [↑ Voltar ao índice](#índice)
@@ -297,9 +317,10 @@ O histórico de localStorage é atualizado e o App renderiza a nova nota
 
 | Decisão | Alternativas consideradas | Motivo |
 |---|---|---|
-| Migração para Supabase / remoção do Node.js backend | SQLite + Express local, MongoDB Remoto | O plano tornou-se focar o aplicativo num poderoso PWA sem depender de um computador desktop rodando Node. Supabase atende gratuitamente bancos robustos de uso serverless direto no JS do PWA. |
-| Fetch via domínio `corsproxy.io` em vez de Backend Node | Edge Functions do Supabase, Cloudflare Workers | Maior facilidade imediata. Corta drasticamente a complexidade de deploy sem exigir setup extra além do banco de dados de notas. |
-| Vite PWA Plugin | Configuração manual de Service Workers | `vite-plugin-pwa` controla o caching e manifest de instalação `standalone` automaticamente durante o build com configuração absurdamente simples no `vite.config.js`. |
+| Migração Relacional (Adeus JSONB) | Guardar itens dentro da nota como JSON | O modelo JSONB dificultava buscas cross-nota (ex: "Qual o preço médio da maçã em todas as notas?"). O modelo relacional de `items` torna a pesquisa instantânea e rica. |
+| BYOK (Bring Your Own Key) | API Key fixa no servidor / Proxy | Como o app não tem backend centralizado, a abordagem BYOK (o usuário fornece sua chave Gemini/OpenAI) garante privacidade, custo zero para o desenvolvedor e longevidade do app. |
+| IA em Lote (Batching) | IA por item individual | Chamar a IA para cada item separadamente é lento e consome tokens de forma ineficiente. O pipeline agrupa itens desconhecidos em lotes de 10, reduzindo latência e custos. |
+| Dicionário como Cache | IA em cada scan | O dicionário evita chamar a IA para produtos já conhecidos, tornando o scan instantâneo para compras recorrentes. |
 
 [↑ Voltar ao índice](#índice)
 
@@ -322,13 +343,10 @@ O histórico de localStorage é atualizado e o App renderiza a nova nota
 
 | Funcionalidade | Status | Observação |
 |---|---|---|
-| Autenticação Simples | ✅ Estável | Usa `Supabase Auth` e bloqueia acesso do App |
-| Banco Seguro (Multi-inquilino) | ✅ Estável | Controle de Acesso Restrito via Supabase RLS |
-| Escaneamento via Câmera/Upload | ✅ Estável | Depende de HTTPS para rodar |
-| Banco de dados Serverless | ✅ Concluído | App 100% Frontend |
-| Instalação PWA | ✅ Concluído | Falta gerar e customizar imagens na pasta `public/` caso necessário |
-| Fetch Sefaz Frontend-only | ✅ Estável | Dependência do `corsproxy.io` funcionar |
-| Histórico de Preços | ✅ Estável | Comunica muito bem com o DB novo |
+| IA e Categorização | ✅ Estável | Suporta Gemini 2.5 Flash / OpenAI via BYOK |
+| Modelo Relacional | ✅ Estável | `items` normalizados e vinculados a `receipts` |
+| Dicionário de Produtos | ✅ Estável | Aprendizagem contínua via banco global |
+| Histórico de Preços | ✅ Estável | Gráficos baseados em itens normalizados |
 
 [↑ Voltar ao índice](#índice)
 

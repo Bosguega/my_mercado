@@ -7,9 +7,12 @@ import HistoryTab from "./components/HistoryTab";
 import ScannerTab from "./components/ScannerTab";
 import Login from "./components/Login";
 import { Toaster, toast } from "react-hot-toast";
-import { getAllReceiptsFromDB, upsertReceiptToDB, deleteReceiptFromDB } from "./services/dbMethods";
+import { getAllReceiptsFromDB, saveReceiptToDB, deleteReceiptFromDB } from "./services/dbMethods";
+import { processItemsPipeline } from "./services/productService";
 import { logout } from "./services/auth";
 import { isSupabaseConfigured, supabase } from "./services/supabaseClient";
+import { useApiKey } from "./hooks/useApiKey";
+import ApiKeyModal from "./components/ApiKeyModal";
 import "./index.css";
 
 function App() {
@@ -60,6 +63,22 @@ function App() {
     endDate: "", // for custom period
   });
   const [expandedReceipts, setExpandedReceipts] = useState([]);
+  
+  // AI Key Management (BYOK)
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const { apiKey, setApiKey, hasKey } = useApiKey();
+
+  useEffect(() => {
+    // Check if AI Key exists on startup (Etapa 5)
+    if (!hasKey) {
+      setShowApiKeyModal(true);
+    }
+  }, [hasKey]);
+
+  const handleSaveApiKey = (newKey) => {
+    setApiKey(newKey);
+    setShowApiKeyModal(false);
+  };
 
   useEffect(() => {
     const storedTab = localStorage.getItem("@MyMercado:tab");
@@ -134,25 +153,29 @@ function App() {
       return false;
     }
 
-    const newReceipt = { ...receipt, id: receiptId };
-
     try {
-      await upsertReceiptToDB(newReceipt);
+      // 1. Processar itens através do pipeline
+      const processedItems = await processItemsPipeline(receipt.items || []);
+      
+      // 2. Salvar no banco relacional
+      await saveReceiptToDB({ ...receipt, id: receiptId }, processedItems);
+      
+      const fullReceipt = { ...receipt, id: receiptId, items: processedItems };
       
       setSavedReceipts((prev) => {
-        const filtered = prev.filter((r) => r.id !== newReceipt.id);
-        const newList = [newReceipt, ...filtered];
+        const filtered = prev.filter((r) => r.id !== receiptId);
+        const newList = [fullReceipt, ...filtered];
         localStorage.setItem("@MyMercado:receipts", JSON.stringify(newList));
         return newList;
       });
 
       setDuplicateReceipt(null);
       setError(null);
-      return true;
+      return fullReceipt;
     } catch (err) {
-      console.warn("Erro ao salvar no Supabase, backup local:", err);
-      setDuplicateReceipt(null);
-      return true;
+      console.warn("Erro ao salvar no Supabase:", err);
+      toast.error("Erro técnico ao salvar a nota.");
+      return null;
     }
   };
 
@@ -162,37 +185,35 @@ function App() {
     try {
       setError(null);
       const extractedData = await parseNFCeSP(decodedText);
-      if (
-        !extractedData ||
-        !extractedData.items ||
-        extractedData.items.length === 0
-      ) {
-        toast.error(
-          "Não conseguimos ler os itens dessa nota. Verifique se o QR Code é de uma NFC-e válida.",
-        );
+      
+      if (!extractedData || !extractedData.items || extractedData.items.length === 0) {
+        toast.error("Não conseguimos ler os itens dessa nota. Verifique se o QR Code é de uma NFC-e válida.");
         setError("Falha ao extrair itens da nota.");
-      } else {
-        const saved = await saveReceipt(extractedData);
-        if (saved) {
-          setCurrentReceipt(extractedData);
-          toast.success("Nota fiscal salva com sucesso!");
-        }
+        return;
+      }
+
+      // Agora usamos saveReceipt que encapsula o pipeline + persistência + duplicados
+      const savedReceipt = await saveReceipt(extractedData);
+      
+      if (savedReceipt) {
+        setCurrentReceipt(savedReceipt);
+        toast.success("Nota fiscal processada com sucesso!");
       }
     } catch (err) {
       toast.error("Erro ao processar nota. Tente novamente.");
-      setError(
-        "Erro de conexão ou processamento: " + (err.message || "Desconhecido"),
-      );
+      setError("Erro de conexão ou processamento: " + (err.message || "Desconhecido"));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleForceSaveDuplicate = () => {
+  const handleForceSaveDuplicate = async () => {
     if (duplicateReceipt) {
-      saveReceipt(duplicateReceipt, true);
-      setCurrentReceipt(duplicateReceipt);
-      toast.success("Nota atualizada com sucesso!");
+      const savedReceipt = await saveReceipt(duplicateReceipt, true);
+      if (savedReceipt) {
+        setCurrentReceipt(savedReceipt);
+        toast.success("Nota atualizada com sucesso!");
+      }
     }
   };
 
@@ -332,17 +353,21 @@ function App() {
 
     setLoading(true);
     try {
-      const saved = await saveReceipt(finalData);
-      if (saved) {
+      const savedReceipt = await saveReceipt(finalData);
+      if (savedReceipt) {
+        setCurrentReceipt(savedReceipt);
+
         setManualMode(false);
         setManualData({
           establishment: "",
           date: new Date().toLocaleDateString("pt-BR"),
           items: [],
         });
-        setCurrentReceipt(finalData);
         toast.success("Nota manual salva com sucesso!");
       }
+    } catch (err) {
+      toast.error("Erro ao salvar nota.");
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -432,6 +457,13 @@ function App() {
            title="Sair"
         >
           <LogOut size={24} />
+        </button>
+        <button
+           onClick={() => setShowApiKeyModal(true)}
+           style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', color: 'var(--primary)', cursor: 'pointer', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+           title="Configurações de IA"
+        >
+          ⚙️ Configurar IA
         </button>
       </header>
 
@@ -617,6 +649,13 @@ function App() {
           <span style={{ marginTop: "2px" }}>Preços</span>
         </button>
       </nav>
+
+      <ApiKeyModal 
+        isOpen={showApiKeyModal} 
+        onClose={() => setShowApiKeyModal(false)}
+        currentKey={apiKey}
+        onSave={handleSaveApiKey}
+      />
     </div>
   );
 }
