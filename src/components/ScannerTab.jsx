@@ -319,13 +319,13 @@ function ScannerTab({
           className="glass-card"
           style={{ textAlign: "center", padding: "2.5rem 1.5rem" }}
         >
-          <div style={{ marginBottom: "2.5rem" }}>
+          <div style={{ marginBottom: "2rem" }}>
             <div
               className="pulse-container"
               style={{
                 margin: "0 auto",
-                width: "100px",
-                height: "100px",
+                width: "80px",
+                height: "80px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -333,26 +333,27 @@ function ScannerTab({
                 borderRadius: "50%",
               }}
             >
-              <Scan size={50} color="var(--primary)" />
+              <Scan size={40} color="var(--primary)" />
             </div>
             <h2
               style={{
-                marginTop: "1.5rem",
+                marginTop: "1.25rem",
                 color: "#f8fafc",
-                fontSize: "1.6rem",
+                fontSize: "1.4rem",
+                fontWeight: 700
               }}
             >
               Escanear Nota Fiscal
             </h2>
             <p
               style={{
-                marginTop: "0.75rem",
+                marginTop: "0.5rem",
                 color: "#94a3b8",
-                lineHeight: "1.6",
+                lineHeight: "1.5",
+                fontSize: "0.95rem"
               }}
             >
-              Aponte a câmera para o QR Code da nota fiscal e registre seus
-              gastos automaticamente.
+              Aponte a câmera para o QR Code ou faça upload da galeria.
             </p>
           </div>
 
@@ -360,13 +361,13 @@ function ScannerTab({
             style={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
-              gap: "1rem",
-              marginBottom: "1rem",
+              gap: "0.75rem",
+              marginBottom: "0.75rem",
             }}
           >
             <button
               className="btn"
-              style={{ height: "60px" }}
+              style={{ height: "56px", fontSize: "0.95rem" }}
               onClick={startCamera}
               disabled={loading || scanning}
             >
@@ -376,7 +377,8 @@ function ScannerTab({
             <label
               className="btn btn-success"
               style={{
-                height: "60px",
+                height: "56px",
+                fontSize: "0.95rem",
                 opacity: loading || scanning ? 0.7 : 1,
                 cursor: "pointer",
               }}
@@ -393,16 +395,17 @@ function ScannerTab({
             </label>
           </div>
 
-          <div style={{ marginBottom: "1rem" }}>
+          <div style={{ marginBottom: "0.75rem" }}>
             {!pasteMode ? (
               <button
                 className="btn"
                 style={{
                   width: "100%",
-                  height: "50px",
-                  background: "rgba(59, 130, 246, 0.1)",
+                  height: "52px",
+                  background: "rgba(59, 130, 246, 0.05)",
                   border: "1px solid rgba(59, 130, 246, 0.2)",
                   color: "var(--primary)",
+                  fontSize: "0.95rem"
                 }}
                 onClick={() => setPasteMode(true)}
                 disabled={loading || scanning}
@@ -411,20 +414,21 @@ function ScannerTab({
                 Colar Link da Nota
               </button>
             ) : (
-              <div className="glass-card" style={{ padding: "1rem", background: "rgba(15, 23, 42, 0.4)" }}>
+              <div className="glass-card" style={{ padding: "0.75rem", background: "rgba(15, 23, 42, 0.4)", marginBottom: "0" }}>
                 <div style={{ display: "flex", gap: "0.5rem" }}>
                   <input
                     type="text"
                     className="search-input"
-                    placeholder="Cole a URL da NFC-e aqui..."
+                    placeholder="URL da NFC-e..."
                     value={pastedUrl}
                     onChange={(e) => setPastedUrl(e.target.value)}
                     autoFocus
+                    style={{ fontSize: "0.9rem" }}
                   />
-                  <button className="btn btn-success" onClick={handleLinkSubmit} style={{ padding: "0 1rem" }}>
+                  <button className="btn btn-success" onClick={handleLinkSubmit} style={{ padding: "0 0.75rem" }}>
                     <Plus size={20} />
                   </button>
-                  <button className="btn" onClick={() => setPasteMode(false)} style={{ padding: "0 1rem", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.2)", color: "#f87171" }}>
+                  <button className="btn" onClick={() => setPasteMode(false)} style={{ padding: "0 0.75rem", background: "rgba(239, 68, 68, 0.1)", border: "none", color: "#f87171" }}>
                     <X size={20} />
                   </button>
                 </div>
@@ -437,15 +441,16 @@ function ScannerTab({
             style={{
               backgroundColor: "transparent",
               border: "1px solid var(--card-border)",
-              color: "#94a3b8",
+              color: "#64748b",
               width: "100%",
-              height: "50px",
+              height: "52px",
+              fontSize: "0.95rem"
             }}
             onClick={() => setManualMode(true)}
             disabled={loading || scanning}
           >
             <Edit3 size={18} />
-            Digitar Conteúdo Manualmente
+            Digitar Manualmente
           </button>
 
           {error && (

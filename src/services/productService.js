@@ -9,11 +9,12 @@ export function normalizeKey(name) {
 
   return name
     .toUpperCase()
-    // Remover unidades comuns e medidas (KG, G, ML, L, UN, FD, CX)
-    .replace(/\b(KG|G|ML|L|UN|FD|CX|C\/|X)\b/g, '')
-    // Remover números e caracteres especiais (exceto espaços)
-    .replace(/[0-9]/g, '')
-    .replace(/[^\w\s]/gi, '')
+    // Remover KG ou SC isolados (sem número antes) - Ex: "BATATA KG" -> "BATATA"
+    .replace(/(?<!\d)\b(KG|SC)\b/g, '')
+    // Remover ruídos comuns que não são medidas (lotes, códigos internos, etc)
+    .replace(/\b(UN|FD|CX|C\/|X)\b/g, '')
+    // Remover caracteres especiais (exceto espaços e os necessários para medidas como ponto/vírgula)
+    .replace(/[^\w\s.,]/gi, '')
     // Colapsar múltiplos espaços
     .replace(/\s+/g, ' ')
     .trim();
@@ -75,9 +76,20 @@ export async function callAI(items) {
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `Você é um assistente especialista em compras de mercado. Receba uma lista de itens de nota fiscal (raw) e retorne APENAS um JSON (array de objetos) com: key, normalized_name, category. 
-              Categorias permitidas: Açougue, Hortifruti, Laticínios, Padaria, Limpeza, Higiene, Bebidas, Mercearia, Outros.
-              Itens: ${JSON.stringify(batch)}`
+              text: `Você é um assistente especialista em compras de mercado no Brasil. 
+              Receba uma lista de itens de nota fiscal (raw) e retorne APENAS um JSON (array de objetos) com: key, normalized_name, category.
+              
+              REGRAS DE NORMALIZAÇÃO:
+               1. normalized_name: Deve ser o nome legível e simplificado do produto. 
+                  IMPORTANTE: Mantenha as medidas (ex: 5kg, 1L, 350ml) no nome para diferenciar tamanhos.
+                  REMOVA medidas genéricas sem valor numérico (ex: "BATATA KG" -> "Batata", "CEBOLA SC" -> "Cebola").
+                  Exemplo: "ARROZ TIO JOAO T1 5KG" -> "Arroz Branco Tio João 5kg"
+                  Exemplo: "COCA COLA PET 2L" -> "Coca-Cola 2L"
+                  Exemplo: "SAB PO OMO LAV PERF 1.6KG" -> "Sabão em Pó Omo 1.6kg"
+               2. category: Escolha a melhor categoria entre: Açougue, Hortifruti, Laticínios, Padaria, Limpeza, Higiene, Bebidas, Mercearia, Petshop, Outros.
+              3. key: Deve ser exatamente a chave fornecida no campo 'key' do item recebido.
+
+              Itens para processar: ${JSON.stringify(batch)}`
             }]
           }],
           generationConfig: {
@@ -108,7 +120,18 @@ export async function callAI(items) {
           messages: [
             { 
               role: "system", 
-              content: "Você é um assistente especialista em compras de mercado. Receba uma lista de itens de nota fiscal (raw) e retorne um JSON (array de objetos) com: key, normalized_name, category. Categorias permitidas: Açougue, Hortifruti, Laticínios, Padaria, Limpeza, Higiene, Bebidas, Mercearia, Outros." 
+              content: `Você é um assistente especialista em compras de mercado no Brasil. 
+              Receba uma lista de itens de nota fiscal (raw) e retorne um JSON (array de objetos) com: key, normalized_name, category. 
+              
+              REGRAS DE NORMALIZAÇÃO:
+               1. normalized_name: Deve ser o nome legível e simplificado do produto. 
+                  IMPORTANTE: Mantenha as medidas (ex: 5kg, 1L, 350ml) no nome para diferenciar tamanhos.
+                  REMOVA medidas genéricas sem valor numérico (ex: "BATATA KG" -> "Batata", "CEBOLA SC" -> "Cebola").
+                  Exemplo: "ARROZ TIO JOAO T1 5KG" -> "Arroz Branco Tio João 5kg"
+                  Exemplo: "COCA COLA PET 2L" -> "Coca-Cola 2L"
+                  Exemplo: "SAB PO OMO LAV PERF 1.6KG" -> "Sabão em Pó Omo 1.6kg"
+               2. category: Escolha a melhor categoria entre: Açougue, Hortifruti, Laticínios, Padaria, Limpeza, Higiene, Bebidas, Mercearia, Petshop, Outros.
+              3. key: Deve ser exatamente a chave fornecida no campo 'key' do item recebido.`
             },
             { 
               role: "user", 
@@ -247,11 +270,22 @@ export async function processItemsPipeline(rawItems) {
   const unknownKeysForAI = Array.from(unknownMap.entries()).map(([key, raw]) => ({ key, raw }));
   let aiResults = [];
   
-  // Processamento em lotes (Etapa 10)
+  // Processamento em lotes com tratamento de erro resiliente
   for (let i = 0; i < unknownKeysForAI.length; i += 10) {
     const chunk = unknownKeysForAI.slice(i, i + 10);
-    const results = await callAI(chunk);
-    aiResults = [...aiResults, ...results];
+    try {
+      const results = await callAI(chunk);
+      aiResults = [...aiResults, ...results];
+    } catch (err) {
+      console.warn('Erro ao chamar IA para lote, usando fallback:', err);
+      // Fallback: se a IA falhar, usamos o nome original como nome normalizado
+      const fallbackResults = chunk.map(item => ({
+        key: item.key,
+        normalized_name: item.raw,
+        category: 'Outros'
+      }));
+      aiResults = [...aiResults, ...fallbackResults];
+    }
   }
 
   // 5. Atualizar dicionário com novos aprendizados

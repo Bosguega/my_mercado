@@ -6,14 +6,14 @@ O **My Mercado** é uma aplicação completa e moderna (Progressive Web App - PW
 
 ## ✨ Funcionalidades
 
-*   **🔍 Escaneamento Inteligente**: Captura de notas fiscais via QR Code utilizando a câmera do celular ou upload de imagem. O scraping ocorre nativamente no navegador utilizando proxy de CORS e o `DOMParser`.
+*   **🔍 Escaneamento Inteligente**: Captura de notas fiscais via QR Code utilizando a câmera do celular ou upload de imagem. O scraping ocorre nativamente no navegador utilizando uma rotação resiliente de 3 proxies de CORS.
+*   **🤖 Inteligência Artificial (BYOK)**: Normalização automática de nomes e categorias via Google Gemini ou OpenAI. A IA é treinada para preservar medidas (ex: 5kg, 350ml) e remover termos genéricos (KG, UN).
+*   **📚 Dicionário Personalizado**: Aba exclusiva para gerenciar o cache da IA. Corrija manualmente nomes ou categorias e limpe o cache conforme necessário.
 *   **⌨️ Lançamento Manual**: Permite cadastrar compras e itens manualmente quando não houver nota fiscal disponível.
-*   **🔐 Autenticação Segura**: Suporte completo a multi-inquilinos (multi-tenant) fornecido pela autenticação do Supabase. Cada usuário tem sua própria conta (Email / Senha) e visualiza exclusivamente suas próprias despesas por meio das robustas políticas do banco de dados (RLS).
-*   **📊 Histórico na Nuvem**: Suas transações e recibos armazenados de forma distribuída e garantida via PostgreSQL Serverless.
-*   **📅 Filtros Avançados**: Filtragem por período (Mês atual, últimos 3 meses ou período personalizado) e busca por nome do mercado.
-*   **📉 Análise de Preços**: Busca de itens específicos com gráficos de tendência de preços para acompanhar variações ao longo do tempo.
-*   **📥 Exportação e Backup**: Você domina seus dados! Exporte de forma nativa para formato CSV ou exporte/importe backups JSON na nuvem ou de forma distribuída pelo `localStorage`.
-*   **📱 Aplicativo PWA**: Instale no celular e utilize-o como um software nativo.
+*   **🔐 Autenticação Segura**: Suporte completo a multi-inquilinos fornecido pelo Supabase Auth. Cada usuário visualiza exclusivamente seus dados via RLS (Row Level Security).
+*   **📊 Histórico e Busca**: Acompanhe o histórico de notas e busque preços de produtos específicos com gráficos de tendência.
+*   **📥 Exportação e Backup**: Exporte para CSV ou realize backups completos em JSON para garantir a soberania dos seus dados.
+*   **📱 Mobile-First PWA**: Interface moderna com glassmorphism, navegação inferior otimizada e instalação nativa no celular.
 
 ---
 
@@ -21,54 +21,55 @@ O **My Mercado** é uma aplicação completa e moderna (Progressive Web App - PW
 
 ### ⚙️ Configurações e Infraestrutura
 
-*   **`package.json`**: Dependências da SPA (React, Recharts, VitePWA, Supabase JS, etc).
-*   **`vite.config.js`**: Configurações do Vite e do plugin provedor do PWA.
-*   **`ARCHITECTURE.md`**: Detalhes conceituais rígidos e fluxos de dados do aplicativo PWA.
+*   **`package.json`**: Dependências (React, Recharts, VitePWA, Supabase JS, etc).
+*   **`vite.config.js`**: Configurações do Vite e do plugin PWA.
+*   **`ARCHITECTURE.md`**: Documentação técnica detalhada da arquitetura.
+*   **`supabase_schema.sql`**: Script para criação das tabelas e políticas de segurança no Supabase.
 
 ### 🎨 Frontend (React & Design)
 
-*   **`src/App.jsx`**: Orquestrador principal, lida com estado do Supabase Auth e roteia abas.
-*   **`src/services/`**: Camada que gerencia toda a lógica de negócio do React.
-    *   `auth.js`: Lida com Login/Cadastro do Supabase.
-    *   `dbMethods.js`: Lida com chamadas assíncronas de upsert e remanejamento do PostgreSQL.
-    *   `receiptParser.js`: Realiza extração dos recibos na Sefaz.
-*   **`src/components/`**: Módulos visuais da nossa interface.
-    *   `ScannerTab.jsx`: Tratamento de WebRTC e APIs nativas para a câmera.
-    *   `Login.jsx`: Gateway que ampara todo o dashboard seguro.
-    *  `HistoryTab.jsx` / `SearchTab.jsx`: Representações e gráficos.
+*   **`src/App.jsx`**: Orquestrador principal e roteamento de abas.
+*   **`src/hooks/`**:
+    *   `useReceipts.js`: Gerencia o estado global das notas e sincronização com banco.
+    *   `useApiKey.js`: Gestão da chave de API da IA.
+*   **`src/services/`**:
+    *   `productService.js`: Pipeline de normalização e integração com LLMs.
+    *   `dbMethods.js`: Operações de banco de dados (CRUD) e lógica de backup.
+    *   `receiptParser.js`: Extração de dados da Sefaz com rotação de proxies.
+*   **`src/components/`**:
+    *   `ScannerTab.jsx`: Interface de captura de QR Code.
+    *   `DictionaryTab.jsx`: Edição manual do dicionário de produtos.
+    *   `HistoryTab.jsx` / `SearchTab.jsx`: Visualização de dados e gráficos.
 
 ---
 
 ## ⚡ Tecnologias Utilizadas
 
 - **Frontend**: React, Vite, Lucide React, Recharts, Html5-QRCode, React Hot Toast.
-- **Progressive Web App**: *vite-plugin-pwa* injetando um Web App Manifest assíncrono.
-- **Backend as a Service (BaaS)**: Supabase (PostgreSQL Nuvem).
-- **Web Scraping PWA**: Nativo (`corsproxy` + `DOMParser`).
+- **IA**: Google Gemini 1.5 Flash / OpenAI GPT-4o (via BYOK).
+- **Backend**: Supabase (PostgreSQL Nuvem).
+- **PWA**: *vite-plugin-pwa* com suporte offline.
+- **Web Scraping**: `DOMParser` + Rotação de Proxies (CORS Proxy, AllOrigins, etc).
 
 ---
 
 ## 🚀 Como Rodar o Projeto
 
-É necessário clonar este repositório tendo já criado um Banco de Dados gratuito no painel do [Supabase](https://supabase.com/).
-
-1.  **Clone o `.env.example`** para `.env` e preencha-o com suas credenciais:
-```env
-VITE_SUPABASE_URL=Sua URL
-VITE_SUPABASE_ANON_KEY=Sua Chave Anon Publica
-```
-2. **Setup do Supabase DB**: No editor SQL de seu painel do Supabase, certifique-se de executar as Querys de RLS estipuladas no arquivo de arquitetura para ligar a tabela `receipts` na tabela base de `auth.users` provida automaticamente!
-
-3.  **Instalação das bibliotecas**: 
+1.  **Clone o repositório** e instale as dependências:
 ```bash
 npm install
 ```
 
-4.  **Iniciando o PWA Localmente**: 
+2.  **Configuração do Banco**:
+    *   Crie um projeto no [Supabase](https://supabase.com/).
+    *   Execute o conteúdo de `supabase_schema.sql` no Editor SQL do Supabase.
+    *   Configure as variáveis de ambiente no `.env` (use o `.env.example` como base).
+
+3.  **Execução**:
 ```bash
+# Desenvolvimento padrão
 npm run dev
-```
-Acesse `http://localhost:5173`. Para conectar clientes pela rede e testar a permissão da câmera em navegadores restritos, execute: 
-```bash
+
+# Com HTTPS (recomendado para testar câmera no celular)
 npm run dev:https
 ```

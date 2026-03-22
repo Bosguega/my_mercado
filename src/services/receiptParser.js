@@ -1,16 +1,33 @@
-export async function parseNFCeSP(url) {
-  try {
-    // Como abolimos o servidor Node.js, não podemos fazer fetch direto no site da Fazenda Sefaz
-    // por causa do bloqueio de CORS do navegador.
-    // Usamos um proxy público grátis para buscar a tela do recibo e repassar para o App.
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-    
-    const response = await fetch(proxyUrl);
-    if (!response.ok) {
-      throw new Error("Falha no proxy ao acessar o site da Sefaz.");
-    }
+const PROXIES = [
+  (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  (url) => `https://thingproxy.freeboard.io/fetch/${url}`,
+];
 
-    const html = await response.text();
+export async function parseNFCeSP(url) {
+  let html = null;
+  let lastError = null;
+
+  // Tenta múltiplos proxies em sequência para aumentar a resiliência
+  for (const getProxyUrl of PROXIES) {
+    try {
+      const proxyUrl = getProxyUrl(url);
+      const response = await fetch(proxyUrl);
+      if (response.ok) {
+        html = await response.text();
+        if (html && html.includes('tabResult')) break; // Verifica se é um HTML válido da Sefaz
+      }
+    } catch (err) {
+      console.warn(`Falha ao tentar proxy: ${getProxyUrl(url)}`, err);
+      lastError = err;
+    }
+  }
+
+  if (!html) {
+    throw new Error(lastError?.message || "Falha ao acessar o site da Sefaz após tentar múltiplos proxies.");
+  }
+
+  try {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
 

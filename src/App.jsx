@@ -1,17 +1,17 @@
 import { useState, useEffect, useRef } from "react";
 import { BrowserMultiFormatReader, DecodeHintType } from "@zxing/library";
-import { Scan, History as HistoryIcon, Search, LogOut } from "lucide-react";
+import { Scan, History as HistoryIcon, Search, LogOut, Book } from "lucide-react";
 import { parseNFCeSP } from "./services/receiptParser";
 import SearchTab from "./components/SearchTab";
 import HistoryTab from "./components/HistoryTab";
 import ScannerTab from "./components/ScannerTab";
+import DictionaryTab from "./components/DictionaryTab";
 import Login from "./components/Login";
 import { Toaster, toast } from "react-hot-toast";
-import { getAllReceiptsFromDB, saveReceiptToDB, deleteReceiptFromDB } from "./services/dbMethods";
-import { processItemsPipeline } from "./services/productService";
 import { logout } from "./services/auth";
 import { isSupabaseConfigured, supabase } from "./services/supabaseClient";
 import { useApiKey } from "./hooks/useApiKey";
+import { useReceipts } from "./hooks/useReceipts";
 import ApiKeyModal from "./components/ApiKeyModal";
 import "./index.css";
 
@@ -20,7 +20,22 @@ function App() {
   const [authLoading, setAuthLoading] = useState(true);
 
   const [tab, setTab] = useState("scan"); // 'scan', 'history', 'search'
-  const [savedReceipts, setSavedReceipts] = useState([]);
+  
+  // Custom Hook para gestão de notas
+  const { 
+    savedReceipts, 
+    loading: receiptsLoading, 
+    error: receiptsError,
+    loadReceipts, 
+    saveReceipt, 
+    deleteReceipt 
+  } = useReceipts(sessionUser);
+
+  useEffect(() => {
+    if (receiptsError) {
+      toast.error("Erro ao sincronizar dados com o servidor. Exibindo dados locais.");
+    }
+  }, [receiptsError]);
 
   // Scan & Global State
   const [currentReceipt, setCurrentReceipt] = useState(null);
@@ -47,10 +62,6 @@ function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState("recent");
 
-  // Loading states para skeletons
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [searchLoading, setSearchLoading] = useState(false);
-
   // History filter state
   const [historyFilter, setHistoryFilter] = useState("");
 
@@ -69,7 +80,7 @@ function App() {
   const { apiKey, setApiKey, hasKey } = useApiKey();
 
   useEffect(() => {
-    // Check if AI Key exists on startup (Etapa 5)
+    // Check if AI Key exists on startup
     if (!hasKey) {
       setShowApiKeyModal(true);
     }
@@ -92,91 +103,20 @@ function App() {
     // Initial session fetch
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSessionUser(session?.user ?? null);
-      if (session?.user) {
-        loadReceipts();
-      }
       setAuthLoading(false);
     });
 
     // Listen to changes (login, logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSessionUser(session?.user ?? null);
-      if (session?.user) {
-        loadReceipts();
-      } else {
-        setSavedReceipts([]);
-      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const loadReceipts = async () => {
-    setHistoryLoading(true);
-    setSearchLoading(true);
-    try {
-      const data = await getAllReceiptsFromDB();
-      if (Array.isArray(data)) {
-        setSavedReceipts(data);
-        localStorage.setItem("@MyMercado:receipts", JSON.stringify(data));
-      }
-    } catch (err) {
-      console.error("Supabase offline ou erro. Usando localStorage:", err);
-      try {
-        const stored = localStorage.getItem("@MyMercado:receipts");
-        if (stored) setSavedReceipts(JSON.parse(stored));
-      } catch (parseErr) {
-        console.error("Erro ao ler localStorage:", parseErr);
-      }
-    } finally {
-      setHistoryLoading(false);
-      setSearchLoading(false);
-    }
-  };
-
   const handleChangeTab = (nextTab) => {
     setTab(nextTab);
     localStorage.setItem("@MyMercado:tab", nextTab);
-  };
-
-  const saveReceipt = async (receipt, forceReplace = false) => {
-    const receiptId = receipt.id || Date.now().toString();
-    
-    // Verificamos duplicação contra o estado atual da memória
-    const existing = savedReceipts.find(r => r.id === receiptId);
-    
-    if (existing && !forceReplace) {
-      setDuplicateReceipt(receipt);
-      toast.warning(
-        `Esta nota já está no seu histórico desde ${existing.date.split(" ")[0]}`,
-      );
-      return false;
-    }
-
-    try {
-      // 1. Processar itens através do pipeline
-      const processedItems = await processItemsPipeline(receipt.items || []);
-      
-      // 2. Salvar no banco relacional
-      await saveReceiptToDB({ ...receipt, id: receiptId }, processedItems);
-      
-      const fullReceipt = { ...receipt, id: receiptId, items: processedItems };
-      
-      setSavedReceipts((prev) => {
-        const filtered = prev.filter((r) => r.id !== receiptId);
-        const newList = [fullReceipt, ...filtered];
-        localStorage.setItem("@MyMercado:receipts", JSON.stringify(newList));
-        return newList;
-      });
-
-      setDuplicateReceipt(null);
-      setError(null);
-      return fullReceipt;
-    } catch (err) {
-      console.warn("Erro ao salvar no Supabase:", err);
-      toast.error("Erro técnico ao salvar a nota.");
-      return null;
-    }
   };
 
   const handleScanSuccess = async (decodedText) => {
@@ -192,11 +132,15 @@ function App() {
         return;
       }
 
-      // Agora usamos saveReceipt que encapsula o pipeline + persistência + duplicados
-      const savedReceipt = await saveReceipt(extractedData);
+      const result = await saveReceipt(extractedData);
       
-      if (savedReceipt) {
-        setCurrentReceipt(savedReceipt);
+      if (result.duplicate) {
+        setDuplicateReceipt(extractedData);
+        toast.warning(
+          `Esta nota já está no seu histórico desde ${result.existingReceipt.date.split(" ")[0]}`,
+        );
+      } else if (result.success) {
+        setCurrentReceipt(result.receipt);
         toast.success("Nota fiscal processada com sucesso!");
       }
     } catch (err) {
@@ -209,9 +153,10 @@ function App() {
 
   const handleForceSaveDuplicate = async () => {
     if (duplicateReceipt) {
-      const savedReceipt = await saveReceipt(duplicateReceipt, true);
-      if (savedReceipt) {
-        setCurrentReceipt(savedReceipt);
+      const result = await saveReceipt(duplicateReceipt, true);
+      if (result.success) {
+        setCurrentReceipt(result.receipt);
+        setDuplicateReceipt(null);
         toast.success("Nota atualizada com sucesso!");
       }
     }
@@ -251,7 +196,6 @@ function App() {
           }
         };
 
-        // decodeFromConstraints aceita (constraints, videoElementId, callbackFn)
         await codeReader.decodeFromConstraints(constraints, "reader-video", (result) => {
           if (result) {
             const text = result.getText();
@@ -340,7 +284,6 @@ function App() {
       return `${yyyy}${mm}${dd}`;
     };
 
-    // Manual IDs must be URL-safe (no `/`) and unique to avoid collisions and broken DELETE routes.
     const randomSuffix =
       (globalThis.crypto?.randomUUID?.() ||
         `${Date.now()}_${Math.random().toString(16).slice(2)}`).replace(/-/g, "");
@@ -353,9 +296,9 @@ function App() {
 
     setLoading(true);
     try {
-      const savedReceipt = await saveReceipt(finalData);
-      if (savedReceipt) {
-        setCurrentReceipt(savedReceipt);
+      const result = await saveReceipt(finalData);
+      if (result.success) {
+        setCurrentReceipt(result.receipt);
 
         setManualMode(false);
         setManualData({
@@ -370,21 +313,6 @@ function App() {
       console.error(err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const deleteReceipt = async (id) => {
-    if (window.confirm("Certeza que deseja remover esta nota do histórico?")) {
-      const newList = savedReceipts.filter((r) => r.id !== id);
-      setSavedReceipts(newList);
-      localStorage.setItem("@MyMercado:receipts", JSON.stringify(newList));
-
-      try {
-        await deleteReceiptFromDB(id);
-        toast.success("Nota removida com sucesso!");
-      } catch {
-        toast.error("Erro ao remover nota no banco remoto.");
-      }
     }
   };
 
@@ -444,27 +372,49 @@ function App() {
   return (
     <div className="app-container">
       <header className="header">
-        <div>
+        <div style={{ flex: 1 }}>
           <h1>My Mercado</h1>
-          <p>Economize comparando preços e gerenciando compras.</p>
+          <p>Economize comparando preços.</p>
         </div>
-        <button
-           onClick={async () => {
-             await logout();
-             toast.success('Sessão encerrada.');
-           }}
-           style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.5rem' }}
-           title="Sair"
-        >
-          <LogOut size={24} />
-        </button>
-        <button
-           onClick={() => setShowApiKeyModal(true)}
-           style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', color: 'var(--primary)', cursor: 'pointer', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-           title="Configurações de IA"
-        >
-          ⚙️ Configurar IA
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <button
+             onClick={() => setShowApiKeyModal(true)}
+             style={{ 
+               background: 'rgba(59, 130, 246, 0.1)', 
+               border: 'none', 
+               color: 'var(--primary)', 
+               cursor: 'pointer', 
+               padding: '0.6rem', 
+               borderRadius: '10px',
+               display: 'flex',
+               alignItems: 'center',
+               justifyContent: 'center'
+             }}
+             title="Configurar IA"
+          >
+            <span style={{ fontSize: '1.2rem' }}>⚙️</span>
+          </button>
+          <button
+             onClick={async () => {
+               await logout();
+               toast.success('Sessão encerrada.');
+             }}
+             style={{ 
+               background: 'rgba(239, 68, 68, 0.1)', 
+               border: 'none', 
+               color: '#ef4444', 
+               cursor: 'pointer', 
+               padding: '0.6rem',
+               borderRadius: '10px',
+               display: 'flex',
+               alignItems: 'center',
+               justifyContent: 'center'
+             }}
+             title="Sair"
+          >
+            <LogOut size={20} />
+          </button>
+        </div>
       </header>
 
       <main style={{ minHeight: "60vh" }}>
@@ -492,7 +442,7 @@ function App() {
         {tab === "history" && (
           <HistoryTab
             savedReceipts={savedReceipts}
-            setSavedReceipts={setSavedReceipts}
+            setSavedReceipts={loadReceipts}
             historyFilter={historyFilter}
             setHistoryFilter={setHistoryFilter}
             historyFilters={historyFilters}
@@ -500,7 +450,7 @@ function App() {
             expandedReceipts={expandedReceipts}
             setExpandedReceipts={setExpandedReceipts}
             deleteReceipt={deleteReceipt}
-            loading={historyLoading}
+            loading={receiptsLoading}
             loadReceipts={loadReceipts}
           />
         )}
@@ -512,8 +462,12 @@ function App() {
             setSearchQuery={setSearchQuery}
             sortOrder={sortOrder}
             setSortOrder={setSortOrder}
-            loading={searchLoading}
+            loading={receiptsLoading}
           />
+        )}
+
+        {tab === "dictionary" && (
+          <DictionaryTab />
         )}
       </main>
 
@@ -647,6 +601,13 @@ function App() {
         >
           <Search size={22} />
           <span style={{ marginTop: "2px" }}>Preços</span>
+        </button>
+        <button
+          className={`nav-item ${tab === "dictionary" ? "active" : ""}`}
+          onClick={() => handleChangeTab("dictionary")}
+        >
+          <Book size={22} />
+          <span style={{ marginTop: "2px" }}>Dicionário</span>
         </button>
       </nav>
 

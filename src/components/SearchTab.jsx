@@ -11,6 +11,8 @@ import {
 } from "recharts";
 import PropTypes from "prop-types";
 import { parseBRL } from "../utils/currency";
+import { parseToDate } from "../utils/date";
+
 // Skeleton para itens da pesquisa
 const SkeletonSearch = () => (
   <div
@@ -69,7 +71,9 @@ function SearchTab({
       searchQuery.trim() === ""
         ? allPurchasedItems.slice(0, 20) // show only 20 recent if no search
         : allPurchasedItems.filter((i) =>
-            i.name.toLowerCase().includes(searchQuery.toLowerCase()),
+            i.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (i.normalized_name && i.normalized_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (i.category && i.category.toLowerCase().includes(searchQuery.toLowerCase()))
           );
 
     if (sortOrder === "price-asc") {
@@ -86,10 +90,11 @@ function SearchTab({
     return base;
   })();
 
-  // Group items by exact name to create grouped results.
+  // Group items by normalized name for the chart
   const groupedItems = filtered.reduce((acc, curr) => {
-    if (!acc[curr.name]) acc[curr.name] = [];
-    acc[curr.name].push(curr);
+    const key = curr.normalized_name || curr.name;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(curr);
     return acc;
   }, {});
 
@@ -104,13 +109,7 @@ function SearchTab({
     });
 
     const sortedDates = Array.from(allDates).sort((a, b) => {
-      const getTime = (dateStr) => {
-        if (dateStr.includes("/")) {
-          const parts = dateStr.split("/");
-          return new Date(parts[2], parts[1] - 1, parts[0]).getTime();
-        }
-        return new Date(dateStr).getTime();
-      };
+      const getTime = (dateStr) => parseToDate(dateStr).getTime();
       return getTime(a) - getTime(b);
     });
 
@@ -214,10 +213,11 @@ function SearchTab({
       <div
         className="glass-card"
         style={{
-          padding: "1rem",
+          padding: "1.25rem",
           display: "flex",
           flexDirection: "column",
-          gap: "0.75rem",
+          gap: "1rem",
+          marginBottom: "1rem"
         }}
       >
         <div style={{ position: "relative" }}>
@@ -233,11 +233,11 @@ function SearchTab({
           />
           <input
             type="text"
-            placeholder="Pesquisar itens..."
+            placeholder="Pesquisar por nome ou categoria..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="search-input"
-            style={{ paddingLeft: "3rem" }}
+            style={{ paddingLeft: "3rem", height: "48px" }}
           />
         </div>
 
@@ -246,29 +246,52 @@ function SearchTab({
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "0 0.5rem",
+            padding: "0 0.25rem",
           }}
         >
-          <span style={{ fontSize: "0.8rem", color: "#64748b" }}>
-            Filtrar por:
-          </span>
-          <select
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value)}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "var(--primary)",
-              fontSize: "0.85rem",
-              fontWeight: 600,
-              cursor: "pointer",
-              outline: "none",
-            }}
-          >
-            <option value="recent">Recentes</option>
-            <option value="price-asc">Menor Preço</option>
-            <option value="price-desc">Maior Preço</option>
-          </select>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span style={{ fontSize: "0.8rem", color: "#64748b", fontWeight: 500 }}>
+              ORDENAR:
+            </span>
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+              style={{
+                background: "rgba(59, 130, 246, 0.1)",
+                border: "none",
+                borderRadius: "6px",
+                color: "var(--primary)",
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                padding: "0.25rem 0.5rem",
+                cursor: "pointer",
+                outline: "none",
+              }}
+            >
+              <option value="recent">🕒 Recentes</option>
+              <option value="price-asc">📉 Menor Preço</option>
+              <option value="price-desc">📈 Maior Preço</option>
+            </select>
+          </div>
+          
+          {searchQuery && filtered.length > 0 && (
+            <button
+              onClick={() => setShowChart(true)}
+              style={{
+                background: "none",
+                border: "none",
+                color: "var(--success)",
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                cursor: "pointer"
+              }}
+            >
+              <LineChartIcon size={16} /> Gráfico
+            </button>
+          )}
         </div>
       </div>
 
@@ -277,21 +300,6 @@ function SearchTab({
           [...Array(6)].map((_, i) => <SkeletonSearch key={i} />)
         ) : (
           <>
-            {searchQuery && filtered.length > 0 && (
-              <button
-                className="btn btn-success"
-                style={{
-                  width: "100%",
-                  marginBottom: "0.5rem",
-                  borderRadius: "1rem",
-                }}
-                onClick={() => setShowChart(true)}
-              >
-                <LineChartIcon size={18} />
-                Analisar Histórico de Preços
-              </button>
-            )}
-
             {searchQuery === "" && filtered.length === 0 && (
               <div
                 style={{
@@ -315,7 +323,34 @@ function SearchTab({
                 style={{ animationDelay: `${idx * 0.05}s` }}
               >
                 <div style={{ flex: 1 }}>
-                  <div className="item-name">{item.name}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <div className="item-name">{item.normalized_name || item.name}</div>
+                    {item.category && (
+                      <span
+                        style={{
+                          fontSize: "0.65rem",
+                          background: "rgba(59, 130, 246, 0.1)",
+                          padding: "1px 6px",
+                          borderRadius: "4px",
+                          color: "var(--primary)",
+                        }}
+                      >
+                        {item.category}
+                      </span>
+                    )}
+                  </div>
+                  {item.normalized_name && (
+                    <div
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "#64748b",
+                        fontStyle: "italic",
+                        marginBottom: "4px"
+                      }}
+                    >
+                      {item.name}
+                    </div>
+                  )}
                   <div
                     style={{
                       display: "flex",
@@ -348,7 +383,7 @@ function SearchTab({
                     R$ {parseBRL(item.unitPrice).toFixed(2).replace(".", ",")}
                   </div>
                   <div style={{ fontSize: "0.7rem", color: "#475569" }}>
-                    por un.
+                    por {item.unit || "un."}
                   </div>
                 </div>
               </div>

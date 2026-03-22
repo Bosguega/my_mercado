@@ -14,32 +14,10 @@ import { toast } from "react-hot-toast";
 import { restoreReceiptsToDB, getAllReceiptsFromDB } from "../services/dbMethods";
 import { parseBRL } from "../utils/currency";
 import { supabase } from "../services/supabaseClient";
+import { parseToDate } from "../utils/date";
 
-// Moved to module scope: evita recriação a cada par comparado no sort
-const parseDate = (d) => {
-  if (!d) return new Date(0);
-  const parts = typeof d === 'string' ? d.split(" ") : [];
-  const dateParts = (parts[0] || "").split("/");
-  if (dateParts.length < 3) {
-    const fallback = new Date(d);
-    return isNaN(fallback.getTime()) ? new Date(0) : fallback;
-  }
-  const year = parseInt(dateParts[2], 10);
-  const month = parseInt(dateParts[1], 10) - 1;
-  const day = parseInt(dateParts[0], 10);
-  if (parts[1]) {
-    const timeParts = parts[1].split(":");
-    return new Date(
-      year,
-      month,
-      day,
-      parseInt(timeParts[0], 10) || 0,
-      parseInt(timeParts[1], 10) || 0,
-      parseInt(timeParts[2], 10) || 0,
-    );
-  }
-  return new Date(year, month, day);
-};
+// Moved to module scope: utiliza utilitário centralizado
+const parseDate = (d) => parseToDate(d);
 
 // Skeleton Loading Component
 const SkeletonReceipt = () => (
@@ -139,19 +117,7 @@ function HistoryTab({
       last3Months.setHours(0, 0, 0, 0);
 
       filtered = filtered.filter((receipt) => {
-        // Converter data DD/MM/AAAA HH:mm:ss ou DD/MM/AAAA para Date de forma confiável
-        const dateParts = typeof receipt.date === 'string' ? receipt.date.split(" ") : [];
-        const [day, month, year] = (dateParts[0] || "").split("/");
-        let receiptDate;
-        
-        if (day && month && year && day.length <= 2 && month.length <= 2 && year.length === 4) {
-          receiptDate = new Date(year, month - 1, day);
-        } else {
-          receiptDate = new Date(receipt.date);
-        }
-        
-        if (isNaN(receiptDate.getTime())) receiptDate = new Date(0);
-
+        const receiptDate = parseToDate(receipt.date);
         receiptDate.setHours(0, 0, 0, 0); // Normalizar hora para meia-noite
 
         let passes = false;
@@ -399,47 +365,37 @@ function HistoryTab({
         style={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "1.5rem",
+          alignItems: "flex-start",
+          marginBottom: "1.25rem",
           gap: "1rem",
-          flexWrap: "wrap",
         }}
       >
         <div style={{ flex: 1 }}>
-          <h2 style={{ color: "#e2e8f0", fontSize: "1.4rem", marginBottom: "4px" }}>
-            📊 Histórico ({finalFilteredReceipts.length} de {savedReceipts.length})
+          <h2 className="section-title" style={{ marginBottom: "0.25rem" }}>
+            <History size={20} color="var(--primary)" />
+            Histórico
           </h2>
-          {currentUser && (
-            <div style={{ fontSize: "0.7rem", color: "#64748b" }}>
-               ID: {currentUser.id.slice(0, 8)}...
-            </div>
-          )}
+          <div style={{ fontSize: "0.75rem", color: "#64748b", marginLeft: "2rem" }}>
+             {finalFilteredReceipts.length} de {savedReceipts.length} notas
+          </div>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
-          {/* Sync/Reload Button */}
+        <div style={{ display: "flex", gap: "0.5rem" }}>
           <button
             onClick={loadReceipts}
             className="btn"
             style={{
-              padding: "0.6rem 1.2rem",
+              padding: "0.5rem",
               background: "rgba(148, 163, 184, 0.1)",
-              border: "1px solid rgba(148, 163, 184, 0.2)",
+              border: "none",
               color: "#94a3b8",
-              cursor: "pointer",
               borderRadius: "8px",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              fontSize: "0.9rem",
-              fontWeight: "500",
             }}
-            title="Sincronizar com banco de dados"
+            title="Sincronizar"
             disabled={loading}
           >
-            <History size={18} className={loading ? "spin" : ""} />
-            Sincronizar
+            <History size={20} className={loading ? "spin" : ""} />
           </button>
-          {/* Restore Button (Hidden file input) */}
+          
           <input
             type="file"
             id="restore-input"
@@ -451,68 +407,44 @@ function HistoryTab({
             onClick={() => document.getElementById("restore-input").click()}
             className="btn"
             style={{
-              padding: "0.6rem 1.2rem",
-              background: "rgba(16, 185, 129, 0.2)",
-              border: "1px solid rgba(16, 185, 129, 0.3)",
+              padding: "0.5rem",
+              background: "rgba(16, 185, 129, 0.1)",
+              border: "none",
               color: "#10b981",
-              cursor: "pointer",
               borderRadius: "8px",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              fontSize: "0.9rem",
-              fontWeight: "500",
             }}
-            title="Restaurar backup JSON"
+            title="Restaurar Backup"
           >
-            <Upload size={18} />
-            Restaurar
+            <Upload size={20} />
           </button>
 
-          {/* Backup Button */}
           <button
             onClick={handleBackupJSON}
             className="btn"
             style={{
-              padding: "0.6rem 1.2rem",
-              background: "rgba(59, 130, 246, 0.2)",
-              border: "1px solid rgba(59, 130, 246, 0.3)",
-              color: "#60a5fa",
-              cursor: "pointer",
+              padding: "0.5rem",
+              background: "rgba(59, 130, 246, 0.1)",
+              border: "none",
+              color: "var(--primary)",
               borderRadius: "8px",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              fontSize: "0.9rem",
-              fontWeight: "500",
             }}
-            title="Salvar backup JSON"
+            title="Backup"
           >
-            <Save size={18} />
-            Backup
+            <Save size={20} />
           </button>
-
-          {/* Export CSV Button */}
           <button
             onClick={handleExportCSV}
             className="btn"
             style={{
-              padding: "0.6rem 1.2rem",
-              background: "rgba(245, 158, 11, 0.2)",
-              border: "1px solid rgba(245, 158, 11, 0.3)",
+              padding: "0.5rem",
+              background: "rgba(245, 158, 11, 0.1)",
+              border: "none",
               color: "#f59e0b",
-              cursor: "pointer",
               borderRadius: "8px",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              fontSize: "0.9rem",
-              fontWeight: "500",
             }}
-            title="Exportar planilha CSV"
+            title="CSV"
           >
-            <Download size={18} />
-            CSV
+            <Download size={20} />
           </button>
         </div>
       </div>
@@ -572,6 +504,36 @@ function HistoryTab({
         </div>
       ) : (
         <>
+          {/* Summary Card */}
+          <div
+            className="glass-card"
+            style={{
+              padding: "1.25rem",
+              marginBottom: "1.5rem",
+              background: "linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%)",
+              border: "1px solid rgba(59, 130, 246, 0.2)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center"
+            }}
+          >
+            <div>
+              <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginBottom: "4px" }}>Total Gasto no Período</p>
+              <h3 style={{ color: "#fff", fontSize: "1.8rem", fontWeight: 800 }}>
+                R$ {finalFilteredReceipts.reduce((acc, r) => {
+                  const total = r.items.reduce((sum, item) => sum + parseBRL(item.total), 0);
+                  return acc + total;
+                }, 0).toFixed(2).replace(".", ",")}
+              </h3>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginBottom: "4px" }}>Notas Filtradas</p>
+              <h4 style={{ color: "var(--primary)", fontSize: "1.2rem", fontWeight: 700 }}>
+                {finalFilteredReceipts.length}
+              </h4>
+            </div>
+          </div>
+
           {/* Search Input */}
           <div
             className="glass-card"
@@ -921,18 +883,46 @@ function HistoryTab({
                                   fontSize: "0.9rem",
                                   color: "#e2e8f0",
                                   fontWeight: 500,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px"
                                 }}
                               >
-                                {item.name}
+                                {item.normalized_name || item.name}
+                                {item.category && (
+                                  <span
+                                    style={{
+                                      fontSize: "0.65rem",
+                                      background: "rgba(255,255,255,0.1)",
+                                      padding: "1px 6px",
+                                      borderRadius: "4px",
+                                      color: "#94a3b8",
+                                      fontWeight: "normal"
+                                    }}
+                                  >
+                                    {item.category}
+                                  </span>
+                                )}
                               </div>
                               <div
                                 style={{
                                   fontSize: "0.75rem",
-                                  color: "#94a3b8",
+                                  color: "#64748b",
+                                  fontStyle: item.normalized_name ? "italic" : "normal"
                                 }}
                               >
-                                {item.qty} x R$ {item.unitPrice}
+                                {item.normalized_name ? item.name : `${item.qty} x R$ ${item.unitPrice}`}
                               </div>
+                              {item.normalized_name && (
+                                <div
+                                  style={{
+                                    fontSize: "0.75rem",
+                                    color: "#94a3b8",
+                                  }}
+                                >
+                                  {item.qty} x R$ {item.unitPrice}
+                                </div>
+                              )}
                             </div>
                             <div
                               style={{
