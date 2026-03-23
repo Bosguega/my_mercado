@@ -200,10 +200,13 @@ function App() {
             loading={scanLoading}
             scanning={scanning}
             error={scanError}
-            currentReceipt={currentReceipt}
-            handleUrlSubmit={handleUrlSubmit}
-            setCurrentReceipt={setCurrentReceipt}
-          />
+             currentReceipt={currentReceipt}
+             handleUrlSubmit={handleUrlSubmit}
+             setCurrentReceipt={setCurrentReceipt}
+             zoom={zoom}
+             zoomSupported={zoomSupported}
+             applyZoom={applyZoom}
+           />
         )}
 
         {tab === "history" && (

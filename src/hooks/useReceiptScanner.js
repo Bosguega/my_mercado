@@ -10,9 +10,29 @@ export function useReceiptScanner({ saveReceipt, tab }) {
   const [error, setError] = useState(null);
   const [duplicateReceipt, setDuplicateReceipt] = useState(null);
 
-  const codeReaderRef = useRef(null);
-  const startTimeoutRef = useRef(null);
-  const processingRef = useRef(false);
+   const codeReaderRef = useRef(null);
+   const startTimeoutRef = useRef(null);
+   const processingRef = useRef(false);
+ 
+   const [zoom, setZoom] = useState(1);
+   const [zoomSupported, setZoomSupported] = useState(false);
+ 
+   const applyZoom = useCallback(async (value) => {
+     if (!streamRef.current) return;
+     const track = streamRef.current.getVideoTracks()[0];
+     if (track) {
+       const caps = track.getCapabilities();
+       if (caps.zoom) {
+         const clamped = Math.max(caps.zoom.min, Math.min(caps.zoom.max, value));
+         try {
+           await track.applyConstraints({ advanced: [{ zoom: clamped }] });
+           setZoom(clamped);
+         } catch (e) {
+           console.warn("Zoom error:", e);
+         }
+       }
+     }
+   }, []);
 
   const streamRef = useRef(null);
 
@@ -47,8 +67,10 @@ export function useReceiptScanner({ saveReceipt, tab }) {
       video.srcObject = null;
     }
 
-    setScanning(false);
-  }, []);
+     setScanning(false);
+     setZoom(1);
+     setZoomSupported(false);
+   }, []);
 
   const handleScanSuccess = useCallback(
     async (decodedText) => {
@@ -123,13 +145,25 @@ export function useReceiptScanner({ saveReceipt, tab }) {
         try {
           const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
           const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+            video: { 
+              facingMode: 'environment', 
+              width: { ideal: 1920 }, 
+              height: { ideal: 1080 },
+              advanced: [{ focusMode: 'continuous' }]
+            },
             audio: false
           });
           
-          streamRef.current = stream;
-          video.srcObject = stream;
-          await video.play();
+           streamRef.current = stream;
+           video.srcObject = stream;
+           await video.play();
+ 
+           const track = stream.getVideoTracks()[0];
+           const caps = track.getCapabilities ? track.getCapabilities() : {};
+           if (caps.zoom) {
+             setZoomSupported(true);
+             setZoom(1);
+           }
 
           const detectFrame = async () => {
             if (!streamRef.current || !video || video.paused || video.ended) return;
@@ -175,27 +209,38 @@ export function useReceiptScanner({ saveReceipt, tab }) {
         const codeReader = new BrowserMultiFormatReader(hints);
         codeReaderRef.current = codeReader;
 
-        const constraints = {
-          audio: false,
-          video: {
-            facingMode: 'environment',
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-        };
+          const constraints = {
+            audio: false,
+            video: {
+              facingMode: 'environment',
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+              advanced: [{ focusMode: 'continuous' }]
+            },
+          };
 
-        await codeReader.decodeFromConstraints(
-          constraints,
-          video,
-          (result) => {
-            if (result) {
-              if (processingRef.current) return;
-              const text = result.getText();
-              stopCamera();
-              handleScanSuccess(text);
-            }
-          },
-        );
+         await codeReader.decodeFromConstraints(
+           constraints,
+           video,
+           (result) => {
+             if (result) {
+               if (processingRef.current) return;
+               const text = result.getText();
+               stopCamera();
+               handleScanSuccess(text);
+             }
+           },
+         );
+
+         // Check zoom for ZXing fallback too
+         const track = streamRef.current?.getVideoTracks()[0];
+         if (track?.getCapabilities) {
+           const caps = track.getCapabilities();
+           if (caps.zoom) {
+             setZoomSupported(true);
+             setZoom(1);
+           }
+         }
       } catch (err) {
         setScanning(false);
         toast.error(
@@ -388,8 +433,11 @@ export function useReceiptScanner({ saveReceipt, tab }) {
     setManualMode,
     manualData,
     setManualData,
-    manualItem,
-    setManualItem,
-    handleSaveManualReceipt,
-  };
+     manualItem,
+     setManualItem,
+     handleSaveManualReceipt,
+     zoom,
+     zoomSupported,
+     applyZoom
+   };
 }

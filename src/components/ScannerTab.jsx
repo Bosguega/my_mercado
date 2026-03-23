@@ -8,8 +8,10 @@ import {
   Save,
   Plus,
   X,
-  Link as LinkIcon,
-} from "lucide-react";
+   Link as LinkIcon,
+   ZoomIn,
+   ZoomOut,
+ } from "lucide-react";
 import PropTypes from "prop-types";
 import { toast } from "react-hot-toast";
 import { parseBRL, formatBRL } from "../utils/currency";
@@ -72,9 +74,12 @@ function ScannerTab({
   scanning,
   error,
   currentReceipt,
-  setCurrentReceipt,
-  handleUrlSubmit,
-}) {
+   setCurrentReceipt,
+   handleUrlSubmit,
+   zoom,
+   zoomSupported,
+   applyZoom,
+ }) {
   const [pasteMode, setPasteMode] = useState(false);
   const [pastedUrl, setPastedUrl] = useState("");
 
@@ -543,6 +548,31 @@ function ScannerTab({
         }}>
            <div style={{ position: "absolute", top: -25, width: "100%", textAlign: "center", color: "#fff", fontSize: "0.85rem", fontWeight: "bold" }}>Alinhe o QR Code</div>
         </div>
+
+        {zoomSupported && (
+          <button
+            onClick={() => applyZoom(zoom === 1 ? 2.5 : 1)}
+            style={{
+              position: "absolute",
+              bottom: "1.25rem",
+              right: "1.25rem",
+              width: "52px",
+              height: "52px",
+              borderRadius: "50%",
+              background: "rgba(15, 23, 42, 0.9)",
+              border: "2px solid var(--primary)",
+              color: "white",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              zIndex: 10,
+              boxShadow: "0 8px 32px rgba(0,0,0,0.6)"
+            }}
+          >
+            {zoom === 1 ? <ZoomIn size={24} /> : <ZoomOut size={24} />}
+          </button>
+        )}
       </div>
 
       {loading && (
@@ -705,8 +735,11 @@ ScannerTab.propTypes = {
     date: PropTypes.string,
     items: PropTypes.arrayOf(PropTypes.object),
   }),
-  setCurrentReceipt: PropTypes.func.isRequired,
-  handleUrlSubmit: PropTypes.func.isRequired,
-};
+   setCurrentReceipt: PropTypes.func.isRequired,
+   handleUrlSubmit: PropTypes.func.isRequired,
+   zoom: PropTypes.number,
+   zoomSupported: PropTypes.bool,
+   applyZoom: PropTypes.func,
+ };
 
 export default ScannerTab;
