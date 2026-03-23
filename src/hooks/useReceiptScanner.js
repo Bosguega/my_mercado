@@ -16,6 +16,8 @@ export function useReceiptScanner({ saveReceipt, tab }) {
  
    const [zoom, setZoom] = useState(1);
    const [zoomSupported, setZoomSupported] = useState(false);
+   const [torch, setTorch] = useState(false);
+   const [torchSupported, setTorchSupported] = useState(false);
  
    const applyZoom = useCallback(async (value) => {
      if (!streamRef.current) return;
@@ -29,6 +31,22 @@ export function useReceiptScanner({ saveReceipt, tab }) {
            setZoom(clamped);
          } catch (e) {
            console.warn("Zoom error:", e);
+         }
+       }
+     }
+   }, []);
+
+   const applyTorch = useCallback(async (on) => {
+     if (!streamRef.current) return;
+     const track = streamRef.current.getVideoTracks()[0];
+     if (track) {
+       const caps = track.getCapabilities();
+       if (caps.torch) {
+         try {
+           await track.applyConstraints({ advanced: [{ torch: on }] });
+           setTorch(on);
+         } catch (e) {
+           console.warn("Torch error:", e);
          }
        }
      }
@@ -70,6 +88,8 @@ export function useReceiptScanner({ saveReceipt, tab }) {
      setScanning(false);
      setZoom(1);
      setZoomSupported(false);
+     setTorch(false);
+     setTorchSupported(false);
    }, []);
 
   const handleScanSuccess = useCallback(
@@ -160,9 +180,22 @@ export function useReceiptScanner({ saveReceipt, tab }) {
  
            const track = stream.getVideoTracks()[0];
            const caps = track.getCapabilities ? track.getCapabilities() : {};
+           
            if (caps.zoom) {
              setZoomSupported(true);
-             setZoom(1);
+             // Para QR codes pequenos, iniciar com um leve zoom pode ajudar
+             const initialZoom = Math.min(caps.zoom.max, 1.25);
+             try {
+               await track.applyConstraints({ advanced: [{ zoom: initialZoom }] });
+               setZoom(initialZoom);
+             } catch (e) {
+               setZoom(1);
+             }
+           }
+
+           if (caps.torch) {
+             setTorchSupported(true);
+             setTorch(false);
            }
 
           const detectFrame = async () => {
@@ -238,7 +271,17 @@ export function useReceiptScanner({ saveReceipt, tab }) {
            const caps = track.getCapabilities();
            if (caps.zoom) {
              setZoomSupported(true);
-             setZoom(1);
+             const initialZoom = Math.min(caps.zoom.max, 1.25);
+             try {
+               await track.applyConstraints({ advanced: [{ zoom: initialZoom }] });
+               setZoom(initialZoom);
+             } catch (e) {
+               setZoom(1);
+             }
+           }
+           if (caps.torch) {
+             setTorchSupported(true);
+             setTorch(false);
            }
          }
       } catch (err) {
@@ -438,6 +481,9 @@ export function useReceiptScanner({ saveReceipt, tab }) {
      handleSaveManualReceipt,
      zoom,
      zoomSupported,
-     applyZoom
+     applyZoom,
+     torch,
+     torchSupported,
+     applyTorch
    };
 }

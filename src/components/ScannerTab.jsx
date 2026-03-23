@@ -11,6 +11,8 @@ import {
    Link as LinkIcon,
    ZoomIn,
    ZoomOut,
+   Zap,
+   ZapOff,
  } from "lucide-react";
 import PropTypes from "prop-types";
 import { toast } from "react-hot-toast";
@@ -79,6 +81,9 @@ function ScannerTab({
    zoom,
    zoomSupported,
    applyZoom,
+   torch,
+   torchSupported,
+   applyTorch,
  }) {
   const [pasteMode, setPasteMode] = useState(false);
   const [pastedUrl, setPastedUrl] = useState("");
@@ -546,33 +551,65 @@ function ScannerTab({
           boxShadow: "0 0 0 4000px rgba(15, 23, 42, 0.7)",
           pointerEvents: "none"
         }}>
-           <div style={{ position: "absolute", top: -25, width: "100%", textAlign: "center", color: "#fff", fontSize: "0.85rem", fontWeight: "bold" }}>Alinhe o QR Code</div>
+           <div style={{ position: "absolute", top: -35, width: "100%", textAlign: "center", color: "#fff", fontSize: "0.85rem", fontWeight: "bold" }}>
+             Alinhe o QR Code
+           </div>
+           <div style={{ position: "absolute", bottom: -35, width: "100%", textAlign: "center", color: "#94a3b8", fontSize: "0.75rem" }}>
+             Dica: Afaste um pouco e use o Zoom se for pequeno
+           </div>
         </div>
 
-        {zoomSupported && (
-          <button
-            onClick={() => applyZoom(zoom === 1 ? 2.5 : 1)}
-            style={{
-              position: "absolute",
-              bottom: "1.25rem",
-              right: "1.25rem",
-              width: "52px",
-              height: "52px",
-              borderRadius: "50%",
-              background: "rgba(15, 23, 42, 0.9)",
-              border: "2px solid var(--primary)",
-              color: "white",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              zIndex: 10,
-              boxShadow: "0 8px 32px rgba(0,0,0,0.6)"
-            }}
-          >
-            {zoom === 1 ? <ZoomIn size={24} /> : <ZoomOut size={24} />}
-          </button>
-        )}
+        <div style={{
+          position: "absolute",
+          bottom: "1.25rem",
+          right: "1.25rem",
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.75rem",
+          zIndex: 10
+        }}>
+          {torchSupported && (
+            <button
+              onClick={() => applyTorch(!torch)}
+              style={{
+                width: "52px",
+                height: "52px",
+                borderRadius: "50%",
+                background: torch ? "var(--primary)" : "rgba(15, 23, 42, 0.9)",
+                border: "2px solid var(--primary)",
+                color: "white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.6)"
+              }}
+            >
+              {torch ? <ZapOff size={24} /> : <Zap size={24} />}
+            </button>
+          )}
+
+          {zoomSupported && (
+            <button
+              onClick={() => applyZoom(zoom === 1 ? 2.5 : 1)}
+              style={{
+                width: "52px",
+                height: "52px",
+                borderRadius: "50%",
+                background: zoom > 1 ? "var(--primary)" : "rgba(15, 23, 42, 0.9)",
+                border: "2px solid var(--primary)",
+                color: "white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.6)"
+              }}
+            >
+              {zoom === 1 ? <ZoomIn size={24} /> : <ZoomOut size={24} />}
+            </button>
+          )}
+        </div>
       </div>
 
       {loading && (
@@ -740,6 +777,9 @@ ScannerTab.propTypes = {
    zoom: PropTypes.number,
    zoomSupported: PropTypes.bool,
    applyZoom: PropTypes.func,
+   torch: PropTypes.bool,
+   torchSupported: PropTypes.bool,
+   applyTorch: PropTypes.func,
  };
 
 export default ScannerTab;

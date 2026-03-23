@@ -61,6 +61,9 @@ function App() {
     zoom,
     zoomSupported,
     applyZoom,
+    torch,
+    torchSupported,
+    applyTorch,
   } = useReceiptScanner({ saveReceipt, tab });
 
   // Search State
@@ -209,6 +212,9 @@ function App() {
              zoom={zoom}
              zoomSupported={zoomSupported}
              applyZoom={applyZoom}
+             torch={torch}
+             torchSupported={torchSupported}
+             applyTorch={applyTorch}
            />
         )}
 
