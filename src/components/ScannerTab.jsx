@@ -518,6 +518,9 @@ function ScannerTab({
       >
          <video
            id="reader-video"
+           autoPlay
+           muted
+           playsInline
            style={{
              width: "100%",
              height: "auto",

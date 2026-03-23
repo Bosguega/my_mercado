@@ -132,7 +132,9 @@ export function useReceiptScanner({ saveReceipt, tab }) {
           await video.play();
 
           const detectFrame = async () => {
-            if (!processingRef.current && streamRef.current && video.readyState >= 2) {
+            if (!streamRef.current || !video || video.paused || video.ended) return;
+            
+            if (!processingRef.current && video.readyState >= 2) {
               try {
                 const barcodes = await detector.detect(video);
                 if (barcodes.length > 0) {
@@ -142,11 +144,15 @@ export function useReceiptScanner({ saveReceipt, tab }) {
                   return;
                 }
               } catch (err) {
-                console.warn('ML Kit detection error:', err);
+                console.error('ML Kit detection error:', err);
               }
             }
+            
             if (streamRef.current) {
-              requestAnimationFrame(detectFrame);
+              // Delay next detection to prevent CPU throttling on mobile
+              setTimeout(() => {
+                if (streamRef.current) requestAnimationFrame(detectFrame);
+              }, 150);
             }
           };
           
