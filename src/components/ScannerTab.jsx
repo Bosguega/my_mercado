@@ -13,6 +13,7 @@ import {
    ZoomOut,
    Zap,
    ZapOff,
+   Aperture,
  } from "lucide-react";
 import PropTypes from "prop-types";
 import { toast } from "react-hot-toast";
@@ -383,7 +384,7 @@ function ScannerTab({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr 1fr",
+              gridTemplateColumns: "1fr 1fr 1fr",
               gap: "0.75rem",
               marginBottom: "0.75rem",
             }}
@@ -397,6 +398,30 @@ function ScannerTab({
               <Camera size={20} />
               Câmera
             </button>
+
+            <label
+              className="btn"
+              style={{
+                height: "56px",
+                fontSize: "0.95rem",
+                opacity: loading || scanning ? 0.7 : 1,
+                cursor: "pointer",
+                background: "var(--primary)",
+                borderColor: "var(--primary)",
+              }}
+            >
+              <Aperture size={20} />
+              Foto
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileUpload}
+                disabled={loading || scanning}
+                style={{ display: "none" }}
+              />
+            </label>
+
             <label
               className="btn btn-success"
               style={{
