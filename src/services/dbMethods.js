@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient'
 import { formatToISO, formatToBR } from '../utils/date'
 import { parseBRL } from '../utils/currency'
+import { toUserScopedReceiptId } from '../utils/receiptId'
 
 function requireSupabase() {
   if (!supabase) {
@@ -19,6 +20,16 @@ async function getUserOrThrow() {
   return data.user
 }
 
+function isLegacyDictionarySchemaError(error) {
+  const message = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`.toLowerCase()
+  return (
+    error?.code === '42703' || // undefined column
+    error?.code === '42P10' || // invalid ON CONFLICT target
+    message.includes('user_id') ||
+    message.includes('on conflict')
+  )
+}
+
 // 📥 GET
 export async function getAllReceiptsFromDB() {
   await getUserOrThrow() // só garante sessão
@@ -33,7 +44,16 @@ export async function getAllReceiptsFromDB() {
       establishment,
       date,
       created_at,
-      items (*)
+      items (
+        id,
+        name,
+        normalized_key,
+        normalized_name,
+        category,
+        quantity,
+        unit,
+        price
+      )
     `)
     .order('created_at', { ascending: false })
     .limit(2000)
@@ -63,13 +83,14 @@ export async function restoreReceiptsToDB(receipts) {
   const client = requireSupabase();
 
   for (const receiptData of receipts) {
+    const scopedReceiptId = toUserScopedReceiptId(receiptData.id, user.id);
     const isoDate = formatToISO(receiptData.date);
 
     // 1. Upsert da Nota
     const { data: receipt, error: receiptError } = await client
       .from('receipts')
       .upsert({
-        id: receiptData.id,
+        id: scopedReceiptId,
         establishment: receiptData.establishment,
         date: isoDate,
         user_id: user.id
@@ -118,6 +139,7 @@ export async function restoreReceiptsToDB(receipts) {
 export async function saveReceiptToDB(receiptData, items) {
   const user = await getUserOrThrow()
   const client = requireSupabase()
+  const scopedReceiptId = toUserScopedReceiptId(receiptData.id, user.id)
 
   // Converte a data para o formato ISO compatível com o Supabase (Postgres)
   const isoDate = formatToISO(receiptData.date);
@@ -126,7 +148,7 @@ export async function saveReceiptToDB(receiptData, items) {
   const { data: receipt, error: receiptError } = await client
     .from('receipts')
     .upsert({
-      id: receiptData.id,
+      id: scopedReceiptId,
       establishment: receiptData.establishment,
       date: isoDate,
       user_id: user.id
@@ -196,24 +218,46 @@ export async function deleteReceiptFromDB(id) {
 
 // 📖 DICIONÁRIO - CRUD
 export async function getFullDictionaryFromDB() {
-  await getUserOrThrow();
+  const user = await getUserOrThrow();
   const client = requireSupabase();
-  const { data, error } = await client
+  const query = client
     .from('product_dictionary')
     .select('*')
+    .eq('user_id', user.id)
     .order('key', { ascending: true });
+
+  let { data, error } = await query;
+  if (error && isLegacyDictionarySchemaError(error)) {
+    const legacyResponse = await client
+      .from('product_dictionary')
+      .select('*')
+      .order('key', { ascending: true });
+
+    data = legacyResponse.data;
+    error = legacyResponse.error;
+  }
 
   if (error) throw error;
   return data || [];
 }
 
 export async function updateDictionaryEntryInDB(key, normalizedName, category) {
-  await getUserOrThrow();
+  const user = await getUserOrThrow();
   const client = requireSupabase();
-  const { error } = await client
+  let { error } = await client
     .from('product_dictionary')
     .update({ normalized_name: normalizedName, category })
+    .eq('user_id', user.id)
     .eq('key', key);
+
+  if (error && isLegacyDictionarySchemaError(error)) {
+    const legacyResponse = await client
+      .from('product_dictionary')
+      .update({ normalized_name: normalizedName, category })
+      .eq('key', key);
+
+    error = legacyResponse.error;
+  }
 
   if (error) throw error;
   return true;
@@ -242,25 +286,45 @@ export async function applyDictionaryEntryToSavedItems(key, normalizedName, cate
 }
 
 export async function deleteDictionaryEntryFromDB(key) {
-  await getUserOrThrow();
+  const user = await getUserOrThrow();
   const client = requireSupabase();
-  const { error } = await client
+  let { error } = await client
     .from('product_dictionary')
     .delete()
+    .eq('user_id', user.id)
     .eq('key', key);
+
+  if (error && isLegacyDictionarySchemaError(error)) {
+    const legacyResponse = await client
+      .from('product_dictionary')
+      .delete()
+      .eq('key', key);
+
+    error = legacyResponse.error;
+  }
 
   if (error) throw error;
   return true;
 }
 
 export async function clearDictionaryInDB() {
-  await getUserOrThrow();
+  const user = await getUserOrThrow();
   const client = requireSupabase();
-  // No Supabase, para deletar tudo sem filtro id, usamos um neq dummy se RLS permitir
-  const { error } = await client
+  // Escopo explícito por usuário para evitar limpeza global.
+  let { error } = await client
     .from('product_dictionary')
     .delete()
-    .neq('key', '___dummy___');
+    .eq('user_id', user.id);
+
+  // Fallback para schema legado (sem user_id).
+  if (error && isLegacyDictionarySchemaError(error)) {
+    const legacyResponse = await client
+      .from('product_dictionary')
+      .delete()
+      .neq('key', '___dummy___');
+
+    error = legacyResponse.error;
+  }
 
   if (error) throw error;
   return true;
@@ -270,13 +334,24 @@ export async function clearDictionaryInDB() {
 export async function getDictionary(keys) {
   if (!keys || keys.length === 0) return {};
 
-  await getUserOrThrow();
+  const user = await getUserOrThrow();
   const client = requireSupabase();
 
-  const { data, error } = await client
+  let { data, error } = await client
     .from('product_dictionary')
     .select('key, normalized_name, category')
+    .eq('user_id', user.id)
     .in('key', keys);
+
+  if (error && isLegacyDictionarySchemaError(error)) {
+    const legacyResponse = await client
+      .from('product_dictionary')
+      .select('key, normalized_name, category')
+      .in('key', keys);
+
+    data = legacyResponse.data;
+    error = legacyResponse.error;
+  }
 
   if (error) throw error;
 
@@ -294,18 +369,34 @@ export async function getDictionary(keys) {
 export async function updateDictionary(entries) {
   if (!entries || entries.length === 0) return;
 
-  await getUserOrThrow();
+  const user = await getUserOrThrow();
   const client = requireSupabase();
 
   const rows = entries.map((e) => ({
+    user_id: user.id,
     key: e.key,
     normalized_name: e.normalized_name,
     category: e.category || 'Outros',
   }));
 
-  const { error } = await client
+  let { error } = await client
     .from('product_dictionary')
-    .upsert(rows, { onConflict: 'key' });
+    .upsert(rows, { onConflict: 'user_id,key' });
+
+  // Fallback para schema legado (sem user_id e PK simples em key).
+  if (error && isLegacyDictionarySchemaError(error)) {
+    const legacyRows = entries.map((e) => ({
+      key: e.key,
+      normalized_name: e.normalized_name,
+      category: e.category || 'Outros',
+    }));
+
+    const legacyResponse = await client
+      .from('product_dictionary')
+      .upsert(legacyRows, { onConflict: 'key' });
+
+    error = legacyResponse.error;
+  }
 
   if (error) throw error;
 }

@@ -322,6 +322,7 @@ function HistoryTab({
         // Sincronizar com o backend Supabase
         try {
           await restoreReceiptsToDB(restoredReceipts);
+          await loadReceipts();
         } catch (syncErr) {
           console.warn(
             "Não foi possível sincronizar backup com o Supabase:",

@@ -12,6 +12,7 @@ export function useReceiptScanner({ saveReceipt, tab }) {
 
   const codeReaderRef = useRef(null);
   const startTimeoutRef = useRef(null);
+  const processingRef = useRef(false);
 
   const stopCamera = useCallback(() => {
     if (startTimeoutRef.current) {
@@ -34,11 +35,18 @@ export function useReceiptScanner({ saveReceipt, tab }) {
 
   const handleScanSuccess = useCallback(
     async (decodedText) => {
+      if (processingRef.current) return;
+      processingRef.current = true;
+
       setScanning(false);
       setLoading(true);
       try {
+        if (!decodedText || typeof decodedText !== 'string') {
+          throw new Error('Conteúdo do QR Code inválido.');
+        }
+
         setError(null);
-        const extractedData = await parseNFCeSP(decodedText);
+        const extractedData = await parseNFCeSP(decodedText.trim());
 
         if (
           !extractedData ||
@@ -71,6 +79,7 @@ export function useReceiptScanner({ saveReceipt, tab }) {
         );
       } finally {
         setLoading(false);
+        processingRef.current = false;
       }
     },
     [saveReceipt],
@@ -103,6 +112,7 @@ export function useReceiptScanner({ saveReceipt, tab }) {
           'reader-video',
           (result) => {
             if (result) {
+              if (processingRef.current) return;
               const text = result.getText();
               stopCamera();
               handleScanSuccess(text);
@@ -283,4 +293,3 @@ export function useReceiptScanner({ saveReceipt, tab }) {
     handleSaveManualReceipt,
   };
 }
-

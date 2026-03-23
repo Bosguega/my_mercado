@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { getAllReceiptsFromDB, saveReceiptToDB, deleteReceiptFromDB } from '../services/dbMethods';
 import { processItemsPipeline } from '../services/productService';
+import { getReceiptIdCandidates, toUserScopedReceiptId } from '../utils/receiptId';
 
 export function useReceipts(sessionUser) {
   const [savedReceipts, setSavedReceipts] = useState([]);
@@ -42,14 +43,21 @@ export function useReceipts(sessionUser) {
   }, [sessionUser]);
 
   const saveReceipt = async (receipt, forceReplace = false) => {
-    const receiptId = receipt.id || Date.now().toString();
-    const existing = savedReceipts.find(r => r.id === receiptId);
+    const rawReceiptId = receipt.id || Date.now().toString();
+    const receiptId = toUserScopedReceiptId(rawReceiptId, sessionUser?.id);
+    const idCandidates = new Set(getReceiptIdCandidates(rawReceiptId, sessionUser?.id));
+    const existing = savedReceipts.find((r) => idCandidates.has(String(r.id)));
     
     if (existing && !forceReplace) {
       return { duplicate: true, existingReceipt: existing };
     }
 
     try {
+      // Migração progressiva de IDs legados (sem escopo de usuário)
+      if (existing && forceReplace && existing.id !== receiptId) {
+        await deleteReceiptFromDB(existing.id);
+      }
+
       // 1. Processar itens através do pipeline
       const processedItems = await processItemsPipeline(receipt.items || []);
       
@@ -58,7 +66,10 @@ export function useReceipts(sessionUser) {
       await saveReceiptToDB(fullReceipt, processedItems);
       
       setSavedReceipts((prev) => {
-        const filtered = prev.filter((r) => r.id !== receiptId);
+        const idsToReplace = new Set(idCandidates);
+        if (existing?.id) idsToReplace.add(String(existing.id));
+
+        const filtered = prev.filter((r) => !idsToReplace.has(String(r.id)));
         const newList = [fullReceipt, ...filtered];
         localStorage.setItem("@MyMercado:receipts", JSON.stringify(newList));
         return newList;

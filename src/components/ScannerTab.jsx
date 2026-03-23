@@ -79,11 +79,24 @@ function ScannerTab({
   const [pastedUrl, setPastedUrl] = useState("");
 
   const handleLinkSubmit = () => {
-    if (!pastedUrl.trim()) {
+    const rawUrl = pastedUrl.trim();
+    if (!rawUrl) {
       toast.error("Cole um link válido");
       return;
     }
-    handleUrlSubmit(pastedUrl.trim());
+
+    try {
+      const parsed = new URL(rawUrl);
+      if (!["http:", "https:"].includes(parsed.protocol)) {
+        toast.error("Link inválido para NFC-e");
+        return;
+      }
+    } catch {
+      toast.error("Link inválido");
+      return;
+    }
+
+    handleUrlSubmit(rawUrl);
     setPastedUrl("");
     setPasteMode(false);
   };

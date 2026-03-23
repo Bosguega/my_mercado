@@ -3,6 +3,8 @@ const PROXIES = [
   (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
   (url) => `https://thingproxy.freeboard.io/fetch/${url}`,
 ];
+const PROXY_TIMEOUT_MS = 12000;
+const SUPPORTED_HOST_SUFFIX = 'fazenda.sp.gov.br';
 
 // ==============================
 // Utils
@@ -11,6 +13,45 @@ const PROXIES = [
 function parseNumber(value, fallback = "0") {
   if (!value) return fallback;
   return value.replace(/[^\d,.-]/g, "").trim();
+}
+
+function validateNfceSpUrl(rawUrl) {
+  let parsed;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    throw new Error("QR Code inválido: URL não reconhecida.");
+  }
+
+  if (!["http:", "https:"].includes(parsed.protocol)) {
+    throw new Error("URL inválida para consulta da NFC-e.");
+  }
+
+  const host = parsed.hostname.toLowerCase();
+  if (!host.endsWith(SUPPORTED_HOST_SUFFIX)) {
+    throw new Error("Somente URLs da NFC-e de São Paulo (fazenda.sp.gov.br) são suportadas.");
+  }
+
+  const hasKnownQuery = parsed.searchParams.has("p") || parsed.searchParams.has("chNFe");
+  if (!hasKnownQuery) {
+    throw new Error("Link da NFC-e sem parâmetros esperados (p/chNFe).");
+  }
+
+  return parsed.toString();
+}
+
+async function fetchWithTimeout(url, timeoutMs) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      signal: controller.signal,
+      cache: "no-store",
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function extractQtyAndUnit(text) {
@@ -45,34 +86,41 @@ function cleanProductName(name) {
 // ==============================
 
 export async function parseNFCeSP(url) {
+  const targetUrl = validateNfceSpUrl(url);
   let html = null;
-  let lastError = null;
+  const attemptErrors = [];
 
   // 🔁 Tentativa com múltiplos proxies
-  for (const getProxyUrl of PROXIES) {
+  for (let index = 0; index < PROXIES.length; index += 1) {
+    const getProxyUrl = PROXIES[index];
     try {
-      const proxyUrl = getProxyUrl(url);
-      const response = await fetch(proxyUrl);
+      const proxyUrl = getProxyUrl(targetUrl);
+      const response = await fetchWithTimeout(proxyUrl, PROXY_TIMEOUT_MS);
 
       if (response.ok) {
         const text = await response.text();
 
-        if (text && text.includes("tabResult")) {
+        if (text && (text.includes("tabResult") || text.includes("txtTopo"))) {
           html = text;
           break;
         }
+
+        attemptErrors.push(`Proxy ${index + 1}: resposta sem dados da NFC-e.`);
+      } else {
+        attemptErrors.push(`Proxy ${index + 1}: HTTP ${response.status}.`);
       }
     } catch (err) {
+      if (err?.name === "AbortError") {
+        attemptErrors.push(`Proxy ${index + 1}: timeout após ${PROXY_TIMEOUT_MS}ms.`);
+      } else {
+        attemptErrors.push(`Proxy ${index + 1}: ${err?.message || "falha desconhecida"}.`);
+      }
       console.warn("Proxy falhou:", err);
-      lastError = err;
     }
   }
 
   if (!html) {
-    throw new Error(
-      lastError?.message ||
-      "Falha ao acessar Sefaz via proxies."
-    );
+    throw new Error(`Falha ao acessar Sefaz via proxies. ${attemptErrors.join(" ")}`.trim());
   }
 
   try {
@@ -146,9 +194,15 @@ export async function parseNFCeSP(url) {
     // 🔑 Chave da NFCe
     let accessKey = null;
     try {
-      const urlObj = new URL(url);
+      const urlObj = new URL(targetUrl);
       const p = urlObj.searchParams.get("p");
-      if (p) accessKey = p.split("|")[0];
+      const chNFe = urlObj.searchParams.get("chNFe");
+
+      if (p) {
+        accessKey = decodeURIComponent(p).split("|")[0];
+      } else if (chNFe) {
+        accessKey = chNFe;
+      }
     } catch {
       // Ignora erro no parse da URL
     }
