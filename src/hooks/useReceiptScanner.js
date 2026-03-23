@@ -14,6 +14,8 @@ export function useReceiptScanner({ saveReceipt, tab }) {
   const startTimeoutRef = useRef(null);
   const processingRef = useRef(false);
 
+  const streamRef = useRef(null);
+
   const stopCamera = useCallback(() => {
     if (startTimeoutRef.current) {
       clearTimeout(startTimeoutRef.current);
@@ -24,10 +26,25 @@ export function useReceiptScanner({ saveReceipt, tab }) {
       try {
         codeReaderRef.current.reset();
       } catch (err) {
-        console.warn('Erro ao parar câmera:', err);
+        console.warn('Erro ao parar ZXing:', err);
       } finally {
         codeReaderRef.current = null;
       }
+    }
+
+    if (streamRef.current) {
+      try {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      } catch (err) {
+        console.warn('Erro ao parar stream:', err);
+      } finally {
+        streamRef.current = null;
+      }
+    }
+
+    const video = document.getElementById('reader-video');
+    if (video) {
+      video.srcObject = null;
     }
 
     setScanning(false);
@@ -91,6 +108,60 @@ export function useReceiptScanner({ saveReceipt, tab }) {
 
     startTimeoutRef.current = setTimeout(async () => {
       startTimeoutRef.current = null;
+      
+      const video = document.getElementById('reader-video');
+      if (!video) {
+        console.error('Video element not found');
+        setScanning(false);
+        return;
+      }
+
+      // Try Google ML Kit (Native BarcodeDetector) first
+      const hasNativeMLKit = 'BarcodeDetector' in window;
+      
+      if (hasNativeMLKit) {
+        try {
+          const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false
+          });
+          
+          streamRef.current = stream;
+          video.srcObject = stream;
+          await video.play();
+
+          const detectFrame = async () => {
+            if (!processingRef.current && streamRef.current && video.readyState >= 2) {
+              try {
+                const barcodes = await detector.detect(video);
+                if (barcodes.length > 0) {
+                  const text = barcodes[0].rawValue;
+                  stopCamera();
+                  handleScanSuccess(text);
+                  return;
+                }
+              } catch (err) {
+                console.warn('ML Kit detection error:', err);
+              }
+            }
+            if (streamRef.current) {
+              requestAnimationFrame(detectFrame);
+            }
+          };
+          
+          requestAnimationFrame(detectFrame);
+          return;
+        } catch (err) {
+          console.warn('Falha ao iniciar ML Kit, tentando ZXing...', err);
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach(t => t.stop());
+            streamRef.current = null;
+          }
+        }
+      }
+
+      // Fallback to ZXing
       try {
         const hints = new Map();
         hints.set(DecodeHintType.TRY_HARDER, true);
@@ -109,7 +180,7 @@ export function useReceiptScanner({ saveReceipt, tab }) {
 
         await codeReader.decodeFromConstraints(
           constraints,
-          'reader-video',
+          video,
           (result) => {
             if (result) {
               if (processingRef.current) return;
@@ -137,11 +208,33 @@ export function useReceiptScanner({ saveReceipt, tab }) {
       setLoading(true);
       let imageUrl = null;
       try {
+        imageUrl = URL.createObjectURL(file);
+        
+        // Try Native BarcodeDetector first
+        if ('BarcodeDetector' in window) {
+          try {
+            const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+            const img = new Image();
+            img.src = imageUrl;
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+            });
+            
+            const barcodes = await detector.detect(img);
+            if (barcodes.length > 0) {
+              await handleScanSuccess(barcodes[0].rawValue);
+              return;
+            }
+          } catch (err) {
+            console.warn('Native detect fail during upload:', err);
+          }
+        }
+
+        // Fallback to ZXing
         const hints = new Map();
         hints.set(DecodeHintType.TRY_HARDER, true);
         const codeReader = new BrowserMultiFormatReader(hints);
-
-        imageUrl = URL.createObjectURL(file);
         const result = await codeReader.decodeFromImageUrl(imageUrl);
 
         if (result) {
@@ -149,7 +242,8 @@ export function useReceiptScanner({ saveReceipt, tab }) {
         } else {
           throw new Error('Não detectado');
         }
-      } catch {
+      } catch (err) {
+        console.error('Upload detection fail:', err);
         toast.error('QR Code não detectado na imagem.');
         setLoading(false);
       } finally {
