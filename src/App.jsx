@@ -58,6 +58,9 @@ function App() {
     manualItem,
     setManualItem,
     handleSaveManualReceipt,
+    zoom,
+    zoomSupported,
+    applyZoom,
   } = useReceiptScanner({ saveReceipt, tab });
 
   // Search State
