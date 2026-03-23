@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { Key, ShieldCheck, X, Save, Box, Zap, CheckCircle, AlertCircle } from "lucide-react";
+import { Key, ShieldCheck, X, Save, CheckCircle, AlertCircle } from "lucide-react";
 import PropTypes from "prop-types";
 import { toast } from "react-hot-toast";
 import { detectProvider, getApiModel, setApiModel } from "../utils/aiConfig";
-import { testAiConnection } from "../services/productService";
+import { testAiConnection } from "../utils/aiClient";
 
 export default function ApiKeyModal({ isOpen, onClose, currentKey, onSave }) {
   const [key, setKey] = useState(currentKey || "");

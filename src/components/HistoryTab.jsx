@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import {
   History,
   Trash2,
@@ -11,9 +10,8 @@ import {
 } from "lucide-react";
 import PropTypes from "prop-types";
 import { toast } from "react-hot-toast";
-import { restoreReceiptsToDB, getAllReceiptsFromDB } from "../services/dbMethods";
+import { restoreReceiptsToDB } from "../services/dbMethods";
 import { parseBRL } from "../utils/currency";
-import { supabase } from "../services/supabaseClient";
 import { parseToDate } from "../utils/date";
 
 // Moved to module scope: utiliza utilitário centralizado
@@ -77,15 +75,6 @@ function HistoryTab({
   loading,
   loadReceipts,
 }) {
-  const [currentUser, setCurrentUser] = useState(null);
-
-  useEffect(() => {
-    if (supabase) {
-      supabase.auth.getUser().then(({ data }) => {
-        setCurrentUser(data?.user);
-      });
-    }
-  }, []);
   const filteredReceipts = historyFilter.trim()
     ? savedReceipts.filter((receipt) =>
         receipt.establishment

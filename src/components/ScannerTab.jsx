@@ -593,7 +593,7 @@ function ScannerTab({
               >
                 <div className="item-details">
                   <span className="item-name" style={{ fontSize: "0.9rem" }}>
-                    {item.name}
+                    {item.normalized_name || item.name}
                   </span>
                   <div
                     style={{
@@ -604,12 +604,25 @@ function ScannerTab({
                     }}
                   >
                     <span className="item-meta">
-                      R$ {item.unitPrice} un x {item.qty}
+                      R$ {item.unitPrice ?? formatBRL(item.price)} un x {item.qty ?? item.quantity}
                     </span>
+                    {item.category && (
+                      <span
+                        style={{
+                          fontSize: "0.6rem",
+                          background: "rgba(59, 130, 246, 0.1)",
+                          padding: "1px 5px",
+                          borderRadius: "4px",
+                          color: "var(--primary)",
+                        }}
+                      >
+                        {item.category}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="item-total" style={{ fontSize: "1rem" }}>
-                  R$ {item.total}
+                  R$ {item.total ?? formatBRL((item.price || 0) * (item.quantity || 1))}
                 </div>
               </div>
             ))}
@@ -624,7 +637,10 @@ function ScannerTab({
               R${" "}
               {formatBRL(
                 currentReceipt.items.reduce(
-                  (acc, curr) => acc + parseBRL(curr.total),
+                  (acc, curr) => {
+                    if (curr.total != null) return acc + parseBRL(curr.total);
+                    return acc + (curr.price || 0) * (curr.quantity || 1);
+                  },
                   0,
                 ),
               )}

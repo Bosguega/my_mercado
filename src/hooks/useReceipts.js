@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { getAllReceiptsFromDB, saveReceiptToDB, deleteReceiptFromDB } from '../services/dbMethods';
 import { processItemsPipeline } from '../services/productService';
-import { supabase } from '../services/supabaseClient';
 
 export function useReceipts(sessionUser) {
   const [savedReceipts, setSavedReceipts] = useState([]);

@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient'
-import { parseToDate, formatToISO, formatToBR } from '../utils/date'
+import { formatToISO, formatToBR } from '../utils/date'
 import { parseBRL } from '../utils/currency'
 
 function requireSupabase() {
@@ -242,4 +242,48 @@ export async function clearDictionaryInDB() {
 
   if (error) throw error;
   return true;
+}
+
+// 📖 DICIONÁRIO - Batch read (usado pelo productService pipeline)
+export async function getDictionary(keys) {
+  if (!keys || keys.length === 0) return {};
+
+  await getUserOrThrow();
+  const client = requireSupabase();
+
+  const { data, error } = await client
+    .from('product_dictionary')
+    .select('key, normalized_name, category')
+    .in('key', keys);
+
+  if (error) throw error;
+
+  // Retorna um mapa { key: { normalized_name, category } }
+  return (data || []).reduce((acc, row) => {
+    acc[row.key] = {
+      normalized_name: row.normalized_name,
+      category: row.category,
+    };
+    return acc;
+  }, {});
+}
+
+// 📖 DICIONÁRIO - Batch upsert (usado pelo productService pipeline)
+export async function updateDictionary(entries) {
+  if (!entries || entries.length === 0) return;
+
+  await getUserOrThrow();
+  const client = requireSupabase();
+
+  const rows = entries.map((e) => ({
+    key: e.key,
+    normalized_name: e.normalized_name,
+    category: e.category || 'Outros',
+  }));
+
+  const { error } = await client
+    .from('product_dictionary')
+    .upsert(rows, { onConflict: 'key' });
+
+  if (error) throw error;
 }

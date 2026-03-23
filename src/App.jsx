@@ -136,8 +136,9 @@ function App() {
       
       if (result.duplicate) {
         setDuplicateReceipt(extractedData);
-        toast.warning(
+        toast(
           `Esta nota já está no seu histórico desde ${result.existingReceipt.date.split(" ")[0]}`,
+          { icon: "⚠️" },
         );
       } else if (result.success) {
         setCurrentReceipt(result.receipt);
@@ -215,12 +216,13 @@ function App() {
     const file = event.target.files[0];
     if (!file) return;
     setLoading(true);
+    let imageUrl = null;
     try {
       const hints = new Map();
       hints.set(DecodeHintType.TRY_HARDER, true);
       const codeReader = new BrowserMultiFormatReader(hints);
 
-      const imageUrl = URL.createObjectURL(file);
+      imageUrl = URL.createObjectURL(file);
       const result = await codeReader.decodeFromImageUrl(imageUrl);
       
       if (result) {
@@ -231,6 +233,8 @@ function App() {
     } catch {
       toast.error("QR Code não detectado na imagem.");
       setLoading(false);
+    } finally {
+      if (imageUrl) URL.revokeObjectURL(imageUrl);
     }
   };
 

@@ -1,326 +1,208 @@
-import { supabase } from './supabaseClient';
-import { getApiKey, getApiModel } from '../utils/aiConfig';
+// ==============================
+// IMPORTS (ajuste conforme seu projeto)
+// ==============================
 
-/**
- * UTILS - Normalização de chaves para o dicionário
- */
+import { getDictionary, updateDictionary } from "./dbMethods";
+import { callAI } from "../utils/aiClient";
+
+// ==============================
+// 🔤 NORMALIZAÇÃO LEVE
+// ==============================
+
 export function normalizeKey(name) {
-  if (!name) return '';
+  if (!name) return "";
 
   return name
     .toUpperCase()
-    // Remover KG ou SC isolados (sem número antes) - Ex: "BATATA KG" -> "BATATA"
-    .replace(/(?<!\d)\b(KG|SC)\b/g, '')
-    // Remover ruídos comuns que não são medidas (lotes, códigos internos, etc)
-    .replace(/\b(UN|FD|CX|C\/|X)\b/g, '')
-    // Remover caracteres especiais (exceto espaços e os necessários para medidas como ponto/vírgula)
-    .replace(/[^\w\s.,]/gi, '')
-    // Colapsar múltiplos espaços
-    .replace(/\s+/g, ' ')
+    .replace(/[^\w\s]/g, "")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
-/**
- * DICIONÁRIO - Busca chaves existentes no banco
- */
-export async function getDictionary(keys) {
-  if (!keys || keys.length === 0) return {};
+// ==============================
+// 🧼 REMOVER PESO VARIÁVEL
+// ==============================
 
-  const { data, error } = await supabase
-    .from('product_dictionary')
-    .select('key, normalized_name, category')
-    .in('key', keys);
+function stripVariableInfo(name, unit, qty) {
+  if (!name) return "";
 
-  if (error) {
-    console.error('Erro ao buscar dicionário:', error);
-    return {};
+  const qtyNum = parseFloat(String(qty || "0").replace(",", "."));
+
+  // Peso variável (hortifruti, carnes, etc)
+  if (unit === "KG" && qtyNum < 5) {
+    return name
+      .replace(/\b\d+[.,]?\d*\s?(KG|G)\b/gi, "")
+      .trim();
   }
 
-  // Retorna um mapa { key: { normalized_name, category } }
-  return (data || []).reduce((acc, row) => {
-    acc[row.key] = {
-      normalized_name: row.normalized_name,
-      category: row.category
-    };
-    return acc;
-  }, {});
+  return name;
 }
 
-/**
- * IA - Chamada em lote (máximo 10)
- */
-export async function callAI(items) {
-  if (!items || items.length === 0) return [];
+// ==============================
+// 🧠 LIMPEZA PÓS IA
+// ==============================
 
-  const apiKey = getApiKey();
-  const selectedModel = getApiModel();
+function cleanAIName(name) {
+  if (!name) return "";
 
-  if (!apiKey) {
-    throw new Error("API Key da IA não configurada. Clique no ícone de engrenagem para configurar.");
-  }
-
-  // Limite de 10 por lote
-  const batch = items.slice(0, 10);
-
-  try {
-    let data;
-    const isGoogleKey = apiKey.startsWith('AIza');
-    
-    if (isGoogleKey) {
-      // Chamada para GOOGLE GEMINI
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `Você é um assistente especialista em compras de mercado no Brasil. 
-              Receba uma lista de itens de nota fiscal (raw) e retorne APENAS um JSON (array de objetos) com: key, normalized_name, category.
-              
-              REGRAS DE NORMALIZAÇÃO:
-               1. normalized_name: Deve ser o nome legível e simplificado do produto. 
-                  IMPORTANTE: Mantenha as medidas (ex: 5kg, 1L, 350ml) no nome para diferenciar tamanhos.
-                  REMOVA medidas genéricas sem valor numérico (ex: "BATATA KG" -> "Batata", "CEBOLA SC" -> "Cebola").
-                  Exemplo: "ARROZ TIO JOAO T1 5KG" -> "Arroz Branco Tio João 5kg"
-                  Exemplo: "COCA COLA PET 2L" -> "Coca-Cola 2L"
-                  Exemplo: "SAB PO OMO LAV PERF 1.6KG" -> "Sabão em Pó Omo 1.6kg"
-               2. category: Escolha a melhor categoria entre: Açougue, Hortifruti, Laticínios, Padaria, Limpeza, Higiene, Bebidas, Mercearia, Petshop, Outros.
-              3. key: Deve ser exatamente a chave fornecida no campo 'key' do item recebido.
-
-              Itens para processar: ${JSON.stringify(batch)}`
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.1,
-            responseMimeType: "application/json"
-          }
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Erro na API do Google: ${errorData.error?.message || response.statusText}`);
-      }
-
-      const result = await response.json();
-      const content = result.candidates[0]?.content?.parts[0]?.text;
-      data = JSON.parse(content.trim());
-    } else {
-      // Chamada para OPENAI (ou compatível como Groq)
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: selectedModel.includes('gemini') ? 'gpt-3.5-turbo' : selectedModel,
-          messages: [
-            { 
-              role: "system", 
-              content: `Você é um assistente especialista em compras de mercado no Brasil. 
-              Receba uma lista de itens de nota fiscal (raw) e retorne um JSON (array de objetos) com: key, normalized_name, category. 
-              
-              REGRAS DE NORMALIZAÇÃO:
-               1. normalized_name: Deve ser o nome legível e simplificado do produto. 
-                  IMPORTANTE: Mantenha as medidas (ex: 5kg, 1L, 350ml) no nome para diferenciar tamanhos.
-                  REMOVA medidas genéricas sem valor numérico (ex: "BATATA KG" -> "Batata", "CEBOLA SC" -> "Cebola").
-                  Exemplo: "ARROZ TIO JOAO T1 5KG" -> "Arroz Branco Tio João 5kg"
-                  Exemplo: "COCA COLA PET 2L" -> "Coca-Cola 2L"
-                  Exemplo: "SAB PO OMO LAV PERF 1.6KG" -> "Sabão em Pó Omo 1.6kg"
-               2. category: Escolha a melhor categoria entre: Açougue, Hortifruti, Laticínios, Padaria, Limpeza, Higiene, Bebidas, Mercearia, Petshop, Outros.
-              3. key: Deve ser exatamente a chave fornecida no campo 'key' do item recebido.`
-            },
-            { 
-              role: "user", 
-              content: JSON.stringify(batch) 
-            }
-          ],
-          temperature: 0
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Erro na API da IA: ${errorData.error?.message || response.statusText}`);
-      }
-
-      const result = await response.json();
-      let content = result.choices[0]?.message?.content;
-      
-      // Sanitização para extrair JSON de blocos markdown
-      if (content.includes('```json')) {
-        content = content.split('```json')[1].split('```')[0];
-      } else if (content.includes('```')) {
-        content = content.split('```')[1].split('```')[0];
-      }
-      data = JSON.parse(content.trim());
-    }
-
-    // Validação da resposta (Etapa 6)
-    if (!Array.isArray(data)) return [];
-    
-    return data.filter(item => 
-      item.key && 
-      item.normalized_name && 
-      item.category
-    );
-  } catch (err) {
-    console.error('Erro na IA:', err);
-    throw err;
-  }
+  return name
+    .replace(/\b\d+[.,]\d+\s?(KG|G|L|ML)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-/**
- * Testar conexão com a IA
- */
-export async function testAiConnection(key, model) {
-  const isGoogle = key.startsWith('AIza');
-  
-  try {
-    if (isGoogle) {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: "Diga 'OK'" }] }]
-        })
-      });
-      return response.ok;
-    } else {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${key}`
-        },
-        body: JSON.stringify({
-          model: model.includes('gemini') ? 'gpt-3.5-turbo' : model,
-          messages: [{ role: "user", content: "Diga 'OK'" }],
-          max_tokens: 5
-        })
-      });
-      return response.ok;
-    }
-  } catch {
-    return false;
-  }
+// ==============================
+// 🔢 CONVERSÃO NUMÉRICA
+// ==============================
+
+function toNumber(value, fallback = 0) {
+  if (value === null || value === undefined || value === "") return fallback;
+
+  // Já é número
+  if (typeof value === "number") return isNaN(value) ? fallback : value;
+
+  const num = parseFloat(String(value).replace(",", "."));
+  return isNaN(num) ? fallback : num;
 }
 
-/**
- * ATUALIZAR DICIONÁRIO (Etapa 7)
- */
-export async function updateDictionary(aiResults) {
-  if (!aiResults || aiResults.length === 0) return;
+// ==============================
+// 🚀 PIPELINE PRINCIPAL
+// ==============================
 
-  const { error } = await supabase
-    .from('product_dictionary')
-    .upsert(
-      aiResults.map(r => ({
-        key: r.key,
-        normalized_name: r.normalized_name,
-        category: r.category
-      })),
-      { onConflict: 'key' }
-    );
+export async function processItemsPipeline(rawItems = []) {
+  if (!rawItems.length) return [];
 
-  if (error) {
-    console.error('Erro ao atualizar dicionário:', error);
-  }
-}
+  // ==============================
+  // 1. NORMALIZAÇÃO INICIAL
+  // ==============================
 
-/**
- * PIPELINE COMPLETO (Etapa 11)
- */
-export async function processItemsPipeline(rawItems) {
-  // 1. Normalizar keys
-  const itemsWithKey = rawItems.map(item => ({
+  const itemsWithKey = rawItems.map((item) => ({
     ...item,
-    normalized_key: normalizeKey(item.name)
+    normalized_key: normalizeKey(item.name),
   }));
 
-  const keys = [...new Set(itemsWithKey.map(i => i.normalized_key))];
+  // ==============================
+  // 2. BUSCAR DICIONÁRIO
+  // ==============================
 
-  // 2. Buscar dicionário (conhecidos)
+  const keys = [...new Set(itemsWithKey.map((i) => i.normalized_key))];
   const dictionary = await getDictionary(keys);
 
-  // 3. Separar conhecidos / desconhecidos
-  const knownItems = [];
-  const unknownMap = new Map(); // Para evitar duplicados no lote de IA
+  // ==============================
+  // 3. SEPARAR CONHECIDOS / DESCONHECIDOS
+  // ==============================
 
-  itemsWithKey.forEach(item => {
+  const knownItems = [];
+  const unknownMap = new Map();
+
+  itemsWithKey.forEach((item) => {
     const dictEntry = dictionary[item.normalized_key];
+
     if (dictEntry) {
       knownItems.push({
         ...item,
         normalized_name: dictEntry.normalized_name,
-        category: dictEntry.category
+        category: dictEntry.category,
       });
     } else {
-      // Registra no mapa de desconhecidos para IA (evita enviar mesma chave 2x)
       if (!unknownMap.has(item.normalized_key)) {
-        unknownMap.set(item.normalized_key, item.name);
+        const cleanName = stripVariableInfo(
+          item.name,
+          item.unit,
+          item.qty
+        );
+
+        unknownMap.set(item.normalized_key, cleanName);
       }
     }
   });
 
-  // 4. IA para desconhecidos (em lotes de 10)
-  const unknownKeysForAI = Array.from(unknownMap.entries()).map(([key, raw]) => ({ key, raw }));
+  // ==============================
+  // 4. CHAMAR IA (EM LOTES)
+  // ==============================
+
+  const unknownEntries = Array.from(unknownMap.entries()).map(
+    ([key, raw]) => ({ key, raw })
+  );
+
   let aiResults = [];
-  
-  // Processamento em lotes com tratamento de erro resiliente
-  for (let i = 0; i < unknownKeysForAI.length; i += 10) {
-    const chunk = unknownKeysForAI.slice(i, i + 10);
+
+  for (let i = 0; i < unknownEntries.length; i += 10) {
+    const chunk = unknownEntries.slice(i, i + 10);
+
     try {
-      const results = await callAI(chunk);
-      aiResults = [...aiResults, ...results];
+      const response = await callAI(chunk);
+
+      const cleaned = response.map((r) => ({
+        key: r.key,
+        normalized_name: cleanAIName(r.normalized_name),
+        category: r.category || "Outros",
+      }));
+
+      aiResults = [...aiResults, ...cleaned];
     } catch (err) {
-      console.warn('Erro ao chamar IA para lote, usando fallback:', err);
-      // Fallback: se a IA falhar, usamos o nome original como nome normalizado
-      const fallbackResults = chunk.map(item => ({
+      console.warn("Erro na IA, usando fallback:", err);
+
+      const fallback = chunk.map((item) => ({
         key: item.key,
         normalized_name: item.raw,
-        category: 'Outros'
+        category: "Outros",
       }));
-      aiResults = [...aiResults, ...fallbackResults];
+
+      aiResults = [...aiResults, ...fallback];
     }
   }
 
-  // 5. Atualizar dicionário com novos aprendizados
-  if (aiResults.length > 0) {
+  // ==============================
+  // 5. ATUALIZAR DICIONÁRIO
+  // ==============================
+
+  if (aiResults.length) {
     await updateDictionary(aiResults);
   }
 
-  // 6. Montar itens finais
-  const aiResultsMap = aiResults.reduce((acc, r) => {
+  // ==============================
+  // 6. MAPA FINAL (IA + DICIONÁRIO)
+  // ==============================
+
+  const aiMap = aiResults.reduce((acc, r) => {
     acc[r.key] = r;
     return acc;
   }, {});
 
-  const finalItems = itemsWithKey.map(item => {
-    const dictEntry = dictionary[item.normalized_key] || aiResultsMap[item.normalized_key];
-    
-    // Converte valores para números para o banco de dados
-    const quantity = parseFloat(String(item.qty).replace(',', '.')) || 1;
-    const unitPriceNum = parseFloat(String(item.unitPrice || '0,00').replace(',', '.')) || 0;
-    const totalNum = parseFloat(String(item.total || '0,00').replace(',', '.')) || (quantity * unitPriceNum);
+  // ==============================
+  // 7. MONTAGEM FINAL
+  // ==============================
+
+  const finalItems = itemsWithKey.map((item) => {
+    const dictEntry =
+      dictionary[item.normalized_key] ||
+      aiMap[item.normalized_key];
+
+    const quantity = toNumber(item.qty, 1);
+    const unitPrice = toNumber(item.unitPrice, 0);
+    const totalValue = quantity * unitPrice;
+
+    // Formata strings BRL para a UI
+    const fmtQty = quantity.toString().replace(".", ",");
+    const fmtPrice = unitPrice.toFixed(2).replace(".", ",");
+    const fmtTotal = totalValue.toFixed(2).replace(".", ",");
 
     return {
-      // Campos originais para a UI (compatibilidade)
       name: item.name,
-      qty: item.qty,
-      unitPrice: item.unitPrice,
-      total: item.total,
-
-      // Novos campos requeridos (Etapa 8)
       normalized_key: item.normalized_key,
-      normalized_name: dictEntry ? dictEntry.normalized_name : item.name,
-      category: dictEntry ? dictEntry.category : 'Outros',
+      normalized_name: dictEntry?.normalized_name || item.name,
+      category: dictEntry?.category || "Outros",
+
+      // Campos numéricos (para persistência no DB)
       quantity,
-      unit: item.unit || 'UN',
-      price: unitPriceNum // Aqui usamos o preço unitário para 'price'
+      unit: item.unit || "UN",
+      price: unitPrice,
+
+      // Campos string BRL (para exibição na UI)
+      qty: fmtQty,
+      unitPrice: fmtPrice,
+      total: fmtTotal,
     };
   });
 
