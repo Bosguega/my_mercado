@@ -75,6 +75,7 @@ function HistoryTab({
   loading,
   loadReceipts,
 }) {
+  const showSkeleton = loading && savedReceipts.length === 0;
   const filteredReceipts = historyFilter.trim()
     ? savedReceipts.filter((receipt) =>
         receipt.establishment
@@ -438,7 +439,7 @@ function HistoryTab({
         </div>
       </div>
 
-      {loading ? (
+      {showSkeleton ? (
         <div className="items-list" style={{ gap: "1.25rem" }}>
           {[...Array(3)].map((_, i) => (
             <SkeletonReceipt key={i} />

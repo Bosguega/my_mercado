@@ -51,6 +51,7 @@ function SearchTab({
   loading,
 }) {
   const [showChart, setShowChart] = useState(false);
+  const showSkeleton = loading && savedReceipts.length === 0;
 
   // Flatten all items across all receipts
   const allPurchasedItems = [];
@@ -296,7 +297,7 @@ function SearchTab({
       </div>
 
       <div className="items-list">
-        {loading ? (
+        {showSkeleton ? (
           [...Array(6)].map((_, i) => <SkeletonSearch key={i} />)
         ) : (
           <>

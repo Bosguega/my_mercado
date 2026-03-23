@@ -1,7 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { BrowserMultiFormatReader, DecodeHintType } from "@zxing/library";
+import { useState, useEffect } from "react";
 import { Scan, History as HistoryIcon, Search, LogOut, Book } from "lucide-react";
-import { parseNFCeSP } from "./services/receiptParser";
 import SearchTab from "./components/SearchTab";
 import HistoryTab from "./components/HistoryTab";
 import ScannerTab from "./components/ScannerTab";
@@ -9,26 +7,29 @@ import DictionaryTab from "./components/DictionaryTab";
 import Login from "./components/Login";
 import { Toaster, toast } from "react-hot-toast";
 import { logout } from "./services/auth";
-import { isSupabaseConfigured, supabase } from "./services/supabaseClient";
+import { isSupabaseConfigured } from "./services/supabaseClient";
 import { useApiKey } from "./hooks/useApiKey";
 import { useReceipts } from "./hooks/useReceipts";
+import { usePersistedTab } from "./hooks/usePersistedTab";
+import { useReceiptScanner } from "./hooks/useReceiptScanner";
+import { useSupabaseSession } from "./hooks/useSupabaseSession";
 import ApiKeyModal from "./components/ApiKeyModal";
 import "./index.css";
 
 function App() {
-  const [sessionUser, setSessionUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const { sessionUser, setSessionUser, authLoading } = useSupabaseSession();
 
-  const [tab, setTab] = useState("scan"); // 'scan', 'history', 'search'
-  
+  const { tab, setTab } = usePersistedTab();
+
   // Custom Hook para gestão de notas
-  const { 
-    savedReceipts, 
-    loading: receiptsLoading, 
+  const {
+    savedReceipts,
+    setSavedReceipts,
+    loading: receiptsLoading,
     error: receiptsError,
-    loadReceipts, 
-    saveReceipt, 
-    deleteReceipt 
+    loadReceipts,
+    saveReceipt,
+    deleteReceipt
   } = useReceipts(sessionUser);
 
   useEffect(() => {
@@ -37,26 +38,27 @@ function App() {
     }
   }, [receiptsError]);
 
-  // Scan & Global State
-  const [currentReceipt, setCurrentReceipt] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [scanning, setScanning] = useState(false);
-  const [error, setError] = useState(null);
-  const [duplicateReceipt, setDuplicateReceipt] = useState(null);
-  const codeReaderRef = useRef(null);
-
-  // Manual Mode State
-  const [manualMode, setManualMode] = useState(false);
-  const [manualData, setManualData] = useState({
-    establishment: "",
-    date: new Date().toLocaleDateString("pt-BR"),
-    items: [],
-  });
-  const [manualItem, setManualItem] = useState({
-    name: "",
-    qty: "1",
-    unitPrice: "",
-  });
+  const {
+    currentReceipt,
+    setCurrentReceipt,
+    loading: scanLoading,
+    scanning,
+    error: scanError,
+    duplicateReceipt,
+    setDuplicateReceipt,
+    handleForceSaveDuplicate,
+    startCamera,
+    stopCamera,
+    handleFileUpload,
+    handleUrlSubmit,
+    manualMode,
+    setManualMode,
+    manualData,
+    setManualData,
+    manualItem,
+    setManualItem,
+    handleSaveManualReceipt,
+  } = useReceiptScanner({ saveReceipt, tab });
 
   // Search State
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,7 +76,7 @@ function App() {
     endDate: "", // for custom period
   });
   const [expandedReceipts, setExpandedReceipts] = useState([]);
-  
+
   // AI Key Management (BYOK)
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const { apiKey, setApiKey, hasKey } = useApiKey();
@@ -91,246 +93,7 @@ function App() {
     setShowApiKeyModal(false);
   };
 
-  useEffect(() => {
-    const storedTab = localStorage.getItem("@MyMercado:tab");
-    if (storedTab) setTab(storedTab);
-
-    if (!supabase) {
-      setAuthLoading(false);
-      return;
-    }
-
-    // Initial session fetch
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSessionUser(session?.user ?? null);
-      setAuthLoading(false);
-    });
-
-    // Listen to changes (login, logout)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSessionUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const handleChangeTab = (nextTab) => {
-    setTab(nextTab);
-    localStorage.setItem("@MyMercado:tab", nextTab);
-  };
-
-  const handleScanSuccess = async (decodedText) => {
-    setScanning(false);
-    setLoading(true);
-    try {
-      setError(null);
-      const extractedData = await parseNFCeSP(decodedText);
-      
-      if (!extractedData || !extractedData.items || extractedData.items.length === 0) {
-        toast.error("Não conseguimos ler os itens dessa nota. Verifique se o QR Code é de uma NFC-e válida.");
-        setError("Falha ao extrair itens da nota.");
-        return;
-      }
-
-      const result = await saveReceipt(extractedData);
-      
-      if (result.duplicate) {
-        setDuplicateReceipt(extractedData);
-        toast(
-          `Esta nota já está no seu histórico desde ${result.existingReceipt.date.split(" ")[0]}`,
-          { icon: "⚠️" },
-        );
-      } else if (result.success) {
-        setCurrentReceipt(result.receipt);
-        toast.success("Nota fiscal processada com sucesso!");
-      }
-    } catch (err) {
-      toast.error("Erro ao processar nota. Tente novamente.");
-      setError("Erro de conexão ou processamento: " + (err.message || "Desconhecido"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleForceSaveDuplicate = async () => {
-    if (duplicateReceipt) {
-      const result = await saveReceipt(duplicateReceipt, true);
-      if (result.success) {
-        setCurrentReceipt(result.receipt);
-        setDuplicateReceipt(null);
-        toast.success("Nota atualizada com sucesso!");
-      }
-    }
-  };
-
-  const stopCamera = async () => {
-    if (codeReaderRef.current) {
-      try {
-        codeReaderRef.current.reset();
-      } catch (err) {
-        console.warn("Erro ao parar câmera:", err);
-      } finally {
-        codeReaderRef.current = null;
-        setScanning(false);
-      }
-    }
-  };
-
-  const startCamera = async () => {
-    if (scanning || loading) return;
-    setScanning(true);
-    
-    setTimeout(async () => {
-      try {
-        const hints = new Map();
-        hints.set(DecodeHintType.TRY_HARDER, true);
-
-        const codeReader = new BrowserMultiFormatReader(hints);
-        codeReaderRef.current = codeReader;
-
-        const constraints = {
-          audio: false,
-          video: {
-            facingMode: "environment",
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          }
-        };
-
-        await codeReader.decodeFromConstraints(constraints, "reader-video", (result) => {
-          if (result) {
-            const text = result.getText();
-            stopCamera();
-            handleScanSuccess(text);
-          }
-        });
-      } catch (err) {
-        setScanning(false);
-        toast.error("Câmera não disponível. Verifique as permissões ou se o site usa HTTPS.");
-        console.error("Camera fail:", err);
-      }
-    }, 150);
-  };
-
-  const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    setLoading(true);
-    let imageUrl = null;
-    try {
-      const hints = new Map();
-      hints.set(DecodeHintType.TRY_HARDER, true);
-      const codeReader = new BrowserMultiFormatReader(hints);
-
-      imageUrl = URL.createObjectURL(file);
-      const result = await codeReader.decodeFromImageUrl(imageUrl);
-      
-      if (result) {
-        await handleScanSuccess(result.getText());
-      } else {
-        throw new Error("Não detectado");
-      }
-    } catch {
-      toast.error("QR Code não detectado na imagem.");
-      setLoading(false);
-    } finally {
-      if (imageUrl) URL.revokeObjectURL(imageUrl);
-    }
-  };
-
-  const handleSaveManualReceipt = async () => {
-    if (manualData.items.length === 0) {
-      toast.error("Adicione pelo menos um item");
-      return;
-    }
-    if (!manualData.establishment?.trim()) {
-      toast.error("Informe o nome do mercado");
-      return;
-    }
-
-    // Validar data
-    const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
-    if (!dateRegex.test(manualData.date)) {
-      toast.error("Data inválida! Use DD/MM/AAAA");
-      return;
-    }
-
-    // Validar itens (preços e quantidades)
-    const hasInvalidItems = manualData.items.some((item) => {
-      const price = parseFloat(
-        (item.unitPrice || "").toString().replace(",", "."),
-      );
-      const qty = parseFloat((item.qty || "").toString().replace(",", "."));
-      return isNaN(price) || isNaN(qty) || price < 0 || qty < 0;
-    });
-
-    if (hasInvalidItems) {
-      toast.error(
-        "Existem itens com valores inválidos. Verifique os preços e quantidades.",
-      );
-      return;
-    }
-
-    const toStoreSlug = (value) => {
-      const base = (value || "")
-        .toString()
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, "_")
-        .replace(/[^a-z0-9_]/g, "");
-      return base || "mercado";
-    };
-
-    const normalizeManualDate = (value) => {
-      const match = (value || "").toString().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-      if (!match) return "data";
-      const [, dd, mm, yyyy] = match;
-      return `${yyyy}${mm}${dd}`;
-    };
-
-    const randomSuffix =
-      (globalThis.crypto?.randomUUID?.() ||
-        `${Date.now()}_${Math.random().toString(16).slice(2)}`).replace(/-/g, "");
-    const manualId = `manual_${normalizeManualDate(manualData.date)}_${toStoreSlug(manualData.establishment)}_${randomSuffix.slice(0, 12)}`;
-    const finalData = {
-      ...manualData,
-      id: manualId,
-      establishment: manualData.establishment.trim() || "Compra Manual",
-    };
-
-    setLoading(true);
-    try {
-      const result = await saveReceipt(finalData);
-      if (result.success) {
-        setCurrentReceipt(result.receipt);
-
-        setManualMode(false);
-        setManualData({
-          establishment: "",
-          date: new Date().toLocaleDateString("pt-BR"),
-          items: [],
-        });
-        toast.success("Nota manual salva com sucesso!");
-      }
-    } catch (err) {
-      toast.error("Erro ao salvar nota.");
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (tab !== "scan" && codeReaderRef.current) {
-      try {
-        codeReaderRef.current.reset();
-      } catch {
-        // ignore
-      }
-      codeReaderRef.current = null;
-      setScanning(false);
-    }
-  }, [tab]);
+  const handleChangeTab = (nextTab) => setTab(nextTab);
 
   if (!isSupabaseConfigured) {
     return (
@@ -383,12 +146,12 @@ function App() {
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           <button
              onClick={() => setShowApiKeyModal(true)}
-             style={{ 
-               background: 'rgba(59, 130, 246, 0.1)', 
-               border: 'none', 
-               color: 'var(--primary)', 
-               cursor: 'pointer', 
-               padding: '0.6rem', 
+             style={{
+               background: 'rgba(59, 130, 246, 0.1)',
+               border: 'none',
+               color: 'var(--primary)',
+               cursor: 'pointer',
+               padding: '0.6rem',
                borderRadius: '10px',
                display: 'flex',
                alignItems: 'center',
@@ -403,11 +166,11 @@ function App() {
                await logout();
                toast.success('Sessão encerrada.');
              }}
-             style={{ 
-               background: 'rgba(239, 68, 68, 0.1)', 
-               border: 'none', 
-               color: '#ef4444', 
-               cursor: 'pointer', 
+             style={{
+               background: 'rgba(239, 68, 68, 0.1)',
+               border: 'none',
+               color: '#ef4444',
+               cursor: 'pointer',
                padding: '0.6rem',
                borderRadius: '10px',
                display: 'flex',
@@ -434,11 +197,11 @@ function App() {
             startCamera={startCamera}
             stopCamera={stopCamera}
             handleFileUpload={handleFileUpload}
-            loading={loading}
+            loading={scanLoading}
             scanning={scanning}
-            error={error}
+            error={scanError}
             currentReceipt={currentReceipt}
-            handleUrlSubmit={handleScanSuccess}
+            handleUrlSubmit={handleUrlSubmit}
             setCurrentReceipt={setCurrentReceipt}
           />
         )}
@@ -446,7 +209,7 @@ function App() {
         {tab === "history" && (
           <HistoryTab
             savedReceipts={savedReceipts}
-            setSavedReceipts={loadReceipts}
+            setSavedReceipts={setSavedReceipts}
             historyFilter={historyFilter}
             setHistoryFilter={setHistoryFilter}
             historyFilters={historyFilters}
@@ -615,8 +378,8 @@ function App() {
         </button>
       </nav>
 
-      <ApiKeyModal 
-        isOpen={showApiKeyModal} 
+      <ApiKeyModal
+        isOpen={showApiKeyModal}
         onClose={() => setShowApiKeyModal(false)}
         currentKey={apiKey}
         onSave={handleSaveApiKey}
