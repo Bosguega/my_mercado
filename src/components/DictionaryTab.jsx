@@ -12,21 +12,68 @@ import {
   getFullDictionaryFromDB, 
   updateDictionaryEntryInDB, 
   deleteDictionaryEntryFromDB,
-  clearDictionaryInDB 
+  clearDictionaryInDB,
+  applyDictionaryEntryToSavedItems,
 } from "../services/dbMethods";
 import { toast } from "react-hot-toast";
+import PropTypes from "prop-types";
 
 const CATEGORIES = [
   "Açougue", "Hortifruti", "Laticínios", "Padaria", 
   "Limpeza", "Higiene", "Bebidas", "Mercearia", "Petshop", "Outros"
 ];
 
-function DictionaryTab() {
+function DictionaryTab({ setSavedReceipts, loadReceipts }) {
   const [dictionary, setDictionary] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingKey, setEditingKey] = useState(null);
   const [editForm, setEditForm] = useState({ normalized_name: "", category: "" });
+
+  const applyChangesToSavedReceipts = async (key, normalizedName, category) => {
+    const toastId = toast.loading("Atualizando notas salvas...");
+    try {
+      const { updatedCount } = await applyDictionaryEntryToSavedItems(
+        key,
+        normalizedName,
+        category,
+      );
+
+      if (typeof setSavedReceipts === "function") {
+        setSavedReceipts((prev) => {
+          const updated = (prev || []).map((receipt) => ({
+            ...receipt,
+            items: Array.isArray(receipt.items)
+              ? receipt.items.map((item) => {
+                  const itemKey = item.normalized_key ?? item.normalizedKey;
+                  if (itemKey !== key) return item;
+
+                  return {
+                    ...item,
+                    normalized_name: normalizedName,
+                    category,
+                  };
+                })
+              : receipt.items,
+          }));
+
+          localStorage.setItem("@MyMercado:receipts", JSON.stringify(updated));
+          return updated;
+        });
+      } else if (typeof loadReceipts === "function") {
+        await loadReceipts();
+      }
+
+      if (!updatedCount) {
+        toast.success("Nenhum item salvo precisou ser atualizado.", { id: toastId });
+      } else {
+        toast.success(`Atualizado em ${updatedCount} item(ns) nas notas salvas.`, { id: toastId });
+      }
+    } catch (err) {
+      console.error("Erro ao aplicar correção nas notas:", err);
+      toast.error("Erro ao atualizar notas salvas.", { id: toastId });
+    }
+  };
 
   const loadDictionary = async () => {
     setLoading(true);
@@ -55,12 +102,75 @@ function DictionaryTab() {
 
   const handleSaveEdit = async (key) => {
     try {
-      await updateDictionaryEntryInDB(key, editForm.normalized_name, editForm.category);
+      const previous = dictionary.find((item) => item.key === key);
+      const previousNormalizedName = (previous?.normalized_name ?? "").trim();
+      const previousCategory = (previous?.category ?? "Outros").trim();
+
+      const nextNormalizedName = (editForm.normalized_name ?? "").trim();
+      const nextCategory = (editForm.category ?? "Outros").trim();
+
+      const shouldOfferApplyToSaved =
+        previousNormalizedName !== nextNormalizedName ||
+        previousCategory !== nextCategory;
+
+      await updateDictionaryEntryInDB(key, nextNormalizedName, nextCategory);
       setDictionary(prev => prev.map(item => 
-        item.key === key ? { ...item, ...editForm } : item
+        item.key === key ? { ...item, normalized_name: nextNormalizedName, category: nextCategory } : item
       ));
       setEditingKey(null);
       toast.success("Item atualizado!");
+
+      if (shouldOfferApplyToSaved) {
+        toast((t) => (
+          <div
+            className="glass-card"
+            style={{
+              margin: 0,
+              padding: "1rem",
+              width: "100%",
+              maxWidth: "520px",
+              display: "flex",
+              gap: "0.75rem",
+              alignItems: "center",
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <div style={{ color: "#fff", fontWeight: 700, marginBottom: "0.25rem" }}>
+                Corrigir notas já salvas?
+              </div>
+              <div style={{ color: "#94a3b8", fontSize: "0.85rem", lineHeight: 1.35 }}>
+                Aplica este nome/categoria em todos os itens salvos com a chave <strong style={{ color: "#e2e8f0" }}>{key}</strong>.
+              </div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <button
+                className="btn btn-success"
+                style={{ padding: "0.5rem 0.9rem", borderRadius: "0.9rem", fontSize: "0.9rem" }}
+                onClick={async () => {
+                  toast.dismiss(t.id);
+                  await applyChangesToSavedReceipts(key, nextNormalizedName, nextCategory);
+                }}
+              >
+                Corrigir
+              </button>
+              <button
+                className="btn"
+                style={{
+                  padding: "0.5rem 0.9rem",
+                  borderRadius: "0.9rem",
+                  fontSize: "0.9rem",
+                  background: "rgba(255,255,255,0.06)",
+                  boxShadow: "none",
+                }}
+                onClick={() => toast.dismiss(t.id)}
+              >
+                Agora não
+              </button>
+            </div>
+          </div>
+        ), { duration: 10000 });
+      }
     } catch (err) {
       console.error("Erro ao atualizar item:", err);
       toast.error("Erro ao salvar alterações.");
@@ -220,3 +330,8 @@ function DictionaryTab() {
 }
 
 export default DictionaryTab;
+
+DictionaryTab.propTypes = {
+  setSavedReceipts: PropTypes.func,
+  loadReceipts: PropTypes.func,
+};

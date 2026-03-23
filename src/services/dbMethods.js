@@ -219,6 +219,28 @@ export async function updateDictionaryEntryInDB(key, normalizedName, category) {
   return true;
 }
 
+// 🔁 Corrigir itens salvos usando o dicionário
+export async function applyDictionaryEntryToSavedItems(key, normalizedName, category) {
+  await getUserOrThrow();
+  const client = requireSupabase();
+
+  if (!key) return { updatedCount: 0 };
+
+  const patch = {};
+  if (normalizedName !== undefined) patch.normalized_name = normalizedName;
+  if (category !== undefined) patch.category = category;
+
+  if (Object.keys(patch).length === 0) return { updatedCount: 0 };
+
+  const { error, count } = await client
+    .from('items')
+    .update(patch, { count: 'exact' })
+    .eq('normalized_key', key);
+
+  if (error) throw error;
+  return { updatedCount: count ?? 0 };
+}
+
 export async function deleteDictionaryEntryFromDB(key) {
   await getUserOrThrow();
   const client = requireSupabase();

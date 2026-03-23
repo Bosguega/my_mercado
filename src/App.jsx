@@ -234,7 +234,7 @@ function App() {
         )}
 
         {tab === "dictionary" && (
-          <DictionaryTab />
+          <DictionaryTab setSavedReceipts={setSavedReceipts} loadReceipts={loadReceipts} />
         )}
       </main>
 
