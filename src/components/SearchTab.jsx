@@ -14,6 +14,7 @@ import {
 import PropTypes from "prop-types";
 import { parseBRL } from "../utils/currency";
 import { parseToDate } from "../utils/date";
+import { groupBy, filterBySearch, sortItems } from "../utils/analytics";
 
 // Skeleton para itens da pesquisa
 const SkeletonSearch = () => (
@@ -76,41 +77,30 @@ function SearchTab({
 
   // Memoize filtered and sorted items
   const { filteredItems, totalCount } = useMemo(() => {
-    const base =
-      searchQuery.trim() === ""
-        ? allPurchasedItems.slice(0, 50) 
-        : allPurchasedItems.filter((i) =>
-            i.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (i.normalized_name && i.normalized_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-            (i.category && i.category.toLowerCase().includes(searchQuery.toLowerCase()))
-          );
+    const baseItems = searchQuery.trim() === "" 
+      ? allPurchasedItems.slice(0, 50)
+      : filterBySearch(allPurchasedItems, searchQuery, ["name", "normalized_name", "category"]);
 
-    let result = [...base];
+    const customSorters = {
+      price: (a, b) => parseBRL(a.price) - parseBRL(b.price),
+      recent: (a, b) => {
+        const timeA = parseToDate(a.purchasedAt || "").getTime();
+        const timeB = parseToDate(b.purchasedAt || "").getTime();
+        return timeA - timeB;
+      }
+    };
 
-    if (sortOrder === "price") {
-      result.sort((a, b) => {
-        const priceA = parseBRL(a.price);
-        const priceB = parseBRL(b.price);
-        return sortDirection === "asc" ? priceA - priceB : priceB - priceA;
-      });
-    } else if (sortOrder === "recent" && sortDirection === "asc") {
-       result.reverse();
-    }
+    const sorted = sortItems(baseItems, sortOrder, sortDirection, customSorters);
     
     return {
-      filteredItems: result.slice(0, 100),
-      totalCount: result.length
+      filteredItems: sorted.slice(0, 100),
+      totalCount: sorted.length
     };
   }, [allPurchasedItems, searchQuery, sortOrder, sortDirection]);
 
   // Group items by normalized name for the chart - memoized
   const groupedItems = useMemo(() => {
-    return filteredItems.reduce((acc, curr) => {
-      const key = curr.normalized_name || curr.name;
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(curr);
-      return acc;
-    }, {});
+    return groupBy(filteredItems, (i) => i.normalized_name || i.name);
   }, [filteredItems]);
 
   // Memoize chart data calculation

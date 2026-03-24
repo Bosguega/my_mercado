@@ -18,6 +18,7 @@ import {
 } from "../services/dbMethods";
 import { toast } from "react-hot-toast";
 import PropTypes from "prop-types";
+import { filterBySearch, sortItems } from "../utils/analytics";
 
 const CATEGORIES = [
   "Açougue", "Hortifruti", "Laticínios", "Padaria", 
@@ -207,34 +208,29 @@ function DictionaryTab({ setSavedReceipts, loadReceipts }) {
   };
 
   const filteredDictionary = useMemo(() => {
-    return dictionary.filter(item => {
-      const matchesSearch = item.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.normalized_name && item.normalized_name.toLowerCase().includes(searchQuery.toLowerCase()));
-      
-      const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
-      
-      return matchesSearch && matchesCategory;
-    });
+    const baseItems = filterBySearch(dictionary, searchQuery, ["key", "normalized_name"]);
+    return baseItems.filter(item => selectedCategory === "all" || item.category === selectedCategory);
   }, [dictionary, searchQuery, selectedCategory]);
 
   const sortedDictionary = useMemo(() => {
-    const result = [...filteredDictionary].sort((a, b) => {
-      if (sortBy === "recent") {
+    const customSorters = {
+      recent: (a, b) => {
         const dateA = new Date(a.created_at || 0);
         const dateB = new Date(b.created_at || 0);
-        return sortDirection === "asc" ? dateA - dateB : dateB - dateA;
-      } else {
+        return dateA - dateB;
+      },
+      alpha: (a, b) => {
         const nameA = (a.normalized_name || a.key).toLowerCase();
         const nameB = (b.normalized_name || b.key).toLowerCase();
-        return sortDirection === "asc" 
-          ? nameA.localeCompare(nameB) 
-          : nameB.localeCompare(nameA);
+        return nameA.localeCompare(nameB);
       }
-    });
+    };
+
+    const sorted = sortItems(filteredDictionary, sortBy, sortDirection, customSorters);
     
     return {
-      items: result.slice(0, 100),
-      totalCount: result.length
+      items: sorted.slice(0, 100),
+      totalCount: sorted.length
     };
   }, [filteredDictionary, sortBy, sortDirection]);
 

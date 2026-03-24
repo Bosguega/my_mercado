@@ -40,6 +40,7 @@ graph TD
     UI["Interface React (PWA)"]
     App["App.jsx — Orquestrador"]
     Hook["useReceipts.js — State Management"]
+    Analytics["Analytics Engine (utils/analytics/)"]
     Pipeline["Pipeline (productService.js)"]
     Services["Conversão Sefaz (receiptParser.js)"]
     AI["IA — Google Gemini / OpenAI (BYOK)"]
@@ -50,6 +51,8 @@ graph TD
 
     UI --> App
     App --> Hook
+    Hook --> Analytics
+    Analytics --> UI
     Hook --> Pipeline
     UI --> DictionaryTab
     DictionaryTab --> Dictionary
@@ -61,7 +64,7 @@ graph TD
 ```
 
 A regra principal de dependência é:
-**Interface → App/Hooks → Serviços → Backend como Serviço (Supabase) / Proxy Externo**
+**Interface → App/Hooks → Analytics Engine → Pipeline/Serviços → Backend como Serviço (Supabase) / Proxy Externo**
 
 [↑ Voltar ao índice](#índice)
 
@@ -75,9 +78,14 @@ O My Mercado utiliza uma stack moderna voltada para performance, resiliência e 
 
 ### **Frontend & Framework**
 - **React 18**: Biblioteca principal para construção da interface baseada em componentes.
-- **Vite 8**: Ferramenta de build e dev server de próxima geração, focada em velocidade.
+- **Vite 6**: Ferramenta de build e dev server de próxima geração, focada em velocidade e compatibilidade de plugins.
 - **Vite PWA Plugin**: Transforma o site em um Progressive Web App instalável com suporte offline básico.
 - **Framer Motion**: Motor de animações utilizado para reordenamento fluido de listas e transições de interface.
+- **Analytics Engine**: Módulo interno customizado (`src/utils/analytics/`) para processamento pesado de dados (filtros, agrupamentos, séries temporais) desacoplado da UI.
+
+### **Performance & Otimização**
+- **Code Splitting (Manual Chunks)**: Configuração avançada no Vite para separar bibliotecas grandes (Recharts, Supabase, Framer Motion) em arquivos menores, acelerando o carregamento inicial.
+- **Memoization Estratégica**: Uso intensivo de `useMemo` e `useCallback` para evitar re-renderizações desnecessárias em listas grandes.
 
 ### **Backend & Persistência (BaaS)**
 - **Supabase**: Backend-as-a-Service (BaaS) que provê:
@@ -89,6 +97,7 @@ O My Mercado utiliza uma stack moderna voltada para performance, resiliência e 
 ### **Inteligência Artificial (BYOK)**
 - **Google Gemini / OpenAI API**: Utilizadas para normalizar nomes brutos de produtos e categorizá-los automaticamente.
 - **Abordagem BYOK (Bring Your Own Key)**: O usuário fornece sua própria chave, garantindo privacidade e descentralização de custos.
+- **Model Discovery**: Suporte a busca dinâmica de modelos disponíveis na conta do Google AI Studio diretamente pelo modal de configuração.
 
 ### **Câmera & Scraping**
 - **@zxing/library**: Biblioteca de processamento de imagem para leitura nativa de QR Codes no navegador.
@@ -96,6 +105,7 @@ O My Mercado utiliza uma stack moderna voltada para performance, resiliência e 
 - **DOMParser Nativo**: Extração de dados estruturados a partir do HTML "sujo" retornado pelos portais governamentais.
 
 ### **Interface & Visualização**
+- **Universal Components**: Centralização de componentes de UI como `UniversalSearchBar.jsx` para garantir consistência visual e lógica entre as abas.
 - **Lucide React**: Biblioteca de ícones vetoriais modernos.
 - **Recharts**: Biblioteca de gráficos para visualização das tendências de preços dos produtos.
 - **React Hot Toast**: Sistema de notificações dinâmicas para feedback de ações (sucesso, erro, avisos).
@@ -117,8 +127,8 @@ Abaixo estão listadas as dependências principais e de desenvolvimento com suas
 | `@supabase/supabase-js` | `2.99.3` |
 | `@zxing/library` | `0.21.3` |
 | `framer-motion` | `12.38.0` |
-| `lucide-react` | `0.577.0` |
-| `prop-types` | `15.8.1` |
+| `lucide-react` | `0.577.0" |
+| `prop-types` | `15.8.1" |
 | `react` | `18.3.1` |
 | `react-dom` | `18.3.1` |
 | `react-hot-toast` | `2.6.0` |
@@ -127,18 +137,18 @@ Abaixo estão listadas as dependências principais e de desenvolvimento com suas
 ### **Dependências de Desenvolvimento (DevDependencies)**
 | Biblioteca | Versão |
 |---|---|
-| `@eslint/js` | `9.13.0` |
+| `@eslint/js` | `9.13.0" |
 | `@types/react` | `18.3.12` |
 | `@types/react-dom` | `18.3.1` |
-| `@vitejs/plugin-basic-ssl` | `1.1.0` |
-| `@vitejs/plugin-react` | `6.0.1` |
+| `@vitejs/plugin-basic-ssl` | `1.2.0" |
+| `@vitejs/plugin-react` | `4.3.0" |
 | `eslint` | `9.13.0` |
 | `eslint-plugin-react` | `7.37.2` |
 | `eslint-plugin-react-hooks` | `5.0.0` |
 | `eslint-plugin-react-refresh` | `0.4.14` |
 | `globals` | `15.11.0` |
-| `vite` | `8.0.2` |
-| `vite-plugin-pwa` | `0.19.8` |
+| `vite` | `6.0.0" |
+| `vite-plugin-pwa` | `0.21.0" |
 
 [↑ Voltar ao índice](#índice)
 
@@ -222,7 +232,8 @@ my_mercado/
 │   │   ├── DictionaryTab.jsx   # Gerenciamento manual de normalização
 │   │   ├── ScannerTab.jsx      
 │   │   ├── HistoryTab.jsx      
-│   │   └── SearchTab.jsx       
+│   │   ├── SearchTab.jsx       
+│   │   └── UniversalSearchBar.jsx # Barra de busca e filtros unificada
 │   │
 │   ├── hooks/
 │   │   ├── useApiKey.js        # Hook para gestão de estado da Key/IA
@@ -235,6 +246,12 @@ my_mercado/
 │   │   └── auth.js             # Lógica Supabase Auth
 │   │
 │   ├── utils/
+│   │   ├── analytics/          # Analytics Engine (Filtros, Agrupamentos, Cálculos)
+│   │   │   ├── groupBy.js
+│   │   │   ├── aggregate.js
+│   │   │   ├── filters.js
+│   │   │   ├── timeSeries.js
+│   │   │   └── index.js
 │   │   ├── aiConfig.js         # Persistência local da API Key
 │   │   ├── currency.js         # Parsing e formatação BRL
 │   │   └── date.js             # Padronização de datas ISO/BR
@@ -284,6 +301,7 @@ graph TD
 | Termo | Definição |
 |---|---|
 | **PWA** | Progressive Web App: Permite que a página se instale como um app falso no celular, acessando a câmera nativamente mesmo sendo feito apenas de HTML/JS. |
+| **Analytics Engine** | Módulo de processamento de dados (`src/utils/analytics/`) que centraliza lógicas de filtragem, agrupamento e cálculos, garantindo funções puras e alta performance. |
 | **Supabase** | Backend-as-a-Service, alternativa ao Firebase baseada em Postgres que expõe APIs baseadas nas próprias tabelas do banco. |
 | **Sefaz** | Secretaria da Fazenda — órgão responsável pelas NFC-e. Apenas Sefaz SP é suportada. |
 | **BRL** | Formato monetário brasileiro mantido como `string` em armazenamento (`"12,90"`) para evitar arredondamento de JS. |
@@ -364,7 +382,8 @@ using (auth.uid() = user_id);
 | Dicionário e Normalização Manual | `src/components/DictionaryTab.jsx` | `src/services/productService.js` |
 | Scraping / Captura de dados da nota | `src/services/receiptParser.js` | — |
 | Comunicação com banco de dados | `src/services/dbMethods.js` | `src/services/supabaseClient.js` |
-| Gráfico de tendência de preços | `src/components/SearchTab.jsx` | `src/services/dbMethods.js` |
+| Processamento e Filtros de Dados | `src/utils/analytics/` | `src/components/UniversalSearchBar.jsx` |
+| Gráfico de tendência de preços | `src/components/SearchTab.jsx` | `src/utils/analytics/` |
 | Estilização e Layout Mobile | `src/index.css` | `src/App.jsx` |
 
 [↑ Voltar ao índice](#índice)
@@ -417,6 +436,10 @@ Nota é salva no banco relacional (receipts + items) com datas padronizadas
 
 | Decisão | Alternativas consideradas | Motivo |
 |---|---|---|
+| Analytics Engine | Lógica dentro de cada aba (Search/History) | Centralizar cálculos e filtros em um motor de funções puras (`src/utils/analytics/`) reduz duplicação, facilita manutenção e permite que a UI foque apenas na exibição. |
+| Downgrade Vite 6 | Manter Vite 8 | O Vite 8 é muito recente e causou conflitos de dependências peer com plugins essenciais como `vite-plugin-pwa` e `basic-ssl`. O downgrade garante estabilidade no build do GitHub Actions. |
+| Manual Chunks (Build) | Bundle único (SPA padrão) | Com o crescimento das bibliotecas (Recharts, Supabase), o bundle ultrapassou 500kB. A divisão manual melhora o tempo de carregamento inicial e a performance do PWA. |
+| Componentes Universais | Componentes locais por aba | O uso de `UniversalSearchBar.jsx` unifica a lógica de busca e ordenação, garantindo que o usuário tenha a mesma experiência em todas as abas do app. |
 | Migração Relacional (Adeus JSONB) | Guardar itens dentro da nota como JSON | O modelo JSONB dificultava buscas cross-nota (ex: "Qual o preço médio da maçã em todas as notas?"). O modelo relacional de `items` torna a pesquisa instantânea e rica. |
 | BYOK (Bring Your Own Key) | API Key fixa no servidor / Proxy | Como o app não tem backend centralizado, a abordagem BYOK (o usuário fornece sua chave Gemini/OpenAI) garante privacidade, custo zero para o desenvolvedor e longevidade do app. |
 | IA em Lote (Batching) | IA por item individual | Chamar a IA para cada item separadamente é lento e consome tokens de forma ineficiente. O pipeline agrupa itens desconhecidos em lotes de 10, reduzindo latência e custos. |

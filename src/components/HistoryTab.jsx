@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { restoreReceiptsToDB } from "../services/dbMethods";
 import { parseBRL } from "../utils/currency";
 import { parseToDate } from "../utils/date";
+import { calculateReceiptTotal, calculateTotalSpent } from "../utils/analytics";
 
 // Moved to module scope: utiliza utilitário centralizado
 const parseDate = (d) => parseToDate(d);
@@ -155,8 +156,8 @@ function HistoryTab({
       }
 
       if (historyFilters.sortBy === "value") {
-        const totalA = a.items.reduce((acc, item) => acc + (parseBRL(item.price) * parseBRL(item.quantity)), 0);
-        const totalB = b.items.reduce((acc, item) => acc + (parseBRL(item.price) * parseBRL(item.quantity)), 0);
+        const totalA = calculateReceiptTotal(a, parseBRL);
+        const totalB = calculateReceiptTotal(b, parseBRL);
         return historyFilters.sortOrder === "asc"
           ? totalA - totalB
           : totalB - totalA;
@@ -524,14 +525,7 @@ function HistoryTab({
               </p>
               <h3 style={{ color: "#fff", fontSize: "1.8rem", fontWeight: 800 }}>
                 R${" "}
-                {finalFilteredReceipts.items
-                  .reduce((acc, r) => {
-                    const total = r.items.reduce(
-                      (sum, item) => sum + (parseBRL(item.price) * parseBRL(item.quantity)),
-                      0,
-                    );
-                    return acc + total;
-                  }, 0)
+                {calculateTotalSpent(finalFilteredReceipts.items, parseBRL)
                   .toFixed(2)
                   .replace(".", ",")}
               </h3>
@@ -715,10 +709,8 @@ function HistoryTab({
                 {finalFilteredReceipts.items.map((receipt) => {
                   const isExpanded = expandedReceipts.includes(receipt.id);
 
-                  // Calcular total de forma segura usando parseBRL para garantir valores numéricos
-                  const total = receipt.items.reduce((acc, curr) => {
-                    return acc + (parseBRL(curr.price) * parseBRL(curr.quantity) || 0);
-                  }, 0);
+                  // Calcular total de forma segura usando analytics engine
+                  const total = calculateReceiptTotal(receipt, parseBRL);
 
                   return (
                     <motion.div
