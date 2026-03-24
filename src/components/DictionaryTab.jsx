@@ -28,6 +28,7 @@ function DictionaryTab({ setSavedReceipts, loadReceipts }) {
   const [dictionary, setDictionary] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState("recent");
   const [sortDirection, setSortDirection] = useState("desc");
   const [editingKey, setEditingKey] = useState(null);
@@ -206,11 +207,15 @@ function DictionaryTab({ setSavedReceipts, loadReceipts }) {
   };
 
   const filteredDictionary = useMemo(() => {
-    return dictionary.filter(item => 
-      item.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.normalized_name && item.normalized_name.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-  }, [dictionary, searchQuery]);
+    return dictionary.filter(item => {
+      const matchesSearch = item.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.normalized_name && item.normalized_name.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
+      
+      return matchesSearch && matchesCategory;
+    });
+  }, [dictionary, searchQuery, selectedCategory]);
 
   const sortedDictionary = useMemo(() => {
     const result = [...filteredDictionary].sort((a, b) => {
@@ -264,7 +269,7 @@ function DictionaryTab({ setSavedReceipts, loadReceipts }) {
       </div>
 
       <UniversalSearchBar
-        placeholder="Pesquisar por nome ou ID..."
+        placeholder="Pesquisar no dicionário..."
         value={searchQuery}
         onChange={setSearchQuery}
         sortValue={sortBy}
@@ -272,12 +277,39 @@ function DictionaryTab({ setSavedReceipts, loadReceipts }) {
         sortOrder={sortDirection}
         onSortOrderChange={setSortDirection}
         sortOptions={[
-          { value: "recent", label: "🕒 Recentes" },
-          { value: "alpha", label: "🔤 Ordem Alfabética" }
+          { value: "recent", label: "RECENTE" },
+          { value: "alpha", label: "A-Z" }
         ]}
         extraActions={
-          <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
-            {sortedDictionary.totalCount > 100 ? "Exibindo 100+" : `${sortedDictionary.totalCount} itens`}
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <span style={{ fontSize: "0.8rem", color: "#64748b", fontWeight: 500 }}>
+                CATEGORIA:
+              </span>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                style={{
+                  background: "rgba(59, 130, 246, 0.1)",
+                  border: "none",
+                  borderRadius: "6px",
+                  color: "var(--primary)",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  padding: "0.25rem 0.5rem",
+                  cursor: "pointer",
+                  outline: "none",
+                }}
+              >
+                <option value="all">TODAS</option>
+                {CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>{cat.toUpperCase()}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
+              {sortedDictionary.totalCount > 100 ? "Exibindo 100+" : `${sortedDictionary.totalCount} itens`}
+            </div>
           </div>
         }
       />
