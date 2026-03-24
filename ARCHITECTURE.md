@@ -10,22 +10,24 @@ O usuário escaneia o QR Code de notas fiscais eletrônicas brasileiras (NFC-e),
 ## Índice
 
 1. [Diagrama de Camadas](#diagrama-de-camadas)
-2. [Modelo Mental](#modelo-mental)
-3. [Treeview](#treeview)
-4. [Mapa de Dependências](#mapa-de-dependências)
-5. [Glossário de Domínio](#glossário-de-domínio)
-6. [Estrutura de Dados Principal](#estrutura-de-dados-principal)
-7. [Matriz de Tarefas](#matriz-de-tarefas)
-8. [Fluxo de Dados](#fluxo-de-dados)
-9. [Regras de Arquitetura](#regras-de-arquitetura)
-10. [Registro de Decisões](#registro-de-decisões)
-11. [Não-Objetivos](#não-objetivos)
-12. [Estado Atual de Desenvolvimento](#estado-atual-de-desenvolvimento)
-13. [Como Executar](#como-executar)
-14. [Variáveis de Ambiente](#variáveis-de-ambiente)
-15. [Estratégia de Tratamento de Erros](#estratégia-de-tratamento-de-erros)
-16. [Pontos Frágeis](#pontos-frágeis)
-17. [Convenções do Projeto](#convenções-do-projeto)
+2. [Tecnologias Utilizadas](#tecnologias-utilizadas)
+3. [Lista de Dependências (package.json)](#lista-de-dependências-packagejson)
+4. [Modelo Mental](#modelo-mental)
+5. [Treeview](#treeview)
+6. [Mapa de Dependências](#mapa-de-dependências)
+7. [Glossário de Domínio](#glossário-de-domínio)
+8. [Estrutura de Dados Principal](#estrutura-de-dados-principal)
+9. [Matriz de Tarefas](#matriz-de-tarefas)
+10. [Fluxo de Dados](#fluxo-de-dados)
+11. [Regras de Arquitetura](#regras-de-arquitetura)
+12. [Registro de Decisões](#registro-de-decisões)
+13. [Não-Objetivos](#não-objetivos)
+14. [Estado Atual de Desenvolvimento](#estado-atual-de-desenvolvimento)
+15. [Como Executar](#como-executar)
+16. [Variáveis de Ambiente](#variáveis-de-ambiente)
+17. [Estratégia de Tratamento de Erros](#estratégia-de-tratamento-de-erros)
+18. [Pontos Frágeis](#pontos-frágeis)
+19. [Convenções do Projeto](#convenções-do-projeto)
 
 ---
 
@@ -60,6 +62,83 @@ graph TD
 
 A regra principal de dependência é:
 **Interface → App/Hooks → Serviços → Backend como Serviço (Supabase) / Proxy Externo**
+
+[↑ Voltar ao índice](#índice)
+
+---
+
+<a id="tecnologias-utilizadas"></a>
+
+# Tecnologias Utilizadas
+
+O My Mercado utiliza uma stack moderna voltada para performance, resiliência e experiência do usuário (UX) de alta fidelidade.
+
+### **Frontend & Framework**
+- **React 18**: Biblioteca principal para construção da interface baseada em componentes.
+- **Vite 8**: Ferramenta de build e dev server de próxima geração, focada em velocidade.
+- **Vite PWA Plugin**: Transforma o site em um Progressive Web App instalável com suporte offline básico.
+- **Framer Motion**: Motor de animações utilizado para reordenamento fluido de listas e transições de interface.
+
+### **Backend & Persistência (BaaS)**
+- **Supabase**: Backend-as-a-Service (BaaS) que provê:
+  - **PostgreSQL**: Banco de dados relacional para armazenamento de notas e itens.
+  - **Supabase Auth**: Sistema de autenticação Email/Senha.
+  - **RLS (Row Level Security)**: Garante que cada usuário acesse apenas seus próprios dados diretamente via frontend.
+- **SDK do Supabase**: Comunicação direta e segura entre o React e o banco de dados.
+
+### **Inteligência Artificial (BYOK)**
+- **Google Gemini / OpenAI API**: Utilizadas para normalizar nomes brutos de produtos e categorizá-los automaticamente.
+- **Abordagem BYOK (Bring Your Own Key)**: O usuário fornece sua própria chave, garantindo privacidade e descentralização de custos.
+
+### **Câmera & Scraping**
+- **@zxing/library**: Biblioteca de processamento de imagem para leitura nativa de QR Codes no navegador.
+- **Proxy Rotation (CORS)**: Sistema resiliente que rotaciona entre múltiplos proxies (`corsproxy.io`, `allorigins`, `cors-anywhere`) para contornar bloqueios de CORS ao acessar portais da Sefaz.
+- **DOMParser Nativo**: Extração de dados estruturados a partir do HTML "sujo" retornado pelos portais governamentais.
+
+### **Interface & Visualização**
+- **Lucide React**: Biblioteca de ícones vetoriais modernos.
+- **Recharts**: Biblioteca de gráficos para visualização das tendências de preços dos produtos.
+- **React Hot Toast**: Sistema de notificações dinâmicas para feedback de ações (sucesso, erro, avisos).
+- **Glassmorphism CSS**: Estética visual moderna baseada em transparências e desfoque de fundo.
+
+[↑ Voltar ao índice](#índice)
+
+---
+
+<a id="lista-de-dependências-packagejson"></a>
+
+# Lista de Dependências (package.json)
+
+Abaixo estão listadas as dependências principais e de desenvolvimento com suas respectivas versões.
+
+### **Dependências (Dependencies)**
+| Biblioteca | Versão |
+|---|---|
+| `@supabase/supabase-js` | `2.99.3` |
+| `@zxing/library` | `0.21.3` |
+| `framer-motion` | `12.38.0` |
+| `lucide-react` | `0.577.0` |
+| `prop-types` | `15.8.1` |
+| `react` | `18.3.1` |
+| `react-dom` | `18.3.1` |
+| `react-hot-toast` | `2.6.0` |
+| `recharts` | `3.8.0` |
+
+### **Dependências de Desenvolvimento (DevDependencies)**
+| Biblioteca | Versão |
+|---|---|
+| `@eslint/js` | `9.13.0` |
+| `@types/react` | `18.3.12` |
+| `@types/react-dom` | `18.3.1` |
+| `@vitejs/plugin-basic-ssl` | `1.1.0` |
+| `@vitejs/plugin-react` | `6.0.1` |
+| `eslint` | `9.13.0` |
+| `eslint-plugin-react` | `7.37.2` |
+| `eslint-plugin-react-hooks` | `5.0.0` |
+| `eslint-plugin-react-refresh` | `0.4.14` |
+| `globals` | `15.11.0` |
+| `vite` | `8.0.2` |
+| `vite-plugin-pwa` | `0.19.8` |
 
 [↑ Voltar ao índice](#índice)
 
