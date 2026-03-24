@@ -69,6 +69,7 @@ function App() {
   // Search State
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState("recent");
+  const [searchSortDirection, setSearchSortDirection] = useState("desc");
 
   // History filter state
   const [historyFilter, setHistoryFilter] = useState("");
@@ -241,6 +242,8 @@ function App() {
             setSearchQuery={setSearchQuery}
             sortOrder={sortOrder}
             setSortOrder={setSortOrder}
+            sortDirection={searchSortDirection}
+            setSortDirection={setSearchSortDirection}
             loading={receiptsLoading}
           />
         )}

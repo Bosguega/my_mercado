@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { LineChart as LineChartIcon, ArrowLeft, Search } from "lucide-react";
+import { LineChart as LineChartIcon, ArrowLeft } from "lucide-react";
+import UniversalSearchBar from "./UniversalSearchBar";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   LineChart as RechartsLineChart,
   Line,
@@ -48,6 +50,8 @@ function SearchTab({
   setSearchQuery,
   sortOrder,
   setSortOrder,
+  sortDirection,
+  setSortDirection,
   loading,
 }) {
   const [showChart, setShowChart] = useState(false);
@@ -77,17 +81,20 @@ function SearchTab({
             (i.category && i.category.toLowerCase().includes(searchQuery.toLowerCase()))
           );
 
-    if (sortOrder === "price-asc") {
-      return [...base].sort(
-        (a, b) => parseBRL(a.unitPrice) - parseBRL(b.unitPrice),
-      );
+    if (sortOrder === "price") {
+      return [...base].sort((a, b) => {
+        const priceA = parseBRL(a.unitPrice);
+        const priceB = parseBRL(b.unitPrice);
+        return sortDirection === "asc" ? priceA - priceB : priceB - priceA;
+      });
     }
-    if (sortOrder === "price-desc") {
-      return [...base].sort(
-        (a, b) => parseBRL(b.unitPrice) - parseBRL(a.unitPrice),
-      );
-    }
+    
     // 'recent' — mantém a ordem original (mais recente primeiro, garantida pela inserção)
+    // Se for 'recent' e direção 'asc', mostramos os mais antigos primeiro (invertendo a lista)
+    if (sortOrder === "recent" && sortDirection === "asc") {
+       return [...base].reverse();
+    }
+    
     return base;
   })();
 
@@ -211,71 +218,20 @@ function SearchTab({
 
   return (
     <div>
-      <div
-        className="glass-card"
-        style={{
-          padding: "1.25rem",
-          display: "flex",
-          flexDirection: "column",
-          gap: "1rem",
-          marginBottom: "1rem"
-        }}
-      >
-        <div style={{ position: "relative" }}>
-          <Search
-            size={18}
-            style={{
-              position: "absolute",
-              left: "1rem",
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: "#64748b",
-            }}
-          />
-          <input
-            type="text"
-            placeholder="Pesquisar por nome ou categoria..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
-            style={{ paddingLeft: "3rem", height: "48px" }}
-          />
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "0 0.25rem",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <span style={{ fontSize: "0.8rem", color: "#64748b", fontWeight: 500 }}>
-              ORDENAR:
-            </span>
-            <select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-              style={{
-                background: "rgba(59, 130, 246, 0.1)",
-                border: "none",
-                borderRadius: "6px",
-                color: "var(--primary)",
-                fontSize: "0.8rem",
-                fontWeight: 600,
-                padding: "0.25rem 0.5rem",
-                cursor: "pointer",
-                outline: "none",
-              }}
-            >
-              <option value="recent">🕒 Recentes</option>
-              <option value="price-asc">📉 Menor Preço</option>
-              <option value="price-desc">📈 Maior Preço</option>
-            </select>
-          </div>
-          
-          {searchQuery && filtered.length > 0 && (
+      <UniversalSearchBar
+        placeholder="Pesquisar por nome ou categoria..."
+        value={searchQuery}
+        onChange={setSearchQuery}
+        sortValue={sortOrder}
+        onSortChange={setSortOrder}
+        sortOrder={sortDirection}
+        onSortOrderChange={setSortDirection}
+        sortOptions={[
+          { value: "recent", label: "🕒 Recentes" },
+          { value: "price", label: "💰 Preço" }
+        ]}
+        extraActions={
+          searchQuery && filtered.length > 0 && (
             <button
               onClick={() => setShowChart(true)}
               style={{
@@ -292,36 +248,37 @@ function SearchTab({
             >
               <LineChartIcon size={16} /> Gráfico
             </button>
-          )}
-        </div>
-      </div>
+          )
+        }
+      />
 
       <div className="items-list">
         {showSkeleton ? (
           [...Array(6)].map((_, i) => <SkeletonSearch key={i} />)
+        ) : filtered.length === 0 ? (
+          <div
+            style={{
+              textAlign: "center",
+              padding: "3rem 1rem",
+              color: "#64748b",
+            }}
+          >
+            <p>Nenhum item encontrado.</p>
+          </div>
         ) : (
-          <>
-            {searchQuery === "" && filtered.length === 0 && (
-              <div
-                style={{
-                  textAlign: "center",
-                  padding: "3rem 1rem",
-                  color: "#64748b",
-                }}
-              >
-                <Search
-                  size={40}
-                  style={{ opacity: 0.2, marginBottom: "1rem" }}
-                />
-                <p>Seus itens comprados aparecerão aqui.</p>
-              </div>
-            )}
-
+          <AnimatePresence mode="popLayout">
             {filtered.map((item, idx) => (
-              <div
-                key={idx}
+              <motion.div
+                key={`${item.normalized_name || item.name}-${item.purchasedAt}-${idx}`}
+                layout
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ 
+                  duration: 0.2,
+                  layout: { type: "spring", stiffness: 300, damping: 30 }
+                }}
                 className="item-row"
-                style={{ animationDelay: `${idx * 0.05}s` }}
               >
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -387,21 +344,9 @@ function SearchTab({
                     por {item.unit || "un."}
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
-
-            {searchQuery && filtered.length === 0 && (
-              <p
-                style={{
-                  color: "#64748b",
-                  textAlign: "center",
-                  padding: "2rem",
-                }}
-              >
-                Nenhum item encontrado.
-              </p>
-            )}
-          </>
+          </AnimatePresence>
         )}
       </div>
     </div>
@@ -414,6 +359,8 @@ SearchTab.propTypes = {
   setSearchQuery: PropTypes.func.isRequired,
   sortOrder: PropTypes.string.isRequired,
   setSortOrder: PropTypes.func.isRequired,
+  sortDirection: PropTypes.string.isRequired,
+  setSortDirection: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired,
 };
 

@@ -3,13 +3,14 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
-  Search,
   Download,
   Upload,
   Save,
 } from "lucide-react";
 import PropTypes from "prop-types";
 import { toast } from "react-hot-toast";
+import UniversalSearchBar from "./UniversalSearchBar";
+import { motion, AnimatePresence } from "framer-motion";
 import { restoreReceiptsToDB } from "../services/dbMethods";
 import { parseBRL } from "../utils/currency";
 import { parseToDate } from "../utils/date";
@@ -366,8 +367,10 @@ function HistoryTab({
             <History size={20} color="var(--primary)" />
             Histórico
           </h2>
-          <div style={{ fontSize: "0.75rem", color: "#64748b", marginLeft: "2rem" }}>
-             {finalFilteredReceipts.length} de {savedReceipts.length} notas
+          <div
+            style={{ fontSize: "0.75rem", color: "#64748b", marginLeft: "2rem" }}
+          >
+            {finalFilteredReceipts.length} de {savedReceipts.length} notas
           </div>
         </div>
         <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -386,7 +389,7 @@ function HistoryTab({
           >
             <History size={20} className={loading ? "spin" : ""} />
           </button>
-          
+
           <input
             type="file"
             id="restore-input"
@@ -500,216 +503,206 @@ function HistoryTab({
             className="glass-card"
             style={{
               padding: "1.25rem",
-              marginBottom: "1.5rem",
-              background: "linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%)",
+              marginBottom: "1rem",
+              background:
+                "linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%)",
               border: "1px solid rgba(59, 130, 246, 0.2)",
               display: "flex",
               justifyContent: "space-between",
-              alignItems: "center"
+              alignItems: "center",
             }}
           >
             <div>
-              <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginBottom: "4px" }}>Total Gasto no Período</p>
+              <p
+                style={{
+                  color: "#94a3b8",
+                  fontSize: "0.85rem",
+                  marginBottom: "4px",
+                }}
+              >
+                Total Gasto no Período
+              </p>
               <h3 style={{ color: "#fff", fontSize: "1.8rem", fontWeight: 800 }}>
-                R$ {finalFilteredReceipts.reduce((acc, r) => {
-                  const total = r.items.reduce((sum, item) => sum + parseBRL(item.total), 0);
-                  return acc + total;
-                }, 0).toFixed(2).replace(".", ",")}
+                R${" "}
+                {finalFilteredReceipts
+                  .reduce((acc, r) => {
+                    const total = r.items.reduce(
+                      (sum, item) => sum + parseBRL(item.total),
+                      0,
+                    );
+                    return acc + total;
+                  }, 0)
+                  .toFixed(2)
+                  .replace(".", ",")}
               </h3>
             </div>
             <div style={{ textAlign: "right" }}>
-              <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginBottom: "4px" }}>Notas Filtradas</p>
-              <h4 style={{ color: "var(--primary)", fontSize: "1.2rem", fontWeight: 700 }}>
+              <p
+                style={{
+                  color: "#94a3b8",
+                  fontSize: "0.85rem",
+                  marginBottom: "4px",
+                }}
+              >
+                Notas Filtradas
+              </p>
+              <h4
+                style={{
+                  color: "var(--primary)",
+                  fontSize: "1.2rem",
+                  fontWeight: 700,
+                }}
+              >
                 {finalFilteredReceipts.length}
               </h4>
             </div>
           </div>
 
-          {/* Search Input */}
-          <div
-            className="glass-card"
-            style={{ padding: "0.75rem", marginBottom: "1.5rem" }}
+          <UniversalSearchBar
+            placeholder="Buscar por mercado..."
+            value={historyFilter}
+            onChange={setHistoryFilter}
+            sortValue={historyFilters.sortBy}
+            onSortChange={(val) =>
+              setHistoryFilters({ ...historyFilters, sortBy: val })
+            }
+            sortOrder={historyFilters.sortOrder}
+            onSortOrderChange={(val) =>
+              setHistoryFilters({ ...historyFilters, sortOrder: val })
+            }
+            sortOptions={[
+              { value: "date", label: "📊 Data" },
+              { value: "value", label: "💰 Valor" },
+              { value: "store", label: "🏪 Mercado" },
+            ]}
+            extraActions={
+              <>
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+                >
+                  <span
+                    style={{
+                      fontSize: "0.8rem",
+                      color: "#64748b",
+                      fontWeight: 500,
+                    }}
+                  >
+                    PERÍODO:
+                  </span>
+                  <select
+                    value={historyFilters.period}
+                    onChange={(e) =>
+                      setHistoryFilters({
+                        ...historyFilters,
+                        period: e.target.value,
+                      })
+                    }
+                    style={{
+                      background: "rgba(59, 130, 246, 0.1)",
+                      border: "none",
+                      borderRadius: "6px",
+                      color: "var(--primary)",
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                      padding: "0.25rem 0.5rem",
+                      cursor: "pointer",
+                      outline: "none",
+                    }}
+                  >
+                    <option value="all">📅 Todo período</option>
+                    <option value="this-month">📅 Este mês</option>
+                    <option value="last-3-months">📅 Últimos 3 meses</option>
+                    <option value="custom">📅 Personalizado</option>
+                  </select>
+                </div>
+              </>
+            }
           >
-            <input
-              type="text"
-              className="search-input"
-              placeholder="🔍 Buscar por mercado..."
-              value={historyFilter}
-              onChange={(e) => setHistoryFilter(e.target.value)}
-              style={{ border: "none", background: "transparent" }}
-            />
-          </div>
+            {/* Custom Period Date Pickers se necessário injetar dentro do card */}
+          </UniversalSearchBar>
 
-          {/* Advanced Filters */}
-          <div
-            className="glass-card"
-            style={{ padding: "1rem", marginBottom: "1.5rem" }}
-          >
+          {/* Date pickers fora do UniversalSearchBar para manter layout limpo */}
+          {historyFilters.period === "custom" && (
             <div
+              className="glass-card"
               style={{
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
                 gap: "0.75rem",
-                marginBottom: "0.75rem",
+                marginBottom: "1rem",
+                padding: "1rem",
               }}
             >
-              <select
-                className="search-input"
-                value={historyFilters.period}
-                onChange={(e) =>
-                  setHistoryFilters({
-                    ...historyFilters,
-                    period: e.target.value,
-                  })
-                }
-                style={{
-                  background: "rgba(255,255,255,0.95)",
-                  color: "#1e293b",
-                  cursor: "pointer",
-                  fontWeight: "500",
-                }}
-              >
-                <option value="all">📅 Todo período</option>
-                <option value="this-month">📅 Este mês</option>
-                <option value="last-3-months">📅 Últimos 3 meses</option>
-                <option value="custom">📅 Período personalizado</option>
-              </select>
-
-              <select
-                className="search-input"
-                value={historyFilters.sortBy}
-                onChange={(e) =>
-                  setHistoryFilters({
-                    ...historyFilters,
-                    sortBy: e.target.value,
-                  })
-                }
-                style={{
-                  background: "rgba(255,255,255,0.95)",
-                  color: "#1e293b",
-                  cursor: "pointer",
-                  fontWeight: "500",
-                }}
-              >
-                <option value="date">📊 Ordenar por data</option>
-                <option value="value">💰 Ordenar por valor</option>
-                <option value="store">🏪 Ordenar por mercado</option>
-              </select>
-            </div>
-
-            {/* Custom Period Date Pickers */}
-            {historyFilters.period === "custom" && (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "0.75rem",
-                  marginTop: "0.75rem",
-                  paddingTop: "0.75rem",
-                  borderTop: "1px solid rgba(255,255,255,0.1)",
-                }}
-              >
-                <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      marginBottom: "0.25rem",
-                    }}
-                  >
-                    Data inicial
-                  </label>
-                  <input
-                    type="date"
-                    className="search-input"
-                    value={historyFilters.startDate || ""}
-                    onChange={(e) =>
-                      setHistoryFilters({
-                        ...historyFilters,
-                        startDate: e.target.value,
-                      })
-                    }
-                    style={{
-                      background: "rgba(255,255,255,0.95)",
-                      color: "#1e293b",
-                      fontSize: "0.85rem",
-                    }}
-                  />
-                </div>
-                <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      marginBottom: "0.25rem",
-                    }}
-                  >
-                    Data final
-                  </label>
-                  <input
-                    type="date"
-                    className="search-input"
-                    value={historyFilters.endDate || ""}
-                    onChange={(e) =>
-                      setHistoryFilters({
-                        ...historyFilters,
-                        endDate: e.target.value,
-                      })
-                    }
-                    style={{
-                      background: "rgba(255,255,255,0.95)",
-                      color: "#1e293b",
-                      fontSize: "0.85rem",
-                    }}
-                  />
-                </div>
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "0.7rem",
+                    color: "#64748b",
+                    marginBottom: "0.5rem",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Início
+                </label>
+                <input
+                  type="date"
+                  className="search-input"
+                  value={historyFilters.startDate || ""}
+                  onChange={(e) =>
+                    setHistoryFilters({
+                      ...historyFilters,
+                      startDate: e.target.value,
+                    })
+                  }
+                  style={{
+                    background: "rgba(255,255,255,0.05)",
+                    fontSize: "0.85rem",
+                    height: "40px",
+                  }}
+                />
               </div>
-            )}
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "0.7rem",
+                    color: "#64748b",
+                    marginBottom: "0.5rem",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Fim
+                </label>
+                <input
+                  type="date"
+                  className="search-input"
+                  value={historyFilters.endDate || ""}
+                  onChange={(e) =>
+                    setHistoryFilters({
+                      ...historyFilters,
+                      endDate: e.target.value,
+                    })
+                  }
+                  style={{
+                    background: "rgba(255,255,255,0.05)",
+                    fontSize: "0.85rem",
+                    height: "40px",
+                  }}
+                />
+              </div>
+            </div>
+          )}
 
-            <button
-              onClick={() =>
-                setHistoryFilters({
-                  ...historyFilters,
-                  sortOrder:
-                    historyFilters.sortOrder === "asc" ? "desc" : "asc",
-                })
-              }
-              style={{
-                width: "100%",
-                marginTop: "0.75rem",
-                padding: "0.6rem",
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: "8px",
-                color: "#94a3b8",
-                cursor: "pointer",
-                fontSize: "0.85rem",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "0.5rem",
-              }}
-            >
-              {historyFilters.sortOrder === "asc"
-                ? "⬆️ Crescente"
-                : "⬇️ Decrescente"}
-            </button>
-          </div>
-
-          <div className="items-list" style={{ gap: "1.25rem" }}>
+          <div className="items-list" style={{ gap: "1rem" }}>
             {finalFilteredReceipts.length === 0 ? (
               // Mensagem quando filtro não retorna nada
               <div
                 className="glass-card"
                 style={{ textAlign: "center", padding: "3rem 1rem" }}
               >
-                <Search
-                  size={48}
-                  color="var(--primary)"
-                  style={{ opacity: 0.3, margin: "0 auto 1rem" }}
-                />
                 <h3 style={{ color: "#e2e8f0", marginTop: "1rem" }}>
                   Nenhuma nota encontrada
                 </h3>
@@ -718,219 +711,229 @@ function HistoryTab({
                 </p>
               </div>
             ) : (
-              finalFilteredReceipts.map((receipt) => {
-                const isExpanded = expandedReceipts.includes(receipt.id);
+              <AnimatePresence mode="popLayout">
+                {finalFilteredReceipts.map((receipt) => {
+                  const isExpanded = expandedReceipts.includes(receipt.id);
 
-                // Calcular total de forma segura, evitando NaN
-                const total = receipt.items.reduce((acc, curr) => {
-                  const value = parseFloat(
-                    (curr.total || "").toString().replace(",", "."),
-                  );
-                  return acc + (isNaN(value) ? 0 : value);
-                }, 0);
+                  // Calcular total de forma segura, evitando NaN
+                  const total = receipt.items.reduce((acc, curr) => {
+                    const value = parseFloat(
+                      (curr.total || "").toString().replace(",", "."),
+                    );
+                    return acc + (isNaN(value) ? 0 : value);
+                  }, 0);
 
-                return (
-                  <div
-                    key={receipt.id}
-                    className="glass-card"
-                    style={{
-                      padding: "0",
-                      overflow: "hidden",
-                      marginBottom: 0,
-                    }}
-                  >
-                    {/* Header */}
-                    <div
-                      onClick={() => toggleExpand(receipt.id)}
+                  return (
+                    <motion.div
+                      key={receipt.id}
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ 
+                        duration: 0.2,
+                        layout: { type: "spring", stiffness: 300, damping: 30 }
+                      }}
+                      className="glass-card"
                       style={{
-                        padding: "1.25rem",
-                        cursor: "pointer",
-                        position: "relative",
+                        padding: "0",
+                        overflow: "hidden",
+                        marginBottom: 0,
                       }}
                     >
+                      {/* Header */}
                       <div
+                        onClick={() => toggleExpand(receipt.id)}
                         style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "flex-start",
-                          marginBottom: "0.5rem",
+                          padding: "1.25rem",
+                          cursor: "pointer",
+                          position: "relative",
                         }}
                       >
-                        <div>
-                          <h3
-                            style={{
-                              color: "#f8fafc",
-                              fontSize: "1.1rem",
-                              marginBottom: "0.25rem",
-                            }}
-                          >
-                            {receipt.establishment}
-                          </h3>
-                          <div
-                            style={{
-                              display: "flex",
-                              gap: "1rem",
-                              alignItems: "center",
-                            }}
-                          >
-                            <span
-                              style={{ color: "#94a3b8", fontSize: "0.8rem" }}
-                            >
-                              {receipt.date}
-                            </span>
-                            <span
-                              style={{
-                                background: "rgba(59, 130, 246, 0.2)",
-                                color: "var(--primary)",
-                                padding: "0.1rem 0.5rem",
-                                borderRadius: "1rem",
-                                fontSize: "0.75rem",
-                              }}
-                            >
-                              {receipt.items.length} itens
-                            </span>
-                          </div>
-                        </div>
                         <div
                           style={{
                             display: "flex",
-                            alignItems: "center",
-                            gap: "0.75rem",
+                            justifyContent: "space-between",
+                            alignItems: "flex-start",
+                            marginBottom: "0.5rem",
                           }}
                         >
-                          <span
+                          <div>
+                            <h3
+                              style={{
+                                color: "#f8fafc",
+                                fontSize: "1.1rem",
+                                marginBottom: "0.25rem",
+                              }}
+                            >
+                              {receipt.establishment}
+                            </h3>
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: "1rem",
+                                alignItems: "center",
+                              }}
+                            >
+                              <span
+                                style={{ color: "#94a3b8", fontSize: "0.8rem" }}
+                              >
+                                {receipt.date}
+                              </span>
+                              <span
+                                style={{
+                                  background: "rgba(59, 130, 246, 0.2)",
+                                  color: "var(--primary)",
+                                  padding: "0.1rem 0.5rem",
+                                  borderRadius: "1rem",
+                                  fontSize: "0.75rem",
+                                }}
+                              >
+                                {receipt.items.length} itens
+                              </span>
+                            </div>
+                          </div>
+                          <div
                             style={{
-                              color: "var(--success)",
-                              fontWeight: 700,
-                              fontSize: "1.1rem",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            R$ {total.toFixed(2).replace(".", ",")}
-                          </span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteReceipt(receipt.id);
-                            }}
-                            style={{
-                              background: "rgba(239, 68, 68, 0.1)",
-                              border: "none",
-                              borderRadius: "0.5rem",
-                              width: "32px",
-                              height: "32px",
                               display: "flex",
                               alignItems: "center",
-                              justifyContent: "center",
-                              color: "#ef4444",
+                              gap: "0.75rem",
                             }}
                           >
-                            <Trash2 size={16} />
-                          </button>
+                            <span
+                              style={{
+                                color: "var(--success)",
+                                fontWeight: 700,
+                                fontSize: "1.1rem",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              R$ {total.toFixed(2).replace(".", ",")}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteReceipt(receipt.id);
+                              }}
+                              style={{
+                                background: "rgba(239, 68, 68, 0.1)",
+                                border: "none",
+                                borderRadius: "0.5rem",
+                                width: "32px",
+                                height: "32px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "#ef4444",
+                              }}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "center",
+                            marginTop: "0.5rem",
+                            color: "#64748b",
+                          }}
+                        >
+                          {isExpanded ? (
+                            <ChevronUp size={20} />
+                          ) : (
+                            <ChevronDown size={20} />
+                          )}
                         </div>
                       </div>
 
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "center",
-                          marginTop: "0.5rem",
-                          color: "#64748b",
-                        }}
-                      >
-                        {isExpanded ? (
-                          <ChevronUp size={20} />
-                        ) : (
-                          <ChevronDown size={20} />
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Expanded Details */}
-                    {isExpanded && (
-                      <div
-                        style={{
-                          background: "rgba(15, 23, 42, 0.3)",
-                          borderTop: "1px solid var(--card-border)",
-                          padding: "1rem",
-                        }}
-                      >
-                        {receipt.items.map((item, idx) => (
-                          <div
-                            key={idx}
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              padding: "0.6rem 0",
-                              borderBottom:
-                                idx === receipt.items.length - 1
-                                  ? "none"
-                                  : "1px solid rgba(255,255,255,0.05)",
-                            }}
-                          >
-                            <div style={{ flex: 1 }}>
-                              <div
-                                style={{
-                                  fontSize: "0.9rem",
-                                  color: "#e2e8f0",
-                                  fontWeight: 500,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "8px"
-                                }}
-                              >
-                                {item.normalized_name || item.name}
-                                {item.category && (
-                                  <span
+                      {/* Expanded Details */}
+                      {isExpanded && (
+                        <div
+                          style={{
+                            background: "rgba(15, 23, 42, 0.3)",
+                            borderTop: "1px solid var(--card-border)",
+                            padding: "1rem",
+                          }}
+                        >
+                          {receipt.items.map((item, idx) => (
+                            <div
+                              key={idx}
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                padding: "0.6rem 0",
+                                borderBottom:
+                                  idx === receipt.items.length - 1
+                                    ? "none"
+                                    : "1px solid rgba(255,255,255,0.05)",
+                              }}
+                            >
+                              <div style={{ flex: 1 }}>
+                                <div
+                                  style={{
+                                    fontSize: "0.9rem",
+                                    color: "#e2e8f0",
+                                    fontWeight: 500,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "8px"
+                                  }}
+                                >
+                                  {item.normalized_name || item.name}
+                                  {item.category && (
+                                    <span
+                                      style={{
+                                        fontSize: "0.65rem",
+                                        background: "rgba(255,255,255,0.1)",
+                                        padding: "1px 6px",
+                                        borderRadius: "4px",
+                                        color: "#94a3b8",
+                                        fontWeight: "normal"
+                                      }}
+                                    >
+                                      {item.category}
+                                    </span>
+                                  )}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: "0.75rem",
+                                    color: "#64748b",
+                                    fontStyle: item.normalized_name ? "italic" : "normal"
+                                  }}
+                                >
+                                  {item.normalized_name ? item.name : `${item.qty} x R$ ${item.unitPrice}`}
+                                </div>
+                                {item.normalized_name && (
+                                  <div
                                     style={{
-                                      fontSize: "0.65rem",
-                                      background: "rgba(255,255,255,0.1)",
-                                      padding: "1px 6px",
-                                      borderRadius: "4px",
+                                      fontSize: "0.75rem",
                                       color: "#94a3b8",
-                                      fontWeight: "normal"
                                     }}
                                   >
-                                    {item.category}
-                                  </span>
+                                    {item.qty} x R$ {item.unitPrice}
+                                  </div>
                                 )}
                               </div>
                               <div
                                 style={{
-                                  fontSize: "0.75rem",
-                                  color: "#64748b",
-                                  fontStyle: item.normalized_name ? "italic" : "normal"
+                                  color: "#cbd5e1",
+                                  fontWeight: 600,
+                                  fontSize: "0.9rem",
                                 }}
                               >
-                                {item.normalized_name ? item.name : `${item.qty} x R$ ${item.unitPrice}`}
+                                R$ {item.total}
                               </div>
-                              {item.normalized_name && (
-                                <div
-                                  style={{
-                                    fontSize: "0.75rem",
-                                    color: "#94a3b8",
-                                  }}
-                                >
-                                  {item.qty} x R$ {item.unitPrice}
-                                </div>
-                              )}
                             </div>
-                            <div
-                              style={{
-                                color: "#cbd5e1",
-                                fontWeight: 600,
-                                fontSize: "0.9rem",
-                              }}
-                            >
-                              R$ {item.total}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })
+                          ))}
+                        </div>
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
             )}
           </div>
         </>

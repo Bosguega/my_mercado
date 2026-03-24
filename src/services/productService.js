@@ -1,23 +1,6 @@
-// ==============================
-// IMPORTS (ajuste conforme seu projeto)
-// ==============================
-
 import { getDictionary, updateDictionary } from "./dbMethods";
 import { callAI } from "../utils/aiClient";
-
-// ==============================
-// 🔤 NORMALIZAÇÃO LEVE
-// ==============================
-
-export function normalizeKey(name) {
-  if (!name) return "";
-
-  return name
-    .toUpperCase()
-    .replace(/[^\w\s]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
+import { normalizeKey } from "../utils/normalize";
 
 // ==============================
 // 🧼 REMOVER PESO VARIÁVEL
@@ -26,16 +9,20 @@ export function normalizeKey(name) {
 function stripVariableInfo(name, unit, qty) {
   if (!name) return "";
 
+  // 1. Remove unidades isoladas no final (ex: "MANGA TOMMY KG" -> "MANGA TOMMY")
+  // Isso ajuda a agrupar itens que vêm com a unidade de medida literal no nome.
+  let cleanName = name.replace(/(?<!\d)\s+(KG|G|ML|L|UN|PC|CX)\b$/i, "").trim();
+
   const qtyNum = parseFloat(String(qty || "0").replace(",", "."));
 
-  // Peso variável (hortifruti, carnes, etc)
+  // 2. Peso variável (hortifruti, carnes, etc)
   if (unit === "KG" && qtyNum < 5) {
-    return name
+    return cleanName
       .replace(/\b\d+[.,]?\d*\s?(KG|G)\b/gi, "")
       .trim();
   }
 
-  return name;
+  return cleanName;
 }
 
 // ==============================
@@ -45,8 +32,9 @@ function stripVariableInfo(name, unit, qty) {
 function cleanAIName(name) {
   if (!name) return "";
 
+  // Preservamos o que a IA retornou, apenas normalizando espaços.
+  // A IA já foi instruída a manter volumes (1.5L, 350ml) e variantes.
   return name
-    .replace(/\b\d+[.,]\d+\s?(KG|G|L|ML)\b/gi, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -76,10 +64,17 @@ export async function processItemsPipeline(rawItems = []) {
   // 1. NORMALIZAÇÃO INICIAL
   // ==============================
 
-  const itemsWithKey = rawItems.map((item) => ({
-    ...item,
-    normalized_key: normalizeKey(item.name),
-  }));
+  const itemsWithKey = rawItems.map((item) => {
+    // Para itens de peso variável (KG < 5), removemos o peso da chave para agrupar no dicionário
+    const nameForKey = stripVariableInfo(item.name, item.unit, item.qty);
+    const key = normalizeKey(nameForKey);
+    
+    console.log(`[Pipeline] Input: "${item.name}" -> Key: "${key}" (from: "${nameForKey}")`);
+    return {
+      ...item,
+      normalized_key: key,
+    };
+  });
 
   // ==============================
   // 2. BUSCAR DICIONÁRIO
@@ -96,7 +91,18 @@ export async function processItemsPipeline(rawItems = []) {
   const unknownMap = new Map();
 
   itemsWithKey.forEach((item) => {
-    const dictEntry = dictionary[item.normalized_key];
+    let dictEntry = dictionary[item.normalized_key];
+
+    // Fallback: Tenta buscar secundariamente nos valores do dicionário retornados
+    if (!dictEntry) {
+      const fallbackEntry = Object.values(dictionary).find(
+        (entry) => normalizeKey(entry.normalized_name) === item.normalized_key
+      );
+      if (fallbackEntry) {
+        dictEntry = fallbackEntry;
+        console.log(`[Pipeline] Fallback find for "${item.name}": matched by normalized_name "${dictEntry.normalized_name}"`);
+      }
+    }
 
     if (dictEntry) {
       knownItems.push({

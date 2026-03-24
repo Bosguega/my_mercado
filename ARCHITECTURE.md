@@ -300,17 +300,19 @@ using (auth.uid() = user_id);
 ```
 Câmera ou Link → itens extraídos via receiptParser.js (Pool de Proxies)
 ↓
-productService.js: os itens são limpos via regex (mantém medidas tipo 5kg, remove UN/KG)
+normalize.js: gera chaves únicas preservando volumes e variantes (ex: "COCA COLA 2L", "LEITE INTEGRAL")
+↓
+productService.js: separa itens de peso variável (Hortifruti/Carnes) para agrupar por nome base
 ↓
 Consulta ao product_dictionary via Supabase para identificar itens conhecidos
 ↓
 Itens desconhecidos são enviados em lote (max 10) para Google Gemini / OpenAI
 ↓
-Prompt da IA inclui exemplos reais de mercado brasileiro para melhor precisão
+IA transforma nomes brutos em amigáveis (ex: "CERV BRAHMA LTA" → "Cerveja Brahma Lata")
 ↓
-Novas categorizações (incluindo Petshop) são salvas no dicionário
+Novas categorizações e nomes normalizados são salvos no dicionário
 ↓
-Nota é salva no banco relacional (receipts + items) com datas padronizadas (date.js)
+Nota é salva no banco relacional (receipts + items) com datas padronizadas
 ```
 
 [↑ Voltar ao índice](#índice)
@@ -340,6 +342,7 @@ Nota é salva no banco relacional (receipts + items) com datas padronizadas (dat
 | BYOK (Bring Your Own Key) | API Key fixa no servidor / Proxy | Como o app não tem backend centralizado, a abordagem BYOK (o usuário fornece sua chave Gemini/OpenAI) garante privacidade, custo zero para o desenvolvedor e longevidade do app. |
 | IA em Lote (Batching) | IA por item individual | Chamar a IA para cada item separadamente é lento e consome tokens de forma ineficiente. O pipeline agrupa itens desconhecidos em lotes de 10, reduzindo latência e custos. |
 | Aba Dicionário | Confiar 100% na IA | IA pode errar categorias ou normalizações. A aba Dicionário permite ao usuário corrigir manualmente e limpar o cache, garantindo dados perfeitos. |
+| Normalização Granular | Remover volumes da chave | Chaves de normalização agora preservam volumes (ex: 1L, 2L, 350ml) para que o app diferencie preços de tamanhos diferentes, mas agrupam pesos variáveis (Hortifruti) para simplificar o dicionário. |
 | Rotação de Proxies | Proxy único fixo | Evita que o app pare de funcionar caso um proxy gratuito específico sofra queda ou bloqueio por parte da Sefaz. |
 
 [↑ Voltar ao índice](#índice)

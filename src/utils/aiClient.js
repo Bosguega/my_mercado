@@ -12,16 +12,27 @@ import { getApiKey, getApiModel, detectProvider } from "./aiConfig";
 function buildPrompt(items) {
   const list = items.map((i) => `- key: "${i.key}", raw: "${i.raw}"`).join("\n");
 
-  return `Você é um especialista em produtos de supermercado brasileiro.
-Para cada item abaixo, retorne um JSON array com objetos contendo:
-- "key": a mesma key recebida
-- "normalized_name": nome do produto limpo e legível (ex: "Leite Integral Piracanjuba 1L")
-- "category": uma entre: Açougue, Hortifruti, Laticínios, Padaria, Limpeza, Higiene, Bebidas, Mercearia, Petshop, Outros
+  return `Você é um especialista em normalizar nomes de produtos de supermercado brasileiro.
+Para cada item abaixo, converta o nome bruto (muitas vezes abreviado e em letras maiúsculas) em um nome amigável, legível e bem formatado.
 
-Itens:
+REGRAS:
+1. MANTENHA volumes e pesos (ex: 1L, 2L, 350ml, 500g, 5kg, 1.5L).
+2. MANTENHA variantes importantes (ex: Zero, Integral, Desnatado, Sem Lactose, Diet, Light).
+3. Converta abreviações comuns para o nome completo (ex: "CERV" -> "Cerveja", "LTA" -> "Lata", "BISC" -> "Biscoito", "REFR" -> "Refrigerante").
+4. Use Title Case (Primeira Letra Maiúscula).
+5. Categorize em: Açougue, Hortifruti, Laticínios, Padaria, Limpeza, Higiene, Bebidas, Mercearia, Petshop, Outros.
+
+EXEMPLOS:
+- "CERV BRAHMA LTA 350ML" -> "Cerveja Brahma Lata 350ml" (Bebidas)
+- "LEITE PIRACANJUBA INT 1L" -> "Leite Piracanjuba Integral 1L" (Laticínios)
+- "COCA COLA ZERO 2L" -> "Coca-Cola Zero 2L" (Bebidas)
+- "TOMATE ITALIA" -> "Tomate Italiano" (Hortifruti)
+- "BISC RECHEADO TRAKINAS 126G" -> "Biscoito Recheado Trakinas 126g" (Mercearia)
+
+Itens para processar:
 ${list}
 
-Responda SOMENTE com o JSON array, sem explicações.`;
+Responda SOMENTE com o JSON array no formato: [{"key": "...", "normalized_name": "...", "category": "..."}], sem explicações.`;
 }
 
 // ==============================

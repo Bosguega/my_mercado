@@ -76,7 +76,7 @@ function cleanProductName(name) {
 
   return name
     .replace(/\(Código:.*?\)/i, "")       // remove código
-    .replace(/\b(KG|G|ML|L|UN)\b$/i, "") // remove unidade no final
+    .replace(/(?<!\d)\s+(KG|G|ML|L|UN|PC|CX)\b$/i, "") // remove unidade isolada no final (ex: "MANGA TOMMY KG" -> "MANGA TOMMY")
     .replace(/\s+/g, " ")
     .trim();
 }

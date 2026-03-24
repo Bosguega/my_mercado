@@ -10,49 +10,55 @@ export function useReceiptScanner({ saveReceipt, tab }) {
   const [error, setError] = useState(null);
   const [duplicateReceipt, setDuplicateReceipt] = useState(null);
 
-   const codeReaderRef = useRef(null);
-   const startTimeoutRef = useRef(null);
-   const processingRef = useRef(false);
+  const codeReaderRef = useRef(null);
+  const startTimeoutRef = useRef(null);
+  const processingRef = useRef(false);
  
-   const [zoom, setZoom] = useState(1);
-   const [zoomSupported, setZoomSupported] = useState(false);
-   const [torch, setTorch] = useState(false);
-   const [torchSupported, setTorchSupported] = useState(false);
- 
-   const applyZoom = useCallback(async (value) => {
-     if (!streamRef.current) return;
-     const track = streamRef.current.getVideoTracks()[0];
-     if (track) {
-       const caps = track.getCapabilities();
-       if (caps.zoom) {
-         const clamped = Math.max(caps.zoom.min, Math.min(caps.zoom.max, value));
-         try {
-           await track.applyConstraints({ advanced: [{ zoom: clamped }] });
-           setZoom(clamped);
-         } catch (e) {
-           console.warn("Zoom error:", e);
-         }
-       }
-     }
-   }, []);
-
-   const applyTorch = useCallback(async (on) => {
-     if (!streamRef.current) return;
-     const track = streamRef.current.getVideoTracks()[0];
-     if (track) {
-       const caps = track.getCapabilities();
-       if (caps.torch) {
-         try {
-           await track.applyConstraints({ advanced: [{ torch: on }] });
-           setTorch(on);
-         } catch (e) {
-           console.warn("Torch error:", e);
-         }
-       }
-     }
-   }, []);
+  const [zoom, setZoom] = useState(1);
+  const [zoomSupported, setZoomSupported] = useState(false);
+  const [torch, setTorch] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
 
   const streamRef = useRef(null);
+
+  const applyZoom = useCallback(async (value) => {
+    const video = document.getElementById('reader-video');
+    const stream = streamRef.current || video?.srcObject;
+    if (!stream) return;
+
+    const track = stream.getVideoTracks()[0];
+    if (track) {
+      const caps = track.getCapabilities ? track.getCapabilities() : {};
+      if (caps.zoom) {
+        const clamped = Math.max(caps.zoom.min, Math.min(caps.zoom.max, value));
+        try {
+          await track.applyConstraints({ advanced: [{ zoom: clamped }] });
+          setZoom(clamped);
+        } catch (e) {
+          console.warn('Zoom error:', e);
+        }
+      }
+    }
+  }, []);
+
+  const applyTorch = useCallback(async (on) => {
+    const video = document.getElementById('reader-video');
+    const stream = streamRef.current || video?.srcObject;
+    if (!stream) return;
+
+    const track = stream.getVideoTracks()[0];
+    if (track) {
+      const caps = track.getCapabilities ? track.getCapabilities() : {};
+      if (caps.torch) {
+        try {
+          await track.applyConstraints({ advanced: [{ torch: on }] });
+          setTorch(on);
+        } catch (e) {
+          console.warn('Torch error:', e);
+        }
+      }
+    }
+  }, []);
 
   const stopCamera = useCallback(() => {
     if (startTimeoutRef.current) {
