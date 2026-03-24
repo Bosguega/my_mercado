@@ -1,4 +1,8 @@
-export function groupByMonth(items: any[]) { // TODO: type
+type PurchasedItem = {
+  purchasedAt?: string | null;
+};
+
+export function groupByMonth<T extends PurchasedItem>(items: T[]) {
   return items.reduce((acc, item) => {
     if (!item.purchasedAt) return acc;
 
@@ -7,12 +11,12 @@ export function groupByMonth(items: any[]) { // TODO: type
     acc[key].push(item);
 
     return acc;
-  }, {} as Record<string, any[]>);
+  }, {} as Record<string, T[]>);
 }
 
-export function buildTimeSeries(
-  grouped: Record<string, any[]>,
-  valueFn: (item: any) => number, // TODO: type
+export function buildTimeSeries<T>(
+  grouped: Record<string, T[]>,
+  valueFn: (item: T) => number,
 ) {
   return Object.entries(grouped)
     .map(([date, items]) => ({

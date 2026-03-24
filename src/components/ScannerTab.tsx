@@ -18,31 +18,8 @@ import {
 import PropTypes from "prop-types";
 import { toast } from "react-hot-toast";
 import { parseBRL, formatBRL } from "../utils/currency";
-
-type ScannerTabProps = {
-  manualMode: any; // TODO: type
-  setManualMode: any; // TODO: type
-  manualData: any; // TODO: type
-  setManualData: any; // TODO: type
-  manualItem: any; // TODO: type
-  setManualItem: any; // TODO: type
-  handleSaveManualReceipt: any; // TODO: type
-  startCamera: any; // TODO: type
-  stopCamera: any; // TODO: type
-  handleFileUpload: any; // TODO: type
-  loading: any; // TODO: type
-  scanning: any; // TODO: type
-  error: any; // TODO: type
-  currentReceipt: any; // TODO: type
-  setCurrentReceipt: any; // TODO: type
-  handleUrlSubmit: any; // TODO: type
-  zoom: any; // TODO: type
-  zoomSupported: any; // TODO: type
-  applyZoom: any; // TODO: type
-  torch: any; // TODO: type
-  torchSupported: any; // TODO: type
-  applyTorch: any; // TODO: type
-};
+import type { ScannerTabProps } from "../types/ui";
+import type { ReceiptItem } from "../types/domain";
 
 // Skeleton para loading durante extração
 const ScannerSkeleton = () => (
@@ -159,7 +136,7 @@ function ScannerTab({
       total: formatBRL(totalNum),
     };
 
-    setManualData((prev: any) => ({ ...prev, items: [newItem, ...prev.items] })); // TODO: type
+    setManualData((prev) => ({ ...prev, items: [newItem, ...prev.items] }));
     setManualItem({ name: "", qty: "1", unitPrice: "" });
     toast.success("Item adicionado!");
   };
@@ -309,7 +286,7 @@ function ScannerTab({
               overflowY: "auto",
             }}
           >
-            {manualData.items.map((it: any, idx: number) => (
+            {manualData.items.map((it: ReceiptItem, idx: number) => (
               <div
                 key={idx}
                 className="item-row"
@@ -350,7 +327,7 @@ function ScannerTab({
               Total: R${" "}
               {formatBRL(
                 manualData.items.reduce(
-                  (acc: number, curr: any) => acc + parseBRL(curr.total), // TODO: type
+                  (acc: number, curr: ReceiptItem) => acc + parseBRL(curr.total),
                   0,
                 ),
               )}
@@ -718,7 +695,7 @@ function ScannerTab({
               marginBottom: "1.5rem",
             }}
           >
-            {currentReceipt.items.map((item: any, idx: number) => (
+            {currentReceipt.items.map((item: ReceiptItem, idx: number) => (
               <div
                 key={idx}
                 className="item-row"
@@ -755,7 +732,7 @@ function ScannerTab({
                   </div>
                 </div>
                 <div className="item-total" style={{ fontSize: "1rem" }}>
-                  R$ {item.total ?? formatBRL((item.price || 0) * (item.quantity || 1))}
+                  R$ {item.total ?? formatBRL(parseBRL(item.price) * parseBRL(item.quantity || 1))}
                 </div>
               </div>
             ))}
@@ -770,9 +747,9 @@ function ScannerTab({
               R${" "}
               {formatBRL(
                 currentReceipt.items.reduce(
-                  (acc: number, curr: any) => {
+                  (acc: number, curr: ReceiptItem) => {
                     if (curr.total != null) return acc + parseBRL(curr.total);
-                    return acc + (curr.price || 0) * (curr.quantity || 1);
+                    return acc + parseBRL(curr.price) * parseBRL(curr.quantity || 1);
                   },
                   0,
                 ),

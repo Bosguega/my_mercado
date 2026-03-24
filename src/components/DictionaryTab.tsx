@@ -19,7 +19,8 @@ import {
 import { toast } from "react-hot-toast";
 import PropTypes from "prop-types";
 import { filterBySearch, sortItems } from "../utils/analytics";
-import type { SortDirection } from "../types/ui";
+import type { SortDirection, DictionaryTabProps } from "../types/ui";
+import type { DictionaryEntry, Receipt, ReceiptItem } from "../types/domain";
 
 const CATEGORIES = [
   "Açougue", "Hortifruti", "Laticínios", "Padaria", 
@@ -29,17 +30,14 @@ const CATEGORIES = [
 function DictionaryTab({
   setSavedReceipts,
   loadReceipts,
-}: {
-  setSavedReceipts?: any; // TODO: type
-  loadReceipts?: () => Promise<void>;
-}) {
-  const [dictionary, setDictionary] = useState<any[]>([]); // TODO: type
+}: DictionaryTabProps) {
+  const [dictionary, setDictionary] = useState<DictionaryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState("recent");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-  const [editingKey, setEditingKey] = useState(null);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ normalized_name: "", category: "" });
 
   const applyChangesToSavedReceipts = async (
@@ -56,11 +54,11 @@ function DictionaryTab({
       );
 
       if (typeof setSavedReceipts === "function") {
-        setSavedReceipts((prev: any[]) => {
-          const updated = (prev || []).map((receipt: any) => ({
+        setSavedReceipts((prev) => {
+          const updated = (prev || []).map((receipt: Receipt) => ({
             ...receipt,
             items: Array.isArray(receipt.items)
-              ? receipt.items.map((item: any) => {
+              ? receipt.items.map((item: ReceiptItem) => {
                   const itemKey = item.normalized_key ?? item.normalizedKey;
                   if (itemKey !== key) return item;
 
@@ -108,7 +106,7 @@ function DictionaryTab({
     loadDictionary();
   }, []);
 
-  const handleStartEdit = (item: any) => { // TODO: type
+  const handleStartEdit = (item: DictionaryEntry) => {
     setEditingKey(item.key);
     setEditForm({ 
       normalized_name: item.normalized_name || "", 
@@ -220,17 +218,17 @@ function DictionaryTab({
 
   const filteredDictionary = useMemo(() => {
     const baseItems = filterBySearch(dictionary, searchQuery, ["key", "normalized_name"]);
-    return baseItems.filter((item: any) => selectedCategory === "all" || item.category === selectedCategory);
+    return baseItems.filter((item) => selectedCategory === "all" || item.category === selectedCategory);
   }, [dictionary, searchQuery, selectedCategory]);
 
   const sortedDictionary = useMemo(() => {
     const customSorters = {
-      recent: (a: any, b: any) => { // TODO: type
+      recent: (a: DictionaryEntry, b: DictionaryEntry) => {
         const dateA = new Date(a.created_at || 0);
         const dateB = new Date(b.created_at || 0);
         return dateA.getTime() - dateB.getTime();
       },
-      alpha: (a: any, b: any) => { // TODO: type
+      alpha: (a: DictionaryEntry, b: DictionaryEntry) => {
         const nameA = (a.normalized_name || a.key).toLowerCase();
         const nameB = (b.normalized_name || b.key).toLowerCase();
         return nameA.localeCompare(nameB);

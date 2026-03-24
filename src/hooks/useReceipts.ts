@@ -5,10 +5,15 @@ import { processItemsPipeline } from '../services/productService';
 import { getReceiptIdCandidates, toUserScopedReceiptId } from '../utils/receiptId';
 import type { Receipt, SessionUser } from '../types/domain';
 
+type SaveReceiptResult =
+  | { duplicate: true; existingReceipt: Receipt }
+  | { success: true; receipt: Receipt }
+  | { success: false; error: unknown };
+
 export function useReceipts(sessionUser: SessionUser | null) {
   const [savedReceipts, setSavedReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<any>(null); // TODO: type
+  const [error, setError] = useState<unknown>(null);
 
   const loadReceipts = async () => {
     setLoading(true);
@@ -19,7 +24,7 @@ export function useReceipts(sessionUser: SessionUser | null) {
         setSavedReceipts(data);
         localStorage.setItem("@MyMercado:receipts", JSON.stringify(data));
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Erro ao carregar notas:", err);
       setError(err);
       const stored = localStorage.getItem("@MyMercado:receipts");
@@ -43,7 +48,10 @@ export function useReceipts(sessionUser: SessionUser | null) {
     }
   }, [sessionUser]);
 
-  const saveReceipt = async (receipt: any, forceReplace = false) => { // TODO: type
+  const saveReceipt = async (
+    receipt: Receipt,
+    forceReplace = false,
+  ): Promise<SaveReceiptResult> => {
     const rawReceiptId = receipt.id || Date.now().toString();
     const receiptId = toUserScopedReceiptId(rawReceiptId, sessionUser?.id);
     const idCandidates = new Set(getReceiptIdCandidates(rawReceiptId, sessionUser?.id));
@@ -77,7 +85,7 @@ export function useReceipts(sessionUser: SessionUser | null) {
       });
 
       return { success: true, receipt: fullReceipt };
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Erro ao salvar nota:", err);
       toast.error("Erro técnico ao salvar a nota.");
       return { success: false, error: err };
@@ -98,7 +106,7 @@ export function useReceipts(sessionUser: SessionUser | null) {
       });
       toast.success("Nota removida com sucesso!");
       return true;
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Erro ao remover nota:", err);
       toast.error("Erro ao remover nota no banco remoto.");
       return false;

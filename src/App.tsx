@@ -14,7 +14,7 @@ import { usePersistedTab } from "./hooks/usePersistedTab";
 import { useReceiptScanner } from "./hooks/useReceiptScanner";
 import { useSupabaseSession } from "./hooks/useSupabaseSession";
 import ApiKeyModal from "./components/ApiKeyModal";
-import type { AppTab, HistoryFilters, SortDirection } from "./types/ui";
+import type { AppTab, HistoryFilters, SearchSortBy, SortDirection } from "./types/ui";
 import "./index.css";
 
 function App() {
@@ -69,7 +69,7 @@ function App() {
 
   // Search State
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortOrder, setSortOrder] = useState("recent");
+  const [sortOrder, setSortOrder] = useState<SearchSortBy>("recent");
   const [searchSortDirection, setSearchSortDirection] = useState<SortDirection>("desc");
 
   // History filter state

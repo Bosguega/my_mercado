@@ -18,6 +18,7 @@ import { parseToDate } from "../utils/date";
 import { calculateReceiptTotal, calculateTotalSpent } from "../utils/analytics";
 import type { HistoryTabProps } from "../types/ui";
 import type { HistoryFilters } from "../types/ui";
+import type { Receipt, ReceiptItem } from "../types/domain";
 
 // Moved to module scope: utiliza utilitário centralizado
 const parseDate = (d: string | Date) => parseToDate(d);
@@ -84,7 +85,7 @@ function HistoryTab({
   
   const filteredReceipts = useMemo(() => {
     return historyFilter.trim()
-      ? savedReceipts.filter((receipt: any) => // TODO: type
+      ? savedReceipts.filter((receipt: Receipt) =>
           receipt.establishment
             ?.toLowerCase()
             .includes(historyFilter.toLowerCase()),
@@ -113,7 +114,7 @@ function HistoryTab({
       const last3Months = new Date(now.getFullYear(), now.getMonth() - 3, 1);
       last3Months.setHours(0, 0, 0, 0);
 
-      filtered = filtered.filter((receipt: any) => { // TODO: type
+      filtered = filtered.filter((receipt: Receipt) => {
         const receiptDate = parseToDate(receipt.date);
         receiptDate.setHours(0, 0, 0, 0);
 
@@ -208,7 +209,7 @@ function HistoryTab({
 
     // CSV Rows - flatten receipts and items
     const rows = finalFilteredReceipts.items.flatMap((receipt) =>
-      receipt.items.map((item: any) => [ // TODO: type
+      receipt.items.map((item: ReceiptItem) => [
         receipt.date,
         receipt.establishment,
         item.name,
@@ -222,7 +223,7 @@ function HistoryTab({
     // Combine all CSV content
     const csvContent = [
       headers.join(";"), // Use semicolon for Brazilian Excel
-      ...rows.map((row) => row.map((cell: any) => `"${cell}"`).join(";")), // Quote cells TODO: type
+      ...rows.map((row) => row.map((cell: string | number) => `"${cell}"`).join(";")),
     ].join("\n");
 
     // Create blob and download
@@ -719,7 +720,7 @@ function HistoryTab({
               </div>
             ) : (
               <AnimatePresence mode="popLayout">
-                {finalFilteredReceipts.items.map((receipt: any) => { // TODO: type
+                {finalFilteredReceipts.items.map((receipt: Receipt) => {
                   const isExpanded = expandedReceipts.includes(receipt.id);
 
                   // Calcular total de forma segura usando analytics engine
@@ -859,7 +860,7 @@ function HistoryTab({
                             padding: "1rem",
                           }}
                         >
-                          {receipt.items.map((item: any, idx: number) => (
+                          {receipt.items.map((item: ReceiptItem, idx: number) => (
                             <div
                               key={idx}
                               style={{

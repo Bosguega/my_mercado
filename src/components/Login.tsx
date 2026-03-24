@@ -24,8 +24,9 @@ export default function Login({ setSessionUser }: LoginProps) {
         toast.success('Login efetuado com sucesso!');
         setSessionUser(data.user);
       }
-    } catch (err: any) { // TODO: type
-      toast.error(err?.message || 'Erro ao autenticar');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro ao autenticar';
+      toast.error(message);
     } finally {
       setLoading(false);
     }

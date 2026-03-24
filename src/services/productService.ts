@@ -1,78 +1,67 @@
 import { getDictionary, updateDictionary } from "./dbMethods";
 import { callAI } from "../utils/aiClient";
 import { normalizeKey } from "../utils/normalize";
+import type { AiNormalizationResult } from "../types/ai";
+import type { DictionaryMap, ReceiptItem } from "../types/domain";
 
 // ==============================
-// 🧼 REMOVER PESO VARIÁVEL
+// Remover peso variavel
 // ==============================
 
 function stripVariableInfo(
-  name: any, // TODO: type
-  unit: any, // TODO: type
-  qty: any, // TODO: type
-) {
+  name: string | undefined,
+  unit: string | undefined,
+  qty: string | number | undefined,
+): string {
   if (!name) return "";
 
-  // 1. Remove unidades isoladas no final (ex: "MANGA TOMMY KG" -> "MANGA TOMMY")
-  // Isso ajuda a agrupar itens que vêm com a unidade de medida literal no nome.
   let cleanName = name.replace(/(?<!\d)\s+(KG|G|ML|L|UN|PC|CX)\b$/i, "").trim();
 
   const qtyNum = parseFloat(String(qty || "0").replace(",", "."));
 
-  // 2. Peso variável (hortifruti, carnes, etc)
   if (unit === "KG" && qtyNum < 5) {
-    return cleanName
-      .replace(/\b\d+[.,]?\d*\s?(KG|G)\b/gi, "")
-      .trim();
+    return cleanName.replace(/\b\d+[.,]?\d*\s?(KG|G)\b/gi, "").trim();
   }
 
   return cleanName;
 }
 
 // ==============================
-// 🧠 LIMPEZA PÓS IA
+// Limpeza pos IA
 // ==============================
 
-function cleanAIName(name: any) { // TODO: type
+function cleanAIName(name: string): string {
   if (!name) return "";
 
-  // Preservamos o que a IA retornou, apenas normalizando espaços.
-  // A IA já foi instruída a manter volumes (1.5L, 350ml) e variantes.
-  return name
-    .replace(/\s+/g, " ")
-    .trim();
+  return name.replace(/\s+/g, " ").trim();
 }
 
 // ==============================
-// 🔢 CONVERSÃO NUMÉRICA
+// Conversao numerica
 // ==============================
 
-function toNumber(value: any, fallback = 0) { // TODO: type
+function toNumber(value: string | number | null | undefined, fallback = 0): number {
   if (value === null || value === undefined || value === "") return fallback;
 
-  // Já é número
-  if (typeof value === "number") return isNaN(value) ? fallback : value;
+  if (typeof value === "number") return Number.isNaN(value) ? fallback : value;
 
   const num = parseFloat(String(value).replace(",", "."));
-  return isNaN(num) ? fallback : num;
+  return Number.isNaN(num) ? fallback : num;
 }
 
 // ==============================
-// 🚀 PIPELINE PRINCIPAL
+// Pipeline principal
 // ==============================
 
-export async function processItemsPipeline(rawItems: any[] = []) { // TODO: type
+type ItemWithKey = ReceiptItem & { normalized_key: string };
+
+export async function processItemsPipeline(rawItems: ReceiptItem[] = []): Promise<ReceiptItem[]> {
   if (!rawItems.length) return [];
 
-  // ==============================
-  // 1. NORMALIZAÇÃO INICIAL
-  // ==============================
-
-  const itemsWithKey = rawItems.map((item) => {
-    // Para itens de peso variável (KG < 5), removemos o peso da chave para agrupar no dicionário
+  const itemsWithKey: ItemWithKey[] = rawItems.map((item) => {
     const nameForKey = stripVariableInfo(item.name, item.unit, item.qty);
     const key = normalizeKey(nameForKey);
-    
+
     console.log(`[Pipeline] Input: "${item.name}" -> Key: "${key}" (from: "${nameForKey}")`);
     return {
       ...item,
@@ -80,62 +69,35 @@ export async function processItemsPipeline(rawItems: any[] = []) { // TODO: type
     };
   });
 
-  // ==============================
-  // 2. BUSCAR DICIONÁRIO
-  // ==============================
-
   const keys = [...new Set(itemsWithKey.map((i) => i.normalized_key))];
-  const dictionary: any = await getDictionary(keys); // TODO: type
+  const dictionary: DictionaryMap = await getDictionary(keys);
 
-  // ==============================
-  // 3. SEPARAR CONHECIDOS / DESCONHECIDOS
-  // ==============================
-
-  const knownItems = [];
-  const unknownMap = new Map();
+  const unknownMap = new Map<string, string>();
 
   itemsWithKey.forEach((item) => {
     let dictEntry = dictionary[item.normalized_key];
 
-    // Fallback: Tenta buscar secundariamente nos valores do dicionário retornados
     if (!dictEntry) {
       const fallbackEntry = Object.values(dictionary).find(
-        (entry: any) => normalizeKey(entry.normalized_name) === item.normalized_key // TODO: type
+        (entry) => normalizeKey(entry.normalized_name || "") === item.normalized_key,
       );
       if (fallbackEntry) {
         dictEntry = fallbackEntry;
-        console.log(`[Pipeline] Fallback find for "${item.name}": matched by normalized_name "${dictEntry.normalized_name}"`);
+        console.log(
+          `[Pipeline] Fallback find for "${item.name}": matched by normalized_name "${dictEntry.normalized_name}"`,
+        );
       }
     }
 
-    if (dictEntry) {
-      knownItems.push({
-        ...item,
-        normalized_name: dictEntry.normalized_name,
-        category: dictEntry.category,
-      });
-    } else {
-      if (!unknownMap.has(item.normalized_key)) {
-        const cleanName = stripVariableInfo(
-          item.name,
-          item.unit,
-          item.qty
-        );
-
-        unknownMap.set(item.normalized_key, cleanName);
-      }
+    if (!dictEntry && !unknownMap.has(item.normalized_key)) {
+      const cleanName = stripVariableInfo(item.name, item.unit, item.qty);
+      unknownMap.set(item.normalized_key, cleanName);
     }
   });
 
-  // ==============================
-  // 4. CHAMAR IA (EM LOTES)
-  // ==============================
+  const unknownEntries = Array.from(unknownMap.entries()).map(([key, raw]) => ({ key, raw }));
 
-  const unknownEntries = Array.from(unknownMap.entries()).map(
-    ([key, raw]) => ({ key, raw })
-  );
-
-  let aiResults: any[] = []; // TODO: type
+  let aiResults: AiNormalizationResult[] = [];
 
   for (let i = 0; i < unknownEntries.length; i += 10) {
     const chunk = unknownEntries.slice(i, i + 10);
@@ -143,7 +105,7 @@ export async function processItemsPipeline(rawItems: any[] = []) { // TODO: type
     try {
       const response = await callAI(chunk);
 
-      const cleaned = response.map((r: any) => ({ // TODO: type
+      const cleaned: AiNormalizationResult[] = response.map((r) => ({
         key: r.key,
         normalized_name: cleanAIName(r.normalized_name),
         category: r.category || "Outros",
@@ -153,7 +115,7 @@ export async function processItemsPipeline(rawItems: any[] = []) { // TODO: type
     } catch (err) {
       console.warn("Erro na IA, usando fallback:", err);
 
-      const fallback = chunk.map((item: any) => ({ // TODO: type
+      const fallback: AiNormalizationResult[] = chunk.map((item) => ({
         key: item.key,
         normalized_name: item.raw,
         category: "Outros",
@@ -163,37 +125,22 @@ export async function processItemsPipeline(rawItems: any[] = []) { // TODO: type
     }
   }
 
-  // ==============================
-  // 5. ATUALIZAR DICIONÁRIO
-  // ==============================
-
   if (aiResults.length) {
     await updateDictionary(aiResults);
   }
 
-  // ==============================
-  // 6. MAPA FINAL (IA + DICIONÁRIO)
-  // ==============================
-
   const aiMap = aiResults.reduce((acc, r) => {
     acc[r.key] = r;
     return acc;
-  }, {});
+  }, {} as Record<string, AiNormalizationResult>);
 
-  // ==============================
-  // 7. MONTAGEM FINAL
-  // ==============================
-
-  const finalItems = itemsWithKey.map((item) => {
-    const dictEntry =
-      dictionary[item.normalized_key] ||
-      aiMap[item.normalized_key];
+  const finalItems: ReceiptItem[] = itemsWithKey.map((item) => {
+    const dictEntry = dictionary[item.normalized_key] || aiMap[item.normalized_key];
 
     const quantity = toNumber(item.qty, 1);
     const unitPrice = toNumber(item.unitPrice, 0);
     const totalValue = quantity * unitPrice;
 
-    // Formata strings BRL para a UI
     const fmtQty = quantity.toString().replace(".", ",");
     const fmtPrice = unitPrice.toFixed(2).replace(".", ",");
     const fmtTotal = totalValue.toFixed(2).replace(".", ",");
@@ -203,13 +150,9 @@ export async function processItemsPipeline(rawItems: any[] = []) { // TODO: type
       normalized_key: item.normalized_key,
       normalized_name: dictEntry?.normalized_name || item.name,
       category: dictEntry?.category || "Outros",
-
-      // Campos numéricos (para persistência no DB)
       quantity,
       unit: item.unit || "UN",
       price: unitPrice,
-
-      // Campos string BRL (para exibição na UI)
       qty: fmtQty,
       unitPrice: fmtPrice,
       total: fmtTotal,

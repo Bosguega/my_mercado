@@ -1,7 +1,6 @@
 export interface SessionUser {
   id: string;
   email?: string | null;
-  [key: string]: any; // TODO: type
 }
 
 export interface ReceiptItem {
@@ -16,7 +15,7 @@ export interface ReceiptItem {
   unitPrice?: string | number;
   price?: string | number;
   total?: string | number;
-  [key: string]: any; // TODO: type
+  [key: string]: unknown;
 }
 
 export interface Receipt {
@@ -25,7 +24,7 @@ export interface Receipt {
   date: string;
   items: ReceiptItem[];
   created_at?: string;
-  [key: string]: any; // TODO: type
+  [key: string]: unknown;
 }
 
 export interface DictionaryEntry {
@@ -34,7 +33,7 @@ export interface DictionaryEntry {
   category?: string;
   user_id?: string;
   created_at?: string;
-  [key: string]: any; // TODO: type
+  [key: string]: unknown;
 }
 
 export type DictionaryMap = Record<
@@ -42,6 +41,6 @@ export type DictionaryMap = Record<
   {
     normalized_name?: string;
     category?: string;
-    [key: string]: any; // TODO: type
+    [key: string]: unknown;
   }
 >;

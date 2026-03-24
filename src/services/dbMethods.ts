@@ -1,44 +1,74 @@
-import { supabase } from './supabaseClient'
-import { formatToISO, formatToBR } from '../utils/date'
-import { parseBRL } from '../utils/currency'
-import { toUserScopedReceiptId } from '../utils/receiptId'
+import { supabase } from "./supabaseClient";
+import { formatToISO, formatToBR } from "../utils/date";
+import { parseBRL } from "../utils/currency";
+import { toUserScopedReceiptId } from "../utils/receiptId";
+import type { DictionaryEntry, DictionaryMap, Receipt, ReceiptItem } from "../types/domain";
+
+type DictionaryUpdateEntry = Pick<DictionaryEntry, "key" | "normalized_name" | "category">;
+
+interface DbItemRow {
+  id?: string;
+  name: string;
+  normalized_key?: string | null;
+  normalized_name?: string | null;
+  category?: string | null;
+  quantity?: number | null;
+  unit?: string | null;
+  price?: number | null;
+}
+
+interface DbReceiptRow {
+  id: string;
+  establishment: string;
+  date: string;
+  created_at?: string | null;
+  items?: DbItemRow[] | null;
+}
+
+interface DbDictionaryRow {
+  key: string;
+  normalized_name: string;
+  category?: string | null;
+}
 
 function requireSupabase() {
   if (!supabase) {
-    throw new Error("Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.")
+    throw new Error(
+      "Supabase nao configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.",
+    );
   }
-  return supabase
+  return supabase;
 }
 
-// 🔐 Centraliza auth (evita repetir código)
 async function getUserOrThrow() {
-  const client = requireSupabase()
-  const { data, error } = await client.auth.getUser()
+  const client = requireSupabase();
+  const { data, error } = await client.auth.getUser();
   if (error || !data?.user) {
-    throw new Error("Usuário não autenticado")
+    throw new Error("Usuario nao autenticado");
   }
-  return data.user
+  return data.user;
 }
 
-function isLegacyDictionarySchemaError(error: any) { // TODO: type
-  const message = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`.toLowerCase()
+function isLegacyDictionarySchemaError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as Record<string, unknown>;
+  const code = String(e.code ?? "");
+  const message = `${String(e.message ?? "")} ${String(e.details ?? "")} ${String(e.hint ?? "")}`.toLowerCase();
   return (
-    error?.code === '42703' || // undefined column
-    error?.code === '42P10' || // invalid ON CONFLICT target
-    message.includes('user_id') ||
-    message.includes('on conflict')
-  )
+    code === "42703" ||
+    code === "42P10" ||
+    message.includes("user_id") ||
+    message.includes("on conflict")
+  );
 }
 
-// 📥 GET
-export async function getAllReceiptsFromDB() {
-  await getUserOrThrow() // só garante sessão
+// GET
+export async function getAllReceiptsFromDB(): Promise<Receipt[]> {
+  await getUserOrThrow();
+  const client = requireSupabase();
 
-  const client = requireSupabase()
-  
-  // No novo modelo relacional, buscamos as notas e seus itens associados
   const { data, error } = await client
-    .from('receipts')
+    .from("receipts")
     .select(`
       id,
       establishment,
@@ -55,30 +85,40 @@ export async function getAllReceiptsFromDB() {
         price
       )
     `)
-    .order('created_at', { ascending: false })
-    .limit(2000)
+    .order("created_at", { ascending: false })
+    .limit(2000);
 
   if (error) {
-    console.error('Erro ao buscar notas:', error);
+    console.error("Erro ao buscar notas:", error);
     throw error;
   }
 
-  return (data || []).map((row) => ({
+  const rows = (data || []) as DbReceiptRow[];
+  return rows.map((row) => ({
     id: row.id,
     establishment: row.establishment,
     date: formatToBR(row.date),
-    items: (row.items || []).map(item => ({
-      ...item,
-      // Mapeia de volta para o formato esperado pela UI (strings BRL)
-      qty: item.quantity ? item.quantity.toString().replace('.', ',') : '1',
-      unitPrice: item.price ? item.price.toFixed(2).replace('.', ',') : '0,00',
-      total: (item.price * item.quantity).toFixed(2).replace('.', ',')
-    }))
-  }))
+    items: (row.items || []).map((item) => {
+      const quantity = item.quantity ?? 1;
+      const price = item.price ?? 0;
+      return {
+        ...item,
+        normalized_key: item.normalized_key ?? undefined,
+        normalized_name: item.normalized_name ?? undefined,
+        category: item.category ?? undefined,
+        quantity,
+        unit: item.unit ?? undefined,
+        price,
+        qty: quantity.toString().replace(".", ","),
+        unitPrice: price.toFixed(2).replace(".", ","),
+        total: (price * quantity).toFixed(2).replace(".", ","),
+      };
+    }),
+  }));
 }
 
-// 🔄 RESTORE (Importação em massa)
-export async function restoreReceiptsToDB(receipts: any[]) { // TODO: type
+// RESTORE
+export async function restoreReceiptsToDB(receipts: Receipt[]): Promise<boolean> {
   const user = await getUserOrThrow();
   const client = requireSupabase();
 
@@ -86,95 +126,24 @@ export async function restoreReceiptsToDB(receipts: any[]) { // TODO: type
     const scopedReceiptId = toUserScopedReceiptId(receiptData.id, user.id);
     const isoDate = formatToISO(receiptData.date);
 
-    // 1. Upsert da Nota
     const { data: receipt, error: receiptError } = await client
-      .from('receipts')
+      .from("receipts")
       .upsert({
         id: scopedReceiptId,
         establishment: receiptData.establishment,
         date: isoDate,
-        user_id: user.id
+        user_id: user.id,
       })
       .select()
       .single();
 
     if (receiptError) throw receiptError;
 
-    // 2. Upsert dos Itens
     if (receiptData.items && receiptData.items.length > 0) {
-      // Limpa itens antigos para evitar duplicados
-      await client
-        .from('items')
-        .delete()
-        .eq('receipt_id', receipt.id);
+      await client.from("items").delete().eq("receipt_id", receipt.id);
 
-      const { error: itemsError } = await client
-        .from('items')
-        .insert(
-          receiptData.items.map((item: any) => { // TODO: type
-            // Garante que valores numéricos sejam extraídos corretamente (do backup ou da UI)
-            const qty = parseBRL(item.qty || item.quantity);
-            const price = parseBRL(item.unitPrice || item.price);
-            
-            return {
-              receipt_id: receipt.id,
-              name: item.name,
-              normalized_key: item.normalized_key,
-              normalized_name: item.normalized_name,
-              category: item.category,
-              quantity: qty,
-              unit: item.unit || 'un',
-              price: price
-            };
-          })
-        );
-
-      if (itemsError) throw itemsError;
-    }
-  }
-  return true;
-}
-
-// 📤 INSERT / UPSERT (Etapa 9)
-export async function saveReceiptToDB(receiptData: any, items: any[]) { // TODO: type
-  const user = await getUserOrThrow()
-  const client = requireSupabase()
-  const scopedReceiptId = toUserScopedReceiptId(receiptData.id, user.id)
-
-  // Converte a data para o formato ISO compatível com o Supabase (Postgres)
-  const isoDate = formatToISO(receiptData.date);
-
-  // 1. Inserir Receipt
-  const { data: receipt, error: receiptError } = await client
-    .from('receipts')
-    .upsert({
-      id: scopedReceiptId,
-      establishment: receiptData.establishment,
-      date: isoDate,
-      user_id: user.id
-    })
-    .select()
-    .single()
-
-  if (receiptError) {
-    console.error('Erro ao salvar nota:', receiptError);
-    throw receiptError;
-  }
-
-  // 2. Limpar itens antigos (para evitar duplicados em caso de re-scan) e Inserir novos (batch)
-  if (items && items.length > 0) {
-    // Remove itens anteriores dessa nota (Etapa de limpeza para integridade)
-    await client
-      .from('items')
-      .delete()
-      .eq('receipt_id', receipt.id)
-
-    // Insere os itens processados
-    const { error: itemsError } = await client
-      .from('items')
-      .insert(
-        items.map((item: any) => { // TODO: type
-          // Garante conversão numérica correta antes de salvar no Postgres
+      const { error: itemsError } = await client.from("items").insert(
+        receiptData.items.map((item: ReceiptItem) => {
           const qty = parseBRL(item.qty || item.quantity);
           const price = parseBRL(item.unitPrice || item.price);
 
@@ -185,14 +154,68 @@ export async function saveReceiptToDB(receiptData: any, items: any[]) { // TODO:
             normalized_name: item.normalized_name,
             category: item.category,
             quantity: qty,
-            unit: item.unit || 'un',
-            price: price
+            unit: item.unit || "un",
+            price,
           };
-        })
-      )
+        }),
+      );
+
+      if (itemsError) throw itemsError;
+    }
+  }
+  return true;
+}
+
+// INSERT / UPSERT
+export async function saveReceiptToDB(
+  receiptData: Receipt,
+  items: ReceiptItem[],
+) {
+  const user = await getUserOrThrow();
+  const client = requireSupabase();
+  const scopedReceiptId = toUserScopedReceiptId(receiptData.id, user.id);
+
+  const isoDate = formatToISO(receiptData.date);
+
+  const { data: receipt, error: receiptError } = await client
+    .from("receipts")
+    .upsert({
+      id: scopedReceiptId,
+      establishment: receiptData.establishment,
+      date: isoDate,
+      user_id: user.id,
+    })
+    .select()
+    .single();
+
+  if (receiptError) {
+    console.error("Erro ao salvar nota:", receiptError);
+    throw receiptError;
+  }
+
+  if (items && items.length > 0) {
+    await client.from("items").delete().eq("receipt_id", receipt.id);
+
+    const { error: itemsError } = await client.from("items").insert(
+      items.map((item: ReceiptItem) => {
+        const qty = parseBRL(item.qty || item.quantity);
+        const price = parseBRL(item.unitPrice || item.price);
+
+        return {
+          receipt_id: receipt.id,
+          name: item.name,
+          normalized_key: item.normalized_key,
+          normalized_name: item.normalized_name,
+          category: item.category,
+          quantity: qty,
+          unit: item.unit || "un",
+          price,
+        };
+      }),
+    );
 
     if (itemsError) {
-      console.error('Erro ao salvar itens:', itemsError);
+      console.error("Erro ao salvar itens:", itemsError);
       throw itemsError;
     }
   }
@@ -200,65 +223,60 @@ export async function saveReceiptToDB(receiptData: any, items: any[]) { // TODO:
   return receipt;
 }
 
-// 🗑️ DELETE
-export async function deleteReceiptFromDB(id: string) {
-  await getUserOrThrow()
+// DELETE
+export async function deleteReceiptFromDB(id: string): Promise<boolean> {
+  await getUserOrThrow();
 
-  const client = requireSupabase()
-  
-  // Com o CASCADE configurado no banco (conforme o schema sql fornecido), deletar a nota remove os itens
-  const { error } = await client
-    .from('receipts')
-    .delete()
-    .eq('id', id)
+  const client = requireSupabase();
+  const { error } = await client.from("receipts").delete().eq("id", id);
 
-  if (error) throw error
-  return true
+  if (error) throw error;
+  return true;
 }
 
-// 📖 DICIONÁRIO - CRUD
-export async function getFullDictionaryFromDB() {
+// DICIONARIO - CRUD
+export async function getFullDictionaryFromDB(): Promise<DictionaryEntry[]> {
   const user = await getUserOrThrow();
   const client = requireSupabase();
   const query = client
-    .from('product_dictionary')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('key', { ascending: true });
+    .from("product_dictionary")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("key", { ascending: true });
 
   let { data, error } = await query;
   if (error && isLegacyDictionarySchemaError(error)) {
     const legacyResponse = await client
-      .from('product_dictionary')
-      .select('*')
-      .order('key', { ascending: true });
+      .from("product_dictionary")
+      .select("*")
+      .order("key", { ascending: true });
 
     data = legacyResponse.data;
     error = legacyResponse.error;
   }
 
   if (error) throw error;
-  return data || [];
+  return (data || []) as DictionaryEntry[];
 }
 
 export async function updateDictionaryEntryInDB(
   key: string,
   normalizedName: string,
   category: string,
-) {
+): Promise<boolean> {
   const user = await getUserOrThrow();
   const client = requireSupabase();
   let { error } = await client
-    .from('product_dictionary')
+    .from("product_dictionary")
     .update({ normalized_name: normalizedName, category })
-    .eq('user_id', user.id)
-    .eq('key', key);
+    .eq("user_id", user.id)
+    .eq("key", key);
 
   if (error && isLegacyDictionarySchemaError(error)) {
     const legacyResponse = await client
-      .from('product_dictionary')
+      .from("product_dictionary")
       .update({ normalized_name: normalizedName, category })
-      .eq('key', key);
+      .eq("key", key);
 
     error = legacyResponse.error;
   }
@@ -267,46 +285,45 @@ export async function updateDictionaryEntryInDB(
   return true;
 }
 
-// 🔁 Corrigir itens salvos usando o dicionário
 export async function applyDictionaryEntryToSavedItems(
   key: string,
   normalizedName: string | undefined,
   category: string | undefined,
-) {
+): Promise<{ updatedCount: number }> {
   await getUserOrThrow();
   const client = requireSupabase();
 
   if (!key) return { updatedCount: 0 };
 
-  const patch: Record<string, any> = {}; // TODO: type
+  const patch: Partial<{ normalized_name: string; category: string }> = {};
   if (normalizedName !== undefined) patch.normalized_name = normalizedName;
   if (category !== undefined) patch.category = category;
 
   if (Object.keys(patch).length === 0) return { updatedCount: 0 };
 
   const { error, count } = await client
-    .from('items')
-    .update(patch, { count: 'exact' })
-    .eq('normalized_key', key);
+    .from("items")
+    .update(patch, { count: "exact" })
+    .eq("normalized_key", key);
 
   if (error) throw error;
   return { updatedCount: count ?? 0 };
 }
 
-export async function deleteDictionaryEntryFromDB(key: string) {
+export async function deleteDictionaryEntryFromDB(key: string): Promise<boolean> {
   const user = await getUserOrThrow();
   const client = requireSupabase();
   let { error } = await client
-    .from('product_dictionary')
+    .from("product_dictionary")
     .delete()
-    .eq('user_id', user.id)
-    .eq('key', key);
+    .eq("user_id", user.id)
+    .eq("key", key);
 
   if (error && isLegacyDictionarySchemaError(error)) {
     const legacyResponse = await client
-      .from('product_dictionary')
+      .from("product_dictionary")
       .delete()
-      .eq('key', key);
+      .eq("key", key);
 
     error = legacyResponse.error;
   }
@@ -315,21 +332,16 @@ export async function deleteDictionaryEntryFromDB(key: string) {
   return true;
 }
 
-export async function clearDictionaryInDB() {
+export async function clearDictionaryInDB(): Promise<boolean> {
   const user = await getUserOrThrow();
   const client = requireSupabase();
-  // Escopo explícito por usuário para evitar limpeza global.
-  let { error } = await client
-    .from('product_dictionary')
-    .delete()
-    .eq('user_id', user.id);
+  let { error } = await client.from("product_dictionary").delete().eq("user_id", user.id);
 
-  // Fallback para schema legado (sem user_id).
   if (error && isLegacyDictionarySchemaError(error)) {
     const legacyResponse = await client
-      .from('product_dictionary')
+      .from("product_dictionary")
       .delete()
-      .neq('key', '___dummy___');
+      .neq("key", "___dummy___");
 
     error = legacyResponse.error;
   }
@@ -338,24 +350,24 @@ export async function clearDictionaryInDB() {
   return true;
 }
 
-// 📖 DICIONÁRIO - Batch read (usado pelo productService pipeline)
-export async function getDictionary(keys: string[]) {
+// DICIONARIO - Batch
+export async function getDictionary(keys: string[]): Promise<DictionaryMap> {
   if (!keys || keys.length === 0) return {};
 
   const user = await getUserOrThrow();
   const client = requireSupabase();
 
   let { data, error } = await client
-    .from('product_dictionary')
-    .select('key, normalized_name, category')
-    .eq('user_id', user.id)
-    .in('key', keys);
+    .from("product_dictionary")
+    .select("key, normalized_name, category")
+    .eq("user_id", user.id)
+    .in("key", keys);
 
   if (error && isLegacyDictionarySchemaError(error)) {
     const legacyResponse = await client
-      .from('product_dictionary')
-      .select('key, normalized_name, category')
-      .in('key', keys);
+      .from("product_dictionary")
+      .select("key, normalized_name, category")
+      .in("key", keys);
 
     data = legacyResponse.data;
     error = legacyResponse.error;
@@ -363,45 +375,43 @@ export async function getDictionary(keys: string[]) {
 
   if (error) throw error;
 
-  // Retorna um mapa { key: { normalized_name, category } }
-  return (data || []).reduce((acc: Record<string, any>, row: any) => { // TODO: type
+  const rows = (data || []) as DbDictionaryRow[];
+  return rows.reduce((acc: DictionaryMap, row) => {
     acc[row.key] = {
       normalized_name: row.normalized_name,
-      category: row.category,
+      category: row.category || undefined,
     };
     return acc;
   }, {});
 }
 
-// 📖 DICIONÁRIO - Batch upsert (usado pelo productService pipeline)
-export async function updateDictionary(entries: any[]) { // TODO: type
+export async function updateDictionary(entries: DictionaryUpdateEntry[]): Promise<void> {
   if (!entries || entries.length === 0) return;
 
   const user = await getUserOrThrow();
   const client = requireSupabase();
 
-  const rows = entries.map((e: any) => ({ // TODO: type
+  const rows = entries.map((e) => ({
     user_id: user.id,
     key: e.key,
     normalized_name: e.normalized_name,
-    category: e.category || 'Outros',
+    category: e.category || "Outros",
   }));
 
   let { error } = await client
-    .from('product_dictionary')
-    .upsert(rows, { onConflict: 'user_id,key' });
+    .from("product_dictionary")
+    .upsert(rows, { onConflict: "user_id,key" });
 
-  // Fallback para schema legado (sem user_id e PK simples em key).
   if (error && isLegacyDictionarySchemaError(error)) {
-    const legacyRows = entries.map((e: any) => ({ // TODO: type
+    const legacyRows = entries.map((e) => ({
       key: e.key,
       normalized_name: e.normalized_name,
-      category: e.category || 'Outros',
+      category: e.category || "Outros",
     }));
 
     const legacyResponse = await client
-      .from('product_dictionary')
-      .upsert(legacyRows, { onConflict: 'key' });
+      .from("product_dictionary")
+      .upsert(legacyRows, { onConflict: "key" });
 
     error = legacyResponse.error;
   }

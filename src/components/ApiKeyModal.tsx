@@ -77,10 +77,10 @@ export default function ApiKeyModal({ isOpen, onClose, currentKey, onSave }: Api
         throw new Error(`Erro na API (${res.status})`);
       }
 
-      const data = await res.json();
+      const data = (await res.json()) as { models?: Array<{ name?: string }> };
       if (data && data.models && Array.isArray(data.models)) {
         const names = data.models
-          .map((m: any) => m.name.replace('models/', '')) // TODO: type
+          .map((m) => (m.name || "").replace("models/", ""))
           .filter((name: string) => !name.includes('vision') && !name.includes('embedding'));
         
         setFetchedModels(names);

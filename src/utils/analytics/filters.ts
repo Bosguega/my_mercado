@@ -1,23 +1,27 @@
-export function filterBySearch(
-  items: any[], // TODO: type
+export function filterBySearch<T extends Record<string, unknown>>(
+  items: T[],
   query: string,
   fields: string[],
-): any[] { // TODO: type
+): T[] {
   if (!query) return items;
 
   const q = query.toLowerCase();
 
   return items.filter((item) =>
-    fields.some((field) => (item[field] || "").toLowerCase().includes(q))
+    fields.some((field) =>
+      String((item as Record<string, unknown>)[field] ?? "")
+        .toLowerCase()
+        .includes(q),
+    )
   );
 }
 
-export function sortItems(
-  items: any[], // TODO: type
+export function sortItems<T extends Record<string, unknown>>(
+  items: T[],
   sortBy: string,
   direction: "asc" | "desc",
-  customSorters: Record<string, (a: any, b: any) => number> = {}, // TODO: type
-): any[] { // TODO: type
+  customSorters: Record<string, (a: T, b: T) => number> = {},
+): T[] {
   const sorted = [...items];
 
   if (customSorters[sortBy]) {

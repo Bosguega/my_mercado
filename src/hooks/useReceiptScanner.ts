@@ -1,22 +1,69 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { BrowserMultiFormatReader, DecodeHintType } from '@zxing/library';
 import { toast } from 'react-hot-toast';
 import { parseNFCeSP } from '../services/receiptParser';
+import type { Receipt, ReceiptItem } from '../types/domain';
+import type { AppTab } from '../types/ui';
+
+type SaveReceiptResponse =
+  | { duplicate: true; existingReceipt: Receipt }
+  | { success: true; receipt: Receipt }
+  | { success: false; error: unknown };
+
+type SaveReceiptFn = (receipt: Receipt, forceReplace?: boolean) => Promise<SaveReceiptResponse>;
+
+function isDuplicateResult(
+  result: SaveReceiptResponse,
+): result is { duplicate: true; existingReceipt: Receipt } {
+  return "duplicate" in result && result.duplicate === true;
+}
+
+function isSuccessResult(
+  result: SaveReceiptResponse,
+): result is { success: true; receipt: Receipt } {
+  return "success" in result && result.success === true;
+}
+
+type CameraCapabilities = MediaTrackCapabilities & {
+  zoom?: {
+    min: number;
+    max: number;
+  };
+  torch?: boolean;
+};
+
+type BarcodeDetectorLike = {
+  detect: (input: ImageBitmapSource) => Promise<Array<{ rawValue?: string }>>;
+};
+
+type BarcodeDetectorCtor = new (options: { formats: string[] }) => BarcodeDetectorLike;
+
+type ManualData = {
+  establishment: string;
+  date: string;
+  items: ReceiptItem[];
+};
+
+type ManualItem = {
+  name: string;
+  qty: string;
+  unitPrice: string;
+};
 
 export function useReceiptScanner({
   saveReceipt,
   tab,
 }: {
-  saveReceipt: any; // TODO: type
-  tab: any; // TODO: type
+  saveReceipt: SaveReceiptFn;
+  tab: AppTab;
 }) {
-  const [currentReceipt, setCurrentReceipt] = useState<any | null>(null); // TODO: type
+  const [currentReceipt, setCurrentReceipt] = useState<Receipt | null>(null);
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [duplicateReceipt, setDuplicateReceipt] = useState<any | null>(null); // TODO: type
+  const [duplicateReceipt, setDuplicateReceipt] = useState<Receipt | null>(null);
 
-  const codeReaderRef = useRef<any>(null); // TODO: type
+  const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
   const startTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const processingRef = useRef(false);
  
@@ -27,19 +74,21 @@ export function useReceiptScanner({
 
   const streamRef = useRef<MediaStream | null>(null);
 
-  const applyZoom = useCallback(async (value: any) => { // TODO: type
+  const applyZoom = useCallback(async (value: number) => {
     const video = document.getElementById('reader-video') as HTMLVideoElement | null;
     const stream = (streamRef.current || video?.srcObject) as MediaStream | null;
     if (!stream) return;
 
     const track = stream.getVideoTracks()[0];
     if (track) {
-      const caps = track.getCapabilities ? track.getCapabilities() : {};
-      const zoomCaps = (caps as any).zoom; // TODO: type
+      const caps = (track.getCapabilities ? track.getCapabilities() : {}) as CameraCapabilities;
+      const zoomCaps = caps.zoom;
       if (zoomCaps) {
         const clamped = Math.max(zoomCaps.min, Math.min(zoomCaps.max, value));
         try {
-          await track.applyConstraints({ advanced: [{ zoom: clamped } as any] }); // TODO: type
+          await track.applyConstraints({
+            advanced: [{ zoom: clamped }] as unknown as MediaTrackConstraintSet[],
+          });
           setZoom(clamped);
         } catch (_e) {
           console.warn('Zoom error');
@@ -48,18 +97,20 @@ export function useReceiptScanner({
     }
   }, []);
 
-  const applyTorch = useCallback(async (on: any) => { // TODO: type
+  const applyTorch = useCallback(async (on: boolean) => {
     const video = document.getElementById('reader-video') as HTMLVideoElement | null;
     const stream = (streamRef.current || video?.srcObject) as MediaStream | null;
     if (!stream) return;
 
     const track = stream.getVideoTracks()[0];
     if (track) {
-      const caps = track.getCapabilities ? track.getCapabilities() : {};
-      const torchSupported = Boolean((caps as any).torch); // TODO: type
+      const caps = (track.getCapabilities ? track.getCapabilities() : {}) as CameraCapabilities;
+      const torchSupported = Boolean(caps.torch);
       if (torchSupported) {
         try {
-          await track.applyConstraints({ advanced: [{ torch: on } as any] }); // TODO: type
+          await track.applyConstraints({
+            advanced: [{ torch: on }] as unknown as MediaTrackConstraintSet[],
+          });
           setTorch(on);
         } catch (e) {
           console.warn('Torch error:', e);
@@ -77,7 +128,7 @@ export function useReceiptScanner({
     if (codeReaderRef.current) {
       try {
         codeReaderRef.current.reset();
-      } catch (err: any) { // TODO: type
+      } catch (err: unknown) {
         console.warn('Erro ao parar ZXing:', err);
       } finally {
         codeReaderRef.current = null;
@@ -107,7 +158,7 @@ export function useReceiptScanner({
    }, []);
 
   const handleScanSuccess = useCallback(
-    async (decodedText: any) => { // TODO: type
+    async (decodedText: string) => {
       if (processingRef.current) return;
       processingRef.current = true;
 
@@ -135,20 +186,21 @@ export function useReceiptScanner({
 
         const result = await saveReceipt(extractedData);
 
-        if (result.duplicate) {
+        if (isDuplicateResult(result)) {
           setDuplicateReceipt(extractedData);
           toast(
             `Esta nota já está no seu histórico desde ${result.existingReceipt.date.split(' ')[0]}`,
             { icon: '⚠️' },
           );
-        } else if (result.success) {
+        } else if (isSuccessResult(result)) {
           setCurrentReceipt(result.receipt);
           toast.success('Nota fiscal processada com sucesso!');
         }
-      } catch (err: any) { // TODO: type
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Desconhecido';
         toast.error('Erro ao processar nota. Tente novamente.');
         setError(
-          `Erro de conexão ou processamento: ${err?.message || 'Desconhecido'}`,
+          `Erro de conexão ou processamento: ${message}`,
         );
       } finally {
         setLoading(false);
@@ -173,10 +225,10 @@ export function useReceiptScanner({
       }
 
       // Try Google ML Kit (Native BarcodeDetector) first
-      const BarcodeDetectorCtor = (window as any).BarcodeDetector; // TODO: type
-      const hasNativeMLKit = Boolean(BarcodeDetectorCtor);
+      const BarcodeDetectorCtor = (window as Window & { BarcodeDetector?: BarcodeDetectorCtor })
+        .BarcodeDetector;
       
-      if (hasNativeMLKit) {
+      if (BarcodeDetectorCtor) {
         try {
           const detector = new BarcodeDetectorCtor({ formats: ['qr_code'] });
           const stream = await navigator.mediaDevices.getUserMedia({
@@ -184,7 +236,7 @@ export function useReceiptScanner({
               facingMode: 'environment', 
               width: { ideal: 1920 }, 
               height: { ideal: 1080 },
-              advanced: [{ focusMode: 'continuous' } as any] // TODO: type
+              advanced: [{ focusMode: 'continuous' } as unknown as MediaTrackConstraintSet]
             },
             audio: false
           });
@@ -194,16 +246,18 @@ export function useReceiptScanner({
            await video.play();
  
            const track = stream.getVideoTracks()[0];
-           const caps = track.getCapabilities ? track.getCapabilities() : {};
-           const zoomCaps = (caps as any).zoom; // TODO: type
-           const hasTorch = Boolean((caps as any).torch); // TODO: type
+           const caps = (track.getCapabilities ? track.getCapabilities() : {}) as CameraCapabilities;
+           const zoomCaps = caps.zoom;
+           const hasTorch = Boolean(caps.torch);
            
            if (zoomCaps) {
              setZoomSupported(true);
              // Para QR codes pequenos, iniciar com um leve zoom pode ajudar
              const initialZoom = Math.min(zoomCaps.max, 1.25);
              try {
-               await track.applyConstraints({ advanced: [{ zoom: initialZoom } as any] }); // TODO: type
+               await track.applyConstraints({
+                 advanced: [{ zoom: initialZoom }] as unknown as MediaTrackConstraintSet[],
+               });
                setZoom(initialZoom);
              } catch (_e) {
                setZoom(1);
@@ -224,7 +278,9 @@ export function useReceiptScanner({
                 if (barcodes.length > 0) {
                   const text = barcodes[0].rawValue;
                   stopCamera();
-                  handleScanSuccess(text);
+                  if (text) {
+                    handleScanSuccess(text);
+                  }
                   return;
                 }
               } catch (err) {
@@ -265,7 +321,7 @@ export function useReceiptScanner({
               facingMode: 'environment',
               width: { ideal: 1920 },
               height: { ideal: 1080 },
-              advanced: [{ focusMode: 'continuous' } as any] // TODO: type
+              advanced: [{ focusMode: 'continuous' } as unknown as MediaTrackConstraintSet],
             },
           };
 
@@ -285,14 +341,16 @@ export function useReceiptScanner({
          // Check zoom for ZXing fallback too
          const track = streamRef.current?.getVideoTracks()[0];
          if (track?.getCapabilities) {
-           const caps = track.getCapabilities();
-           const zoomCaps = (caps as any).zoom; // TODO: type
-           const hasTorch = Boolean((caps as any).torch); // TODO: type
+           const caps = track.getCapabilities() as CameraCapabilities;
+           const zoomCaps = caps.zoom;
+           const hasTorch = Boolean(caps.torch);
            if (zoomCaps) {
              setZoomSupported(true);
              const initialZoom = Math.min(zoomCaps.max, 1.25);
              try {
-               await track.applyConstraints({ advanced: [{ zoom: initialZoom } as any] }); // TODO: type
+               await track.applyConstraints({
+                 advanced: [{ zoom: initialZoom }] as unknown as MediaTrackConstraintSet[],
+               });
                setZoom(initialZoom);
              } catch (_e) {
                setZoom(1);
@@ -314,8 +372,8 @@ export function useReceiptScanner({
   }, [handleScanSuccess, loading, scanning, stopCamera]);
 
   const handleFileUpload = useCallback(
-    async (event: any) => { // TODO: type
-      const file = event.target.files[0];
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
       if (!file) return;
 
       setLoading(true);
@@ -324,7 +382,8 @@ export function useReceiptScanner({
         imageUrl = URL.createObjectURL(file);
         
         // Try Native BarcodeDetector first
-        const BarcodeDetectorCtor = (window as any).BarcodeDetector; // TODO: type
+        const BarcodeDetectorCtor = (window as Window & { BarcodeDetector?: BarcodeDetectorCtor })
+          .BarcodeDetector;
         if (BarcodeDetectorCtor) {
           try {
             const detector = new BarcodeDetectorCtor({ formats: ['qr_code'] });
@@ -337,7 +396,10 @@ export function useReceiptScanner({
             
             const barcodes = await detector.detect(img);
             if (barcodes.length > 0) {
-              await handleScanSuccess(barcodes[0].rawValue);
+              const rawValue = barcodes[0].rawValue;
+              if (rawValue) {
+                await handleScanSuccess(rawValue);
+              }
               return;
             }
           } catch (err) {
@@ -371,7 +433,7 @@ export function useReceiptScanner({
     if (!duplicateReceipt) return;
 
     const result = await saveReceipt(duplicateReceipt, true);
-    if (result.success) {
+    if (isSuccessResult(result)) {
       setCurrentReceipt(result.receipt);
       setDuplicateReceipt(null);
       toast.success('Nota atualizada com sucesso!');
@@ -380,20 +442,12 @@ export function useReceiptScanner({
 
   // Manual Mode State
   const [manualMode, setManualMode] = useState(false);
-  const [manualData, setManualData] = useState<{
-    establishment: string;
-    date: string;
-    items: any[]; // TODO: type
-  }>({
+  const [manualData, setManualData] = useState<ManualData>({
     establishment: '',
     date: new Date().toLocaleDateString('pt-BR'),
     items: [],
   });
-  const [manualItem, setManualItem] = useState<{
-    name: string;
-    qty: string;
-    unitPrice: string;
-  }>({
+  const [manualItem, setManualItem] = useState<ManualItem>({
     name: '',
     qty: '1',
     unitPrice: '',
@@ -417,7 +471,7 @@ export function useReceiptScanner({
     }
 
     // Validar itens (preços e quantidades)
-    const hasInvalidItems = manualData.items.some((item) => {
+    const hasInvalidItems = manualData.items.some((item: ReceiptItem) => {
       const price = parseFloat((item.unitPrice || '').toString().replace(',', '.'));
       const qty = parseFloat((item.qty || '').toString().replace(',', '.'));
       return isNaN(price) || isNaN(qty) || price < 0 || qty < 0;
@@ -430,7 +484,7 @@ export function useReceiptScanner({
       return;
     }
 
-    const toStoreSlug = (value: any) => { // TODO: type
+    const toStoreSlug = (value: string) => {
       const base = (value || '')
         .toString()
         .trim()
@@ -440,7 +494,7 @@ export function useReceiptScanner({
       return base || 'mercado';
     };
 
-    const normalizeManualDate = (value: any) => { // TODO: type
+    const normalizeManualDate = (value: string) => {
       const match = (value || '')
         .toString()
         .match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -464,7 +518,7 @@ export function useReceiptScanner({
     setLoading(true);
     try {
       const result = await saveReceipt(finalData);
-      if (result.success) {
+      if (isSuccessResult(result)) {
         setCurrentReceipt(result.receipt);
 
         setManualMode(false);

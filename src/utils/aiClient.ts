@@ -1,30 +1,31 @@
 /**
- * AI Client — unified entry point for calling the AI model.
+ * AI Client - unified entry point for calling the AI model.
  * Supports Google AI Studio (Gemini) and OpenAI-compatible APIs.
  */
 
 import { getApiKey, getApiModel, detectProvider } from "./aiConfig";
+import type { AiNormalizationInput, AiNormalizationResult } from "../types/ai";
 
 // ==============================
-// 📝 PROMPT
+// PROMPT
 // ==============================
 
-function buildPrompt(items: any) { // TODO: type
-  const list = items.map((i: any) => `- key: "${i.key}", raw: "${i.raw}"`).join("\n"); // TODO: type
+function buildPrompt(items: AiNormalizationInput[]): string {
+  const list = items.map((i) => `- key: "${i.key}", raw: "${i.raw}"`).join("\n");
 
-  return `Você é um especialista em normalizar nomes de produtos de supermercado brasileiro.
-Para cada item abaixo, converta o nome bruto (muitas vezes abreviado e em letras maiúsculas) em um nome amigável, legível e bem formatado.
+  return `Voce e um especialista em normalizar nomes de produtos de supermercado brasileiro.
+Para cada item abaixo, converta o nome bruto (muitas vezes abreviado e em letras maiusculas) em um nome amigavel, legivel e bem formatado.
 
 REGRAS:
 1. MANTENHA volumes e pesos (ex: 1L, 2L, 350ml, 500g, 5kg, 1.5L).
 2. MANTENHA variantes importantes (ex: Zero, Integral, Desnatado, Sem Lactose, Diet, Light).
-3. Converta abreviações comuns para o nome completo (ex: "CERV" -> "Cerveja", "LTA" -> "Lata", "BISC" -> "Biscoito", "REFR" -> "Refrigerante").
-4. Use Title Case (Primeira Letra Maiúscula).
-5. Categorize em: Açougue, Hortifruti, Laticínios, Padaria, Limpeza, Higiene, Bebidas, Mercearia, Petshop, Outros.
+3. Converta abreviacoes comuns para o nome completo (ex: "CERV" -> "Cerveja", "LTA" -> "Lata", "BISC" -> "Biscoito", "REFR" -> "Refrigerante").
+4. Use Title Case (Primeira Letra Maiuscula).
+5. Categorize em: Acougue, Hortifruti, Laticinios, Padaria, Limpeza, Higiene, Bebidas, Mercearia, Petshop, Outros.
 
 EXEMPLOS:
 - "CERV BRAHMA LTA 350ML" -> "Cerveja Brahma Lata 350ml" (Bebidas)
-- "LEITE PIRACANJUBA INT 1L" -> "Leite Piracanjuba Integral 1L" (Laticínios)
+- "LEITE PIRACANJUBA INT 1L" -> "Leite Piracanjuba Integral 1L" (Laticinios)
 - "COCA COLA ZERO 2L" -> "Coca-Cola Zero 2L" (Bebidas)
 - "TOMATE ITALIA" -> "Tomate Italiano" (Hortifruti)
 - "BISC RECHEADO TRAKINAS 126G" -> "Biscoito Recheado Trakinas 126g" (Mercearia)
@@ -32,14 +33,28 @@ EXEMPLOS:
 Itens para processar:
 ${list}
 
-Responda SOMENTE com o JSON array no formato: [{"key": "...", "normalized_name": "...", "category": "..."}], sem explicações.`;
+Responda SOMENTE com o JSON array no formato: [{"key": "...", "normalized_name": "...", "category": "..."}], sem explicacoes.`;
 }
 
 // ==============================
-// 🔮 GOOGLE AI STUDIO (GEMINI)
+// GOOGLE AI STUDIO (GEMINI)
 // ==============================
 
-async function callGemini(items: any, apiKey: any, model: any) { // TODO: type
+interface GeminiResponse {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{
+        text?: string;
+      }>;
+    };
+  }>;
+}
+
+async function callGemini(
+  items: AiNormalizationInput[],
+  apiKey: string,
+  model: string,
+): Promise<AiNormalizationResult[]> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const res = await fetch(url, {
@@ -59,18 +74,29 @@ async function callGemini(items: any, apiKey: any, model: any) { // TODO: type
     throw new Error(`Gemini API Error (${res.status}): ${err}`);
   }
 
-  const data = await res.json();
-  const text =
-    data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const data = (await res.json()) as GeminiResponse;
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
   return parseJsonFromText(text);
 }
 
 // ==============================
-// 🤖 OPENAI
+// OPENAI
 // ==============================
 
-async function callOpenAI(items: any, apiKey: any, model: any) { // TODO: type
+interface OpenAIResponse {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+}
+
+async function callOpenAI(
+  items: AiNormalizationInput[],
+  apiKey: string,
+  model: string,
+): Promise<AiNormalizationResult[]> {
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -85,7 +111,7 @@ async function callOpenAI(items: any, apiKey: any, model: any) { // TODO: type
         {
           role: "system",
           content:
-            "Você é um especialista em normalizar nomes de produtos de supermercado brasileiro. Responda SOMENTE com JSON.",
+            "Voce e um especialista em normalizar nomes de produtos de supermercado brasileiro. Responda SOMENTE com JSON.",
         },
         { role: "user", content: buildPrompt(items) },
       ],
@@ -97,50 +123,81 @@ async function callOpenAI(items: any, apiKey: any, model: any) { // TODO: type
     throw new Error(`OpenAI API Error (${res.status}): ${err}`);
   }
 
-  const data = await res.json();
+  const data = (await res.json()) as OpenAIResponse;
   const text = data?.choices?.[0]?.message?.content || "";
 
   return parseJsonFromText(text);
 }
 
 // ==============================
-// 🧹 PARSE HELPER
+// PARSE HELPER
 // ==============================
 
-function parseJsonFromText(text: any) { // TODO: type
-  // Remove possível markdown ```json ... ``` wrapper
+function isAiNormalizationResult(value: unknown): value is AiNormalizationResult {
+  if (!value || typeof value !== "object") return false;
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.key === "string" &&
+    typeof candidate.normalized_name === "string" &&
+    typeof candidate.category === "string"
+  );
+}
+
+function parseJsonFromText(text: string): AiNormalizationResult[] {
+  // Remove possible markdown ```json ... ``` wrapper
   const cleaned = text
     .replace(/```json\s*/gi, "")
     .replace(/```\s*/g, "")
     .trim();
 
   try {
-    const parsed = JSON.parse(cleaned);
+    const parsed = JSON.parse(cleaned) as unknown;
     if (!Array.isArray(parsed)) {
-      throw new Error("Resposta da IA não é um array.");
+      throw new Error("Resposta da IA nao e um array.");
     }
-    return parsed;
+
+    return parsed.map((entry) => {
+      if (isAiNormalizationResult(entry)) {
+        return entry;
+      }
+
+      if (entry && typeof entry === "object") {
+        const value = entry as Record<string, unknown>;
+        return {
+          key: String(value.key ?? ""),
+          normalized_name: String(value.normalized_name ?? ""),
+          category: String(value.category ?? "Outros"),
+        };
+      }
+
+      return {
+        key: "",
+        normalized_name: "",
+        category: "Outros",
+      };
+    });
   } catch (err) {
     console.error("Erro ao parsear resposta da IA:", err, "\nTexto:", text);
-    throw new Error("Resposta da IA não é um JSON válido.");
+    throw new Error("Resposta da IA nao e um JSON valido.");
   }
 }
 
 // ==============================
-// 🚀 EXPORT PRINCIPAL
+// MAIN EXPORTS
 // ==============================
 
 /**
- * Chama a IA configurada para normalizar uma lista de itens.
- * @param {Array<{key: string, raw: string}>} items
- * @returns {Promise<Array<{key: string, normalized_name: string, category: string}>>}
+ * Calls the configured AI provider to normalize a list of items.
  */
-export async function callAI(items: any) { // TODO: type
+export async function callAI(
+  items: AiNormalizationInput[],
+): Promise<AiNormalizationResult[]> {
   const apiKey = getApiKey();
   const model = getApiModel();
 
   if (!apiKey) {
-    throw new Error("API Key não configurada. Vá em ⚙️ e configure sua chave.");
+    throw new Error("API Key nao configurada. Va em configuracoes e informe sua chave.");
   }
 
   const provider = detectProvider(apiKey);
@@ -153,20 +210,19 @@ export async function callAI(items: any) { // TODO: type
     return callOpenAI(items, apiKey, model);
   }
 
-  throw new Error(`Provedor desconhecido para a chave fornecida. Prefixos suportados: AIza... (Google) ou sk-... (OpenAI).`);
+  throw new Error(
+    "Provedor desconhecido para a chave fornecida. Prefixos suportados: AIza... (Google) ou sk-... (OpenAI).",
+  );
 }
 
 /**
- * Testa a conexão com a IA.
- * @param {string} apiKey
- * @param {string} model
- * @returns {Promise<boolean>}
+ * Tests AI connection.
  */
-export async function testAiConnection(apiKey: any, model: any) { // TODO: type
+export async function testAiConnection(apiKey: string, model: string): Promise<boolean> {
   if (!apiKey) return false;
 
   const provider = detectProvider(apiKey);
-  const testItems = [{ key: "TEST", raw: "ARROZ BRANCO 5KG" }];
+  const testItems: AiNormalizationInput[] = [{ key: "TEST", raw: "ARROZ BRANCO 5KG" }];
 
   try {
     if (provider === "Google AI Studio") {
@@ -178,7 +234,7 @@ export async function testAiConnection(apiKey: any, model: any) { // TODO: type
     }
     return true;
   } catch (err) {
-    console.warn("Teste de conexão falhou:", err);
+    console.warn("Teste de conexao falhou:", err);
     return false;
   }
 }
