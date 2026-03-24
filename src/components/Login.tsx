@@ -1,15 +1,16 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { login, register } from '../services/auth';
 import { toast } from 'react-hot-toast';
 import PropTypes from 'prop-types';
+import type { LoginProps } from '../types/ui';
 
-export default function Login({ setSessionUser }) {
+export default function Login({ setSessionUser }: LoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
@@ -23,8 +24,8 @@ export default function Login({ setSessionUser }) {
         toast.success('Login efetuado com sucesso!');
         setSessionUser(data.user);
       }
-    } catch (err) {
-      toast.error(err.message || 'Erro ao autenticar');
+    } catch (err: any) { // TODO: type
+      toast.error(err?.message || 'Erro ao autenticar');
     } finally {
       setLoading(false);
     }

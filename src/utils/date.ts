@@ -8,7 +8,7 @@
  * @param {string|Date} dateVal 
  * @returns {Date}
  */
-export function parseToDate(dateVal) {
+export function parseToDate(dateVal: string | Date | null | undefined) {
   if (!dateVal) return new Date();
   if (dateVal instanceof Date) return dateVal;
 
@@ -16,8 +16,11 @@ export function parseToDate(dateVal) {
   if (typeof dateVal === 'string' && dateVal.includes('/')) {
     const parts = dateVal.split(' ');
     const [day, month, year] = parts[0].split('/');
+    const dayNum = Number(day);
+    const monthNum = Number(month);
+    const yearNum = Number(year);
     
-    const date = new Date(year, month - 1, day);
+    const date = new Date(yearNum, monthNum - 1, dayNum);
     
     if (parts[1]) {
       const [hours, minutes, seconds] = parts[1].split(':');
@@ -40,7 +43,10 @@ export function parseToDate(dateVal) {
  * @param {boolean} includeTime 
  * @returns {string}
  */
-export function formatToBR(dateVal, includeTime = true) {
+export function formatToBR(
+  dateVal: string | Date | null | undefined,
+  includeTime = true,
+): string {
   const date = parseToDate(dateVal);
   
   const day = String(date.getDate()).padStart(2, '0');
@@ -64,7 +70,7 @@ export function formatToBR(dateVal, includeTime = true) {
  * @param {string|Date} dateVal 
  * @returns {string}
  */
-export function formatToISO(dateVal) {
+export function formatToISO(dateVal: string | Date | null | undefined): string {
   const date = parseToDate(dateVal);
   return date.toISOString();
 }
@@ -74,7 +80,7 @@ export function formatToISO(dateVal) {
  * @param {string|Date} dateVal 
  * @returns {string}
  */
-export function formatToInputDate(dateVal) {
+export function formatToInputDate(dateVal: string | Date | null | undefined): string {
   const date = parseToDate(dateVal);
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');

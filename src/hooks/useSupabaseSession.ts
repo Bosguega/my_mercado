@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../services/supabaseClient';
+import type { SessionUser } from '../types/domain';
 
 export function useSupabaseSession() {
-  const [sessionUser, setSessionUser] = useState(null);
+  const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
@@ -34,4 +35,3 @@ export function useSupabaseSession() {
 
   return { sessionUser, setSessionUser, authLoading };
 }
-

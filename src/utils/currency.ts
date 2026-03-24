@@ -4,7 +4,7 @@
  * @param {string|number} value
  * @returns {number}
  */
-export function parseBRL(value) {
+export function parseBRL(value: string | number | null | undefined): number {
   if (value === null || value === undefined || value === '') return 0;
   
   // Se já for um número, não mexe
@@ -30,6 +30,6 @@ export function parseBRL(value) {
  * @param {string|number} value
  * @returns {string}
  */
-export function formatBRL(value) {
+export function formatBRL(value: string | number | null | undefined): string {
   return parseBRL(value).toFixed(2).replace('.', ',');
 }

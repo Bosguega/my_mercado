@@ -19,6 +19,31 @@ import PropTypes from "prop-types";
 import { toast } from "react-hot-toast";
 import { parseBRL, formatBRL } from "../utils/currency";
 
+type ScannerTabProps = {
+  manualMode: any; // TODO: type
+  setManualMode: any; // TODO: type
+  manualData: any; // TODO: type
+  setManualData: any; // TODO: type
+  manualItem: any; // TODO: type
+  setManualItem: any; // TODO: type
+  handleSaveManualReceipt: any; // TODO: type
+  startCamera: any; // TODO: type
+  stopCamera: any; // TODO: type
+  handleFileUpload: any; // TODO: type
+  loading: any; // TODO: type
+  scanning: any; // TODO: type
+  error: any; // TODO: type
+  currentReceipt: any; // TODO: type
+  setCurrentReceipt: any; // TODO: type
+  handleUrlSubmit: any; // TODO: type
+  zoom: any; // TODO: type
+  zoomSupported: any; // TODO: type
+  applyZoom: any; // TODO: type
+  torch: any; // TODO: type
+  torchSupported: any; // TODO: type
+  applyTorch: any; // TODO: type
+};
+
 // Skeleton para loading durante extração
 const ScannerSkeleton = () => (
   <div className="glass-card" style={{ padding: "2rem" }}>
@@ -85,7 +110,7 @@ function ScannerTab({
    torch,
    torchSupported,
    applyTorch,
- }) {
+ }: ScannerTabProps) {
   const [pasteMode, setPasteMode] = useState(false);
   const [pastedUrl, setPastedUrl] = useState("");
 
@@ -134,7 +159,7 @@ function ScannerTab({
       total: formatBRL(totalNum),
     };
 
-    setManualData((prev) => ({ ...prev, items: [newItem, ...prev.items] }));
+    setManualData((prev: any) => ({ ...prev, items: [newItem, ...prev.items] })); // TODO: type
     setManualItem({ name: "", qty: "1", unitPrice: "" });
     toast.success("Item adicionado!");
   };
@@ -284,7 +309,7 @@ function ScannerTab({
               overflowY: "auto",
             }}
           >
-            {manualData.items.map((it, idx) => (
+            {manualData.items.map((it: any, idx: number) => (
               <div
                 key={idx}
                 className="item-row"
@@ -325,7 +350,7 @@ function ScannerTab({
               Total: R${" "}
               {formatBRL(
                 manualData.items.reduce(
-                  (acc, curr) => acc + parseBRL(curr.total),
+                  (acc: number, curr: any) => acc + parseBRL(curr.total), // TODO: type
                   0,
                 ),
               )}
@@ -693,7 +718,7 @@ function ScannerTab({
               marginBottom: "1.5rem",
             }}
           >
-            {currentReceipt.items.map((item, idx) => (
+            {currentReceipt.items.map((item: any, idx: number) => (
               <div
                 key={idx}
                 className="item-row"
@@ -745,7 +770,7 @@ function ScannerTab({
               R${" "}
               {formatBRL(
                 currentReceipt.items.reduce(
-                  (acc, curr) => {
+                  (acc: number, curr: any) => {
                     if (curr.total != null) return acc + parseBRL(curr.total);
                     return acc + (curr.price || 0) * (curr.quantity || 1);
                   },

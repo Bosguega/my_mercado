@@ -9,8 +9,8 @@ import { getApiKey, getApiModel, detectProvider } from "./aiConfig";
 // 📝 PROMPT
 // ==============================
 
-function buildPrompt(items) {
-  const list = items.map((i) => `- key: "${i.key}", raw: "${i.raw}"`).join("\n");
+function buildPrompt(items: any) { // TODO: type
+  const list = items.map((i: any) => `- key: "${i.key}", raw: "${i.raw}"`).join("\n"); // TODO: type
 
   return `Você é um especialista em normalizar nomes de produtos de supermercado brasileiro.
 Para cada item abaixo, converta o nome bruto (muitas vezes abreviado e em letras maiúsculas) em um nome amigável, legível e bem formatado.
@@ -39,7 +39,7 @@ Responda SOMENTE com o JSON array no formato: [{"key": "...", "normalized_name":
 // 🔮 GOOGLE AI STUDIO (GEMINI)
 // ==============================
 
-async function callGemini(items, apiKey, model) {
+async function callGemini(items: any, apiKey: any, model: any) { // TODO: type
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const res = await fetch(url, {
@@ -70,7 +70,7 @@ async function callGemini(items, apiKey, model) {
 // 🤖 OPENAI
 // ==============================
 
-async function callOpenAI(items, apiKey, model) {
+async function callOpenAI(items: any, apiKey: any, model: any) { // TODO: type
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -107,7 +107,7 @@ async function callOpenAI(items, apiKey, model) {
 // 🧹 PARSE HELPER
 // ==============================
 
-function parseJsonFromText(text) {
+function parseJsonFromText(text: any) { // TODO: type
   // Remove possível markdown ```json ... ``` wrapper
   const cleaned = text
     .replace(/```json\s*/gi, "")
@@ -135,7 +135,7 @@ function parseJsonFromText(text) {
  * @param {Array<{key: string, raw: string}>} items
  * @returns {Promise<Array<{key: string, normalized_name: string, category: string}>>}
  */
-export async function callAI(items) {
+export async function callAI(items: any) { // TODO: type
   const apiKey = getApiKey();
   const model = getApiModel();
 
@@ -162,7 +162,7 @@ export async function callAI(items) {
  * @param {string} model
  * @returns {Promise<boolean>}
  */
-export async function testAiConnection(apiKey, model) {
+export async function testAiConnection(apiKey: any, model: any) { // TODO: type
   if (!apiKey) return false;
 
   const provider = detectProvider(apiKey);

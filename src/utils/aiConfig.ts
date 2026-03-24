@@ -18,7 +18,7 @@ export function getApiKey() {
  * Salva a API Key no localStorage.
  * @param {string} key 
  */
-export function setApiKey(key) {
+export function setApiKey(key: string | null | undefined) {
   if (key) {
     localStorage.setItem(STORAGE_KEY, key.trim());
   } else {
@@ -36,14 +36,14 @@ export function getApiModel() {
 /**
  * Salva o modelo no localStorage.
  */
-export function setApiModel(model) {
+export function setApiModel(model: string) {
   localStorage.setItem(MODEL_KEY, model);
 }
 
 /**
  * Detecta o provedor básico da chave.
  */
-export function detectProvider(key) {
+export function detectProvider(key: string | null | undefined): string {
   if (!key) return "Nenhum";
   if (key.startsWith("AIza")) return "Google AI Studio";
   if (key.startsWith("sk-")) return "OpenAI";

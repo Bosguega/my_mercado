@@ -14,6 +14,7 @@ import { usePersistedTab } from "./hooks/usePersistedTab";
 import { useReceiptScanner } from "./hooks/useReceiptScanner";
 import { useSupabaseSession } from "./hooks/useSupabaseSession";
 import ApiKeyModal from "./components/ApiKeyModal";
+import type { AppTab, HistoryFilters, SortDirection } from "./types/ui";
 import "./index.css";
 
 function App() {
@@ -69,20 +70,20 @@ function App() {
   // Search State
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState("recent");
-  const [searchSortDirection, setSearchSortDirection] = useState("desc");
+  const [searchSortDirection, setSearchSortDirection] = useState<SortDirection>("desc");
 
   // History filter state
   const [historyFilter, setHistoryFilter] = useState("");
 
   // Advanced filters for HistoryTab
-  const [historyFilters, setHistoryFilters] = useState({
+  const [historyFilters, setHistoryFilters] = useState<HistoryFilters>({
     period: "all", // all, this-month, last-3-months, custom
     sortBy: "date", // date, value, store
     sortOrder: "desc", // asc, desc
     startDate: "", // for custom period
     endDate: "", // for custom period
   });
-  const [expandedReceipts, setExpandedReceipts] = useState([]);
+  const [expandedReceipts, setExpandedReceipts] = useState<string[]>([]);
 
   // AI Key Management (BYOK)
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
@@ -95,12 +96,12 @@ function App() {
     }
   }, [hasKey]);
 
-  const handleSaveApiKey = (newKey) => {
+  const handleSaveApiKey = (newKey: string) => {
     setApiKey(newKey);
     setShowApiKeyModal(false);
   };
 
-  const handleChangeTab = (nextTab) => setTab(nextTab);
+  const handleChangeTab = (nextTab: AppTab) => setTab(nextTab);
 
   if (!isSupabaseConfigured) {
     return (
@@ -396,7 +397,7 @@ function App() {
       <ApiKeyModal
         isOpen={showApiKeyModal}
         onClose={() => setShowApiKeyModal(false)}
-        currentKey={apiKey}
+        currentKey={apiKey ?? undefined}
         onSave={handleSaveApiKey}
       />
     </div>

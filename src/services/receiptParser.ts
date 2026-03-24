@@ -1,7 +1,7 @@
 const PROXIES = [
-  (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  (url) => `https://thingproxy.freeboard.io/fetch/${url}`,
+  (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  (url: string) => `https://thingproxy.freeboard.io/fetch/${url}`,
 ];
 const PROXY_TIMEOUT_MS = 12000;
 const SUPPORTED_HOST_SUFFIX = 'fazenda.sp.gov.br';
@@ -10,12 +10,12 @@ const SUPPORTED_HOST_SUFFIX = 'fazenda.sp.gov.br';
 // Utils
 // ==============================
 
-function parseNumber(value, fallback = "0") {
+function parseNumber(value: any, fallback = "0") { // TODO: type
   if (!value) return fallback;
   return value.replace(/[^\d,.-]/g, "").trim();
 }
 
-function validateNfceSpUrl(rawUrl) {
+function validateNfceSpUrl(rawUrl: any) { // TODO: type
   let parsed;
   try {
     parsed = new URL(rawUrl);
@@ -40,7 +40,7 @@ function validateNfceSpUrl(rawUrl) {
   return parsed.toString();
 }
 
-async function fetchWithTimeout(url, timeoutMs) {
+async function fetchWithTimeout(url: any, timeoutMs: any) { // TODO: type
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -54,7 +54,7 @@ async function fetchWithTimeout(url, timeoutMs) {
   }
 }
 
-function extractQtyAndUnit(text) {
+function extractQtyAndUnit(text: any) { // TODO: type
   if (!text) return { qty: "1", unit: "UN" };
 
   const qtyMatch = text.match(/Qtde\.?:\s*([\d.,]+)/i);
@@ -66,12 +66,12 @@ function extractQtyAndUnit(text) {
   };
 }
 
-function extractUnitPrice(text) {
+function extractUnitPrice(text: any) { // TODO: type
   const match = text.match(/Vl\.?\s*Unit\.?:\s*([\d.,]+)/i);
   return match ? match[1] : "0,00";
 }
 
-function cleanProductName(name) {
+function cleanProductName(name: any) { // TODO: type
   if (!name) return "";
 
   return name
@@ -85,7 +85,7 @@ function cleanProductName(name) {
 // Parser Principal
 // ==============================
 
-export async function parseNFCeSP(url) {
+export async function parseNFCeSP(url: any) { // TODO: type
   const targetUrl = validateNfceSpUrl(url);
   let html = null;
   const attemptErrors = [];
@@ -109,7 +109,7 @@ export async function parseNFCeSP(url) {
       } else {
         attemptErrors.push(`Proxy ${index + 1}: HTTP ${response.status}.`);
       }
-    } catch (err) {
+    } catch (err: any) { // TODO: type
       if (err?.name === "AbortError") {
         attemptErrors.push(`Proxy ${index + 1}: timeout após ${PROXY_TIMEOUT_MS}ms.`);
       } else {
@@ -129,7 +129,7 @@ export async function parseNFCeSP(url) {
 
     let establishment = "Estabelecimento Desconhecido";
     let date = new Date().toISOString();
-    const items = [];
+    const items: any[] = []; // TODO: type
 
     // 🏪 Empresa
     const companyDiv = doc.querySelector(".txtTopo");

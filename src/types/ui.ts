@@ -15,6 +15,13 @@ export interface LoginProps {
   setSessionUser: (user: SessionUser | null) => void;
 }
 
+export interface ApiKeyModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  currentKey?: string;
+  onSave: (key: string) => void;
+}
+
 export interface SearchTabProps {
   savedReceipts: Receipt[];
   searchQuery: string;

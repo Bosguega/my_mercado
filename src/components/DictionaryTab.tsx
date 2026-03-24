@@ -19,23 +19,34 @@ import {
 import { toast } from "react-hot-toast";
 import PropTypes from "prop-types";
 import { filterBySearch, sortItems } from "../utils/analytics";
+import type { SortDirection } from "../types/ui";
 
 const CATEGORIES = [
   "Açougue", "Hortifruti", "Laticínios", "Padaria", 
   "Limpeza", "Higiene", "Bebidas", "Mercearia", "Petshop", "Outros"
 ];
 
-function DictionaryTab({ setSavedReceipts, loadReceipts }) {
-  const [dictionary, setDictionary] = useState([]);
+function DictionaryTab({
+  setSavedReceipts,
+  loadReceipts,
+}: {
+  setSavedReceipts?: any; // TODO: type
+  loadReceipts?: () => Promise<void>;
+}) {
+  const [dictionary, setDictionary] = useState<any[]>([]); // TODO: type
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState("recent");
-  const [sortDirection, setSortDirection] = useState("desc");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [editingKey, setEditingKey] = useState(null);
   const [editForm, setEditForm] = useState({ normalized_name: "", category: "" });
 
-  const applyChangesToSavedReceipts = async (key, normalizedName, category) => {
+  const applyChangesToSavedReceipts = async (
+    key: string,
+    normalizedName: string,
+    category: string,
+  ) => {
     const toastId = toast.loading("Atualizando notas salvas...");
     try {
       const { updatedCount } = await applyDictionaryEntryToSavedItems(
@@ -45,11 +56,11 @@ function DictionaryTab({ setSavedReceipts, loadReceipts }) {
       );
 
       if (typeof setSavedReceipts === "function") {
-        setSavedReceipts((prev) => {
-          const updated = (prev || []).map((receipt) => ({
+        setSavedReceipts((prev: any[]) => {
+          const updated = (prev || []).map((receipt: any) => ({
             ...receipt,
             items: Array.isArray(receipt.items)
-              ? receipt.items.map((item) => {
+              ? receipt.items.map((item: any) => {
                   const itemKey = item.normalized_key ?? item.normalizedKey;
                   if (itemKey !== key) return item;
 
@@ -97,7 +108,7 @@ function DictionaryTab({ setSavedReceipts, loadReceipts }) {
     loadDictionary();
   }, []);
 
-  const handleStartEdit = (item) => {
+  const handleStartEdit = (item: any) => { // TODO: type
     setEditingKey(item.key);
     setEditForm({ 
       normalized_name: item.normalized_name || "", 
@@ -105,7 +116,7 @@ function DictionaryTab({ setSavedReceipts, loadReceipts }) {
     });
   };
 
-  const handleSaveEdit = async (key) => {
+  const handleSaveEdit = async (key: string) => {
     try {
       const previous = dictionary.find((item) => item.key === key);
       const previousNormalizedName = (previous?.normalized_name ?? "").trim();
@@ -182,7 +193,7 @@ function DictionaryTab({ setSavedReceipts, loadReceipts }) {
     }
   };
 
-  const handleDeleteEntry = async (key) => {
+  const handleDeleteEntry = async (key: string) => {
     if (!window.confirm("Remover este item do dicionário?")) return;
     try {
       await deleteDictionaryEntryFromDB(key);
@@ -209,17 +220,17 @@ function DictionaryTab({ setSavedReceipts, loadReceipts }) {
 
   const filteredDictionary = useMemo(() => {
     const baseItems = filterBySearch(dictionary, searchQuery, ["key", "normalized_name"]);
-    return baseItems.filter(item => selectedCategory === "all" || item.category === selectedCategory);
+    return baseItems.filter((item: any) => selectedCategory === "all" || item.category === selectedCategory);
   }, [dictionary, searchQuery, selectedCategory]);
 
   const sortedDictionary = useMemo(() => {
     const customSorters = {
-      recent: (a, b) => {
+      recent: (a: any, b: any) => { // TODO: type
         const dateA = new Date(a.created_at || 0);
         const dateB = new Date(b.created_at || 0);
-        return dateA - dateB;
+        return dateA.getTime() - dateB.getTime();
       },
-      alpha: (a, b) => {
+      alpha: (a: any, b: any) => { // TODO: type
         const nameA = (a.normalized_name || a.key).toLowerCase();
         const nameB = (b.normalized_name || b.key).toLowerCase();
         return nameA.localeCompare(nameB);

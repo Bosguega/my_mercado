@@ -20,7 +20,7 @@ async function getUserOrThrow() {
   return data.user
 }
 
-function isLegacyDictionarySchemaError(error) {
+function isLegacyDictionarySchemaError(error: any) { // TODO: type
   const message = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`.toLowerCase()
   return (
     error?.code === '42703' || // undefined column
@@ -78,7 +78,7 @@ export async function getAllReceiptsFromDB() {
 }
 
 // 🔄 RESTORE (Importação em massa)
-export async function restoreReceiptsToDB(receipts) {
+export async function restoreReceiptsToDB(receipts: any[]) { // TODO: type
   const user = await getUserOrThrow();
   const client = requireSupabase();
 
@@ -111,7 +111,7 @@ export async function restoreReceiptsToDB(receipts) {
       const { error: itemsError } = await client
         .from('items')
         .insert(
-          receiptData.items.map(item => {
+          receiptData.items.map((item: any) => { // TODO: type
             // Garante que valores numéricos sejam extraídos corretamente (do backup ou da UI)
             const qty = parseBRL(item.qty || item.quantity);
             const price = parseBRL(item.unitPrice || item.price);
@@ -136,7 +136,7 @@ export async function restoreReceiptsToDB(receipts) {
 }
 
 // 📤 INSERT / UPSERT (Etapa 9)
-export async function saveReceiptToDB(receiptData, items) {
+export async function saveReceiptToDB(receiptData: any, items: any[]) { // TODO: type
   const user = await getUserOrThrow()
   const client = requireSupabase()
   const scopedReceiptId = toUserScopedReceiptId(receiptData.id, user.id)
@@ -173,7 +173,7 @@ export async function saveReceiptToDB(receiptData, items) {
     const { error: itemsError } = await client
       .from('items')
       .insert(
-        items.map(item => {
+        items.map((item: any) => { // TODO: type
           // Garante conversão numérica correta antes de salvar no Postgres
           const qty = parseBRL(item.qty || item.quantity);
           const price = parseBRL(item.unitPrice || item.price);
@@ -201,7 +201,7 @@ export async function saveReceiptToDB(receiptData, items) {
 }
 
 // 🗑️ DELETE
-export async function deleteReceiptFromDB(id) {
+export async function deleteReceiptFromDB(id: string) {
   await getUserOrThrow()
 
   const client = requireSupabase()
@@ -241,7 +241,11 @@ export async function getFullDictionaryFromDB() {
   return data || [];
 }
 
-export async function updateDictionaryEntryInDB(key, normalizedName, category) {
+export async function updateDictionaryEntryInDB(
+  key: string,
+  normalizedName: string,
+  category: string,
+) {
   const user = await getUserOrThrow();
   const client = requireSupabase();
   let { error } = await client
@@ -264,13 +268,17 @@ export async function updateDictionaryEntryInDB(key, normalizedName, category) {
 }
 
 // 🔁 Corrigir itens salvos usando o dicionário
-export async function applyDictionaryEntryToSavedItems(key, normalizedName, category) {
+export async function applyDictionaryEntryToSavedItems(
+  key: string,
+  normalizedName: string | undefined,
+  category: string | undefined,
+) {
   await getUserOrThrow();
   const client = requireSupabase();
 
   if (!key) return { updatedCount: 0 };
 
-  const patch = {};
+  const patch: Record<string, any> = {}; // TODO: type
   if (normalizedName !== undefined) patch.normalized_name = normalizedName;
   if (category !== undefined) patch.category = category;
 
@@ -285,7 +293,7 @@ export async function applyDictionaryEntryToSavedItems(key, normalizedName, cate
   return { updatedCount: count ?? 0 };
 }
 
-export async function deleteDictionaryEntryFromDB(key) {
+export async function deleteDictionaryEntryFromDB(key: string) {
   const user = await getUserOrThrow();
   const client = requireSupabase();
   let { error } = await client
@@ -331,7 +339,7 @@ export async function clearDictionaryInDB() {
 }
 
 // 📖 DICIONÁRIO - Batch read (usado pelo productService pipeline)
-export async function getDictionary(keys) {
+export async function getDictionary(keys: string[]) {
   if (!keys || keys.length === 0) return {};
 
   const user = await getUserOrThrow();
@@ -356,7 +364,7 @@ export async function getDictionary(keys) {
   if (error) throw error;
 
   // Retorna um mapa { key: { normalized_name, category } }
-  return (data || []).reduce((acc, row) => {
+  return (data || []).reduce((acc: Record<string, any>, row: any) => { // TODO: type
     acc[row.key] = {
       normalized_name: row.normalized_name,
       category: row.category,
@@ -366,13 +374,13 @@ export async function getDictionary(keys) {
 }
 
 // 📖 DICIONÁRIO - Batch upsert (usado pelo productService pipeline)
-export async function updateDictionary(entries) {
+export async function updateDictionary(entries: any[]) { // TODO: type
   if (!entries || entries.length === 0) return;
 
   const user = await getUserOrThrow();
   const client = requireSupabase();
 
-  const rows = entries.map((e) => ({
+  const rows = entries.map((e: any) => ({ // TODO: type
     user_id: user.id,
     key: e.key,
     normalized_name: e.normalized_name,
@@ -385,7 +393,7 @@ export async function updateDictionary(entries) {
 
   // Fallback para schema legado (sem user_id e PK simples em key).
   if (error && isLegacyDictionarySchemaError(error)) {
-    const legacyRows = entries.map((e) => ({
+    const legacyRows = entries.map((e: any) => ({ // TODO: type
       key: e.key,
       normalized_name: e.normalized_name,
       category: e.category || 'Outros',

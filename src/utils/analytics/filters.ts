@@ -1,4 +1,8 @@
-export function filterBySearch(items, query, fields) {
+export function filterBySearch(
+  items: any[], // TODO: type
+  query: string,
+  fields: string[],
+): any[] { // TODO: type
   if (!query) return items;
 
   const q = query.toLowerCase();
@@ -8,7 +12,12 @@ export function filterBySearch(items, query, fields) {
   );
 }
 
-export function sortItems(items, sortBy, direction, customSorters = {}) {
+export function sortItems(
+  items: any[], // TODO: type
+  sortBy: string,
+  direction: "asc" | "desc",
+  customSorters: Record<string, (a: any, b: any) => number> = {}, // TODO: type
+): any[] { // TODO: type
   const sorted = [...items];
 
   if (customSorters[sortBy]) {

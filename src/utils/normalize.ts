@@ -9,7 +9,7 @@
  * @param {string} name - O nome original do produto
  * @returns {string} - A chave normalizada
  */
-export function normalizeKey(name) {
+export function normalizeKey(name: string): string {
   if (!name) return "";
 
   const normalized = name

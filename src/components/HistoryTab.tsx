@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo, type ChangeEvent } from "react";
 import {
   History,
   Trash2,
@@ -16,9 +16,11 @@ import { restoreReceiptsToDB } from "../services/dbMethods";
 import { parseBRL } from "../utils/currency";
 import { parseToDate } from "../utils/date";
 import { calculateReceiptTotal, calculateTotalSpent } from "../utils/analytics";
+import type { HistoryTabProps } from "../types/ui";
+import type { HistoryFilters } from "../types/ui";
 
 // Moved to module scope: utiliza utilitário centralizado
-const parseDate = (d) => parseToDate(d);
+const parseDate = (d: string | Date) => parseToDate(d);
 
 // Skeleton Loading Component
 const SkeletonReceipt = () => (
@@ -77,12 +79,12 @@ function HistoryTab({
   deleteReceipt,
   loading,
   loadReceipts,
-}) {
+}: HistoryTabProps) {
   const showSkeleton = loading && savedReceipts.length === 0;
   
   const filteredReceipts = useMemo(() => {
     return historyFilter.trim()
-      ? savedReceipts.filter((receipt) =>
+      ? savedReceipts.filter((receipt: any) => // TODO: type
           receipt.establishment
             ?.toLowerCase()
             .includes(historyFilter.toLowerCase()),
@@ -111,7 +113,7 @@ function HistoryTab({
       const last3Months = new Date(now.getFullYear(), now.getMonth() - 3, 1);
       last3Months.setHours(0, 0, 0, 0);
 
-      filtered = filtered.filter((receipt) => {
+      filtered = filtered.filter((receipt: any) => { // TODO: type
         const receiptDate = parseToDate(receipt.date);
         receiptDate.setHours(0, 0, 0, 0);
 
@@ -151,8 +153,8 @@ function HistoryTab({
         const dateA = parseDate(a.date);
         const dateB = parseDate(b.date);
         return historyFilters.sortOrder === "asc"
-          ? dateA - dateB
-          : dateB - dateA;
+          ? dateA.getTime() - dateB.getTime()
+          : dateB.getTime() - dateA.getTime();
       }
 
       if (historyFilters.sortBy === "value") {
@@ -180,9 +182,9 @@ function HistoryTab({
     };
   }, [filteredReceipts, historyFilters]);
 
-  const toggleExpand = (id) => {
+  const toggleExpand = (id: string) => {
     setExpandedReceipts((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+      prev.includes(id) ? prev.filter((x: string) => x !== id) : [...prev, id],
     );
   };
 
@@ -206,7 +208,7 @@ function HistoryTab({
 
     // CSV Rows - flatten receipts and items
     const rows = finalFilteredReceipts.items.flatMap((receipt) =>
-      receipt.items.map((item) => [
+      receipt.items.map((item: any) => [ // TODO: type
         receipt.date,
         receipt.establishment,
         item.name,
@@ -220,7 +222,7 @@ function HistoryTab({
     // Combine all CSV content
     const csvContent = [
       headers.join(";"), // Use semicolon for Brazilian Excel
-      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(";")), // Quote cells
+      ...rows.map((row) => row.map((cell: any) => `"${cell}"`).join(";")), // Quote cells TODO: type
     ].join("\n");
 
     // Create blob and download
@@ -280,8 +282,8 @@ function HistoryTab({
   };
 
   // Restore from JSON function
-  const handleRestoreJSON = (event) => {
-    const file = event.target.files[0];
+  const handleRestoreJSON = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
 
     if (!file) return;
 
@@ -294,7 +296,12 @@ function HistoryTab({
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
-        const backupData = JSON.parse(e.target.result);
+        const resultText = e.target?.result;
+        if (typeof resultText !== "string") {
+          throw new Error("Conteúdo de backup inválido");
+        }
+
+        const backupData = JSON.parse(resultText);
 
         // Validate backup structure
         if (!backupData.receipts || !Array.isArray(backupData.receipts)) {
@@ -399,7 +406,10 @@ function HistoryTab({
             style={{ display: "none" }}
           />
           <button
-            onClick={() => document.getElementById("restore-input").click()}
+            onClick={() => {
+              const restoreInput = document.getElementById("restore-input") as HTMLInputElement | null;
+              restoreInput?.click();
+            }}
             className="btn"
             style={{
               padding: "0.5rem",
@@ -558,7 +568,10 @@ function HistoryTab({
             onChange={setHistoryFilter}
             sortValue={historyFilters.sortBy}
             onSortChange={(val) =>
-              setHistoryFilters({ ...historyFilters, sortBy: val })
+              setHistoryFilters({
+                ...historyFilters,
+                sortBy: val as HistoryFilters["sortBy"],
+              })
             }
             sortOrder={historyFilters.sortOrder}
             onSortOrderChange={(val) =>
@@ -588,7 +601,7 @@ function HistoryTab({
                     onChange={(e) =>
                       setHistoryFilters({
                         ...historyFilters,
-                        period: e.target.value,
+                        period: e.target.value as HistoryFilters["period"],
                       })
                     }
                     style={{
@@ -706,7 +719,7 @@ function HistoryTab({
               </div>
             ) : (
               <AnimatePresence mode="popLayout">
-                {finalFilteredReceipts.items.map((receipt) => {
+                {finalFilteredReceipts.items.map((receipt: any) => { // TODO: type
                   const isExpanded = expandedReceipts.includes(receipt.id);
 
                   // Calcular total de forma segura usando analytics engine
@@ -846,7 +859,7 @@ function HistoryTab({
                             padding: "1rem",
                           }}
                         >
-                          {receipt.items.map((item, idx) => (
+                          {receipt.items.map((item: any, idx: number) => (
                             <div
                               key={idx}
                               style={{

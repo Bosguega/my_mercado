@@ -1,5 +1,22 @@
 import { Search, ArrowDownAZ } from 'lucide-react';
 import PropTypes from 'prop-types';
+import type { CSSProperties, ReactNode } from 'react';
+import type { SortDirection } from '../types/ui';
+
+type UniversalSearchBarProps = {
+  placeholder?: string;
+  value: string;
+  onChange: (value: string) => void;
+  sortValue?: string;
+  onSortChange?: (value: string) => void;
+  sortOrder?: SortDirection | null;
+  onSortOrderChange?: (value: SortDirection) => void;
+  sortOptions?: Array<{ value: string; label: string }>;
+  sortLabel?: string;
+  extraActions?: ReactNode;
+  containerStyle?: CSSProperties;
+  inputStyle?: CSSProperties;
+};
 
 /**
  * UniversalSearchBar - Componente centralizado de busca e ordenação
@@ -12,15 +29,15 @@ const UniversalSearchBar = ({
   sortValue,
   onSortChange,
   sortOrder = null, // "asc" | "desc" | null
-  onSortOrderChange = null,
+  onSortOrderChange,
   sortOptions = [],
   sortLabel = "ORDENAR:",
   extraActions = null,
   containerStyle = {},
   inputStyle = {}
-}) => {
+}: UniversalSearchBarProps) => {
   
-  const defaultContainerStyle = {
+  const defaultContainerStyle: CSSProperties = {
     padding: "1.25rem",
     display: "flex",
     flexDirection: "column",
@@ -29,12 +46,12 @@ const UniversalSearchBar = ({
     ...containerStyle
   };
 
-  const inputWrapperStyle = {
+  const inputWrapperStyle: CSSProperties = {
     position: "relative",
     width: "100%",
   };
 
-  const commonInputStyle = {
+  const commonInputStyle: CSSProperties = {
     height: "48px",
     borderRadius: "12px",
     border: "none",
@@ -92,7 +109,7 @@ const UniversalSearchBar = ({
           {sortOptions.length > 0 && (
             <select
               value={sortValue}
-              onChange={(e) => onSortChange(e.target.value)}
+              onChange={(e) => onSortChange?.(e.target.value)}
               style={{
                 background: "rgba(59, 130, 246, 0.1)",
                 border: "none",

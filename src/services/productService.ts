@@ -6,7 +6,11 @@ import { normalizeKey } from "../utils/normalize";
 // 🧼 REMOVER PESO VARIÁVEL
 // ==============================
 
-function stripVariableInfo(name, unit, qty) {
+function stripVariableInfo(
+  name: any, // TODO: type
+  unit: any, // TODO: type
+  qty: any, // TODO: type
+) {
   if (!name) return "";
 
   // 1. Remove unidades isoladas no final (ex: "MANGA TOMMY KG" -> "MANGA TOMMY")
@@ -29,7 +33,7 @@ function stripVariableInfo(name, unit, qty) {
 // 🧠 LIMPEZA PÓS IA
 // ==============================
 
-function cleanAIName(name) {
+function cleanAIName(name: any) { // TODO: type
   if (!name) return "";
 
   // Preservamos o que a IA retornou, apenas normalizando espaços.
@@ -43,7 +47,7 @@ function cleanAIName(name) {
 // 🔢 CONVERSÃO NUMÉRICA
 // ==============================
 
-function toNumber(value, fallback = 0) {
+function toNumber(value: any, fallback = 0) { // TODO: type
   if (value === null || value === undefined || value === "") return fallback;
 
   // Já é número
@@ -57,7 +61,7 @@ function toNumber(value, fallback = 0) {
 // 🚀 PIPELINE PRINCIPAL
 // ==============================
 
-export async function processItemsPipeline(rawItems = []) {
+export async function processItemsPipeline(rawItems: any[] = []) { // TODO: type
   if (!rawItems.length) return [];
 
   // ==============================
@@ -81,7 +85,7 @@ export async function processItemsPipeline(rawItems = []) {
   // ==============================
 
   const keys = [...new Set(itemsWithKey.map((i) => i.normalized_key))];
-  const dictionary = await getDictionary(keys);
+  const dictionary: any = await getDictionary(keys); // TODO: type
 
   // ==============================
   // 3. SEPARAR CONHECIDOS / DESCONHECIDOS
@@ -96,7 +100,7 @@ export async function processItemsPipeline(rawItems = []) {
     // Fallback: Tenta buscar secundariamente nos valores do dicionário retornados
     if (!dictEntry) {
       const fallbackEntry = Object.values(dictionary).find(
-        (entry) => normalizeKey(entry.normalized_name) === item.normalized_key
+        (entry: any) => normalizeKey(entry.normalized_name) === item.normalized_key // TODO: type
       );
       if (fallbackEntry) {
         dictEntry = fallbackEntry;
@@ -131,7 +135,7 @@ export async function processItemsPipeline(rawItems = []) {
     ([key, raw]) => ({ key, raw })
   );
 
-  let aiResults = [];
+  let aiResults: any[] = []; // TODO: type
 
   for (let i = 0; i < unknownEntries.length; i += 10) {
     const chunk = unknownEntries.slice(i, i + 10);
@@ -139,7 +143,7 @@ export async function processItemsPipeline(rawItems = []) {
     try {
       const response = await callAI(chunk);
 
-      const cleaned = response.map((r) => ({
+      const cleaned = response.map((r: any) => ({ // TODO: type
         key: r.key,
         normalized_name: cleanAIName(r.normalized_name),
         category: r.category || "Outros",
@@ -149,7 +153,7 @@ export async function processItemsPipeline(rawItems = []) {
     } catch (err) {
       console.warn("Erro na IA, usando fallback:", err);
 
-      const fallback = chunk.map((item) => ({
+      const fallback = chunk.map((item: any) => ({ // TODO: type
         key: item.key,
         normalized_name: item.raw,
         category: "Outros",

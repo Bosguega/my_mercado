@@ -4,13 +4,14 @@ import PropTypes from "prop-types";
 import { toast } from "react-hot-toast";
 import { detectProvider, getApiModel, setApiModel } from "../utils/aiConfig";
 import { testAiConnection } from "../utils/aiClient";
+import type { ApiKeyModalProps } from "../types/ui";
 
-export default function ApiKeyModal({ isOpen, onClose, currentKey, onSave }) {
+export default function ApiKeyModal({ isOpen, onClose, currentKey, onSave }: ApiKeyModalProps) {
   const [key, setKey] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
   const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState(null);
-  const [fetchedModels, setFetchedModels] = useState([]);
+  const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
+  const [fetchedModels, setFetchedModels] = useState<string[]>([]);
   const [fetchingModels, setFetchingModels] = useState(false);
 
   // Sincronizar estados quando o modal abre ou a chave muda
@@ -79,8 +80,8 @@ export default function ApiKeyModal({ isOpen, onClose, currentKey, onSave }) {
       const data = await res.json();
       if (data && data.models && Array.isArray(data.models)) {
         const names = data.models
-          .map(m => m.name.replace('models/', ''))
-          .filter(name => !name.includes('vision') && !name.includes('embedding'));
+          .map((m: any) => m.name.replace('models/', '')) // TODO: type
+          .filter((name: string) => !name.includes('vision') && !name.includes('embedding'));
         
         setFetchedModels(names);
         toast.success(`${names.length} modelos encontrados!`);

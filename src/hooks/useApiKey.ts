@@ -11,12 +11,12 @@ export function useApiKey() {
   const [apiKey, setApiKeyInternal] = useState(() => getApiKey());
   const [model, setModelInternal] = useState(() => getApiModel());
 
-  const setApiKey = useCallback((newKey) => {
+  const setApiKey = useCallback((newKey: string | null | undefined) => {
     setApiKeyStorage(newKey);
-    setApiKeyInternal(newKey);
+    setApiKeyInternal(newKey ?? null);
   }, []);
 
-  const setModel = useCallback((newModel) => {
+  const setModel = useCallback((newModel: string) => {
     setApiModelStorage(newModel);
     setModelInternal(newModel);
   }, []);

@@ -7,7 +7,7 @@ function requireSupabase() {
   return supabase;
 }
 
-export async function login(email, password) {
+export async function login(email: string, password: string) {
   const client = requireSupabase();
   const { data, error } = await client.auth.signInWithPassword({
     email,
@@ -17,7 +17,7 @@ export async function login(email, password) {
   return data;
 }
 
-export async function register(email, password) {
+export async function register(email: string, password: string) {
   const client = requireSupabase();
   const { data, error } = await client.auth.signUp({
     email,

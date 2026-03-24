@@ -3,11 +3,12 @@ import { toast } from 'react-hot-toast';
 import { getAllReceiptsFromDB, saveReceiptToDB, deleteReceiptFromDB } from '../services/dbMethods';
 import { processItemsPipeline } from '../services/productService';
 import { getReceiptIdCandidates, toUserScopedReceiptId } from '../utils/receiptId';
+import type { Receipt, SessionUser } from '../types/domain';
 
-export function useReceipts(sessionUser) {
-  const [savedReceipts, setSavedReceipts] = useState([]);
+export function useReceipts(sessionUser: SessionUser | null) {
+  const [savedReceipts, setSavedReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<any>(null); // TODO: type
 
   const loadReceipts = async () => {
     setLoading(true);
@@ -42,11 +43,11 @@ export function useReceipts(sessionUser) {
     }
   }, [sessionUser]);
 
-  const saveReceipt = async (receipt, forceReplace = false) => {
+  const saveReceipt = async (receipt: any, forceReplace = false) => { // TODO: type
     const rawReceiptId = receipt.id || Date.now().toString();
     const receiptId = toUserScopedReceiptId(rawReceiptId, sessionUser?.id);
     const idCandidates = new Set(getReceiptIdCandidates(rawReceiptId, sessionUser?.id));
-    const existing = savedReceipts.find((r) => idCandidates.has(String(r.id)));
+    const existing = savedReceipts.find((r: Receipt) => idCandidates.has(String(r.id)));
     
     if (existing && !forceReplace) {
       return { duplicate: true, existingReceipt: existing };
@@ -65,11 +66,11 @@ export function useReceipts(sessionUser) {
       const fullReceipt = { ...receipt, id: receiptId, items: processedItems };
       await saveReceiptToDB(fullReceipt, processedItems);
       
-      setSavedReceipts((prev) => {
+      setSavedReceipts((prev: Receipt[]) => {
         const idsToReplace = new Set(idCandidates);
         if (existing?.id) idsToReplace.add(String(existing.id));
 
-        const filtered = prev.filter((r) => !idsToReplace.has(String(r.id)));
+        const filtered = prev.filter((r: Receipt) => !idsToReplace.has(String(r.id)));
         const newList = [fullReceipt, ...filtered];
         localStorage.setItem("@MyMercado:receipts", JSON.stringify(newList));
         return newList;
@@ -83,15 +84,15 @@ export function useReceipts(sessionUser) {
     }
   };
 
-  const deleteReceipt = async (id) => {
+  const deleteReceipt = async (id: string) => {
     if (!window.confirm("Certeza que deseja remover esta nota do histórico?")) {
       return false;
     }
 
     try {
       await deleteReceiptFromDB(id);
-      setSavedReceipts((prev) => {
-        const newList = prev.filter((r) => r.id !== id);
+      setSavedReceipts((prev: Receipt[]) => {
+        const newList = prev.filter((r: Receipt) => r.id !== id);
         localStorage.setItem("@MyMercado:receipts", JSON.stringify(newList));
         return newList;
       });

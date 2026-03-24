@@ -15,6 +15,7 @@ import PropTypes from "prop-types";
 import { parseBRL } from "../utils/currency";
 import { parseToDate } from "../utils/date";
 import { groupBy, filterBySearch, sortItems } from "../utils/analytics";
+import type { SearchTabProps } from "../types/ui";
 
 // Skeleton para itens da pesquisa
 const SkeletonSearch = () => (
@@ -54,16 +55,16 @@ function SearchTab({
   sortDirection,
   setSortDirection,
   loading,
-}) {
+}: SearchTabProps) {
   const [showChart, setShowChart] = useState(false);
   const showSkeleton = loading && savedReceipts.length === 0;
 
   // Memoize flattening of all items
   const allPurchasedItems = useMemo(() => {
-    const items = [];
-    savedReceipts.forEach((receipt) => {
+    const items: any[] = []; // TODO: type
+    savedReceipts.forEach((receipt: any) => { // TODO: type
       if (receipt && Array.isArray(receipt.items)) {
-        receipt.items.forEach((item) => {
+        receipt.items.forEach((item: any) => { // TODO: type
           items.push({
             ...item,
             purchasedAt: receipt.date,
@@ -82,8 +83,8 @@ function SearchTab({
       : filterBySearch(allPurchasedItems, searchQuery, ["name", "normalized_name", "category"]);
 
     const customSorters = {
-      price: (a, b) => parseBRL(a.price) - parseBRL(b.price),
-      recent: (a, b) => {
+      price: (a: any, b: any) => parseBRL(a.price) - parseBRL(b.price), // TODO: type
+      recent: (a: any, b: any) => { // TODO: type
         const timeA = parseToDate(a.purchasedAt || "").getTime();
         const timeB = parseToDate(b.purchasedAt || "").getTime();
         return timeA - timeB;
@@ -109,7 +110,7 @@ function SearchTab({
     
     const allDates = new Set();
     Object.keys(groupedItems).forEach((key) => {
-      groupedItems[key].forEach((historyItem) => {
+      groupedItems[key].forEach((historyItem: any) => { // TODO: type
         if (historyItem.purchasedAt) {
           allDates.add(historyItem.purchasedAt.substring(0, 10));
         }
@@ -117,12 +118,12 @@ function SearchTab({
     });
 
     const sortedDates = Array.from(allDates).sort((a, b) => {
-      const getTime = (dateStr) => parseToDate(dateStr).getTime();
+      const getTime = (dateStr: any) => parseToDate(dateStr).getTime(); // TODO: type
       return getTime(a) - getTime(b);
     });
 
     return sortedDates.map((dateStr) => {
-      const dataPoint = { date: dateStr };
+      const dataPoint: Record<string, any> = { date: dateStr }; // TODO: type
       Object.keys(groupedItems).forEach((itemName) => {
         const match = groupedItems[itemName].find(
           (h) => h.purchasedAt && h.purchasedAt.startsWith(dateStr),
