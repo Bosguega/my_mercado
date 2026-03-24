@@ -11,7 +11,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import PropTypes from "prop-types";
 import { parseBRL } from "../utils/currency";
 import { parseToDate } from "../utils/date";
 import { groupBy, filterBySearch, sortItems } from "../utils/analytics";
@@ -361,16 +360,5 @@ function SearchTab({
     </div>
   );
 }
-
-SearchTab.propTypes = {
-  savedReceipts: PropTypes.arrayOf(PropTypes.object).isRequired,
-  searchQuery: PropTypes.string.isRequired,
-  setSearchQuery: PropTypes.func.isRequired,
-  sortOrder: PropTypes.string.isRequired,
-  setSortOrder: PropTypes.func.isRequired,
-  sortDirection: PropTypes.string.isRequired,
-  setSortDirection: PropTypes.func.isRequired,
-  loading: PropTypes.bool.isRequired,
-};
 
 export default SearchTab;

@@ -1,5 +1,4 @@
 import { Search, ArrowDownAZ } from 'lucide-react';
-import PropTypes from 'prop-types';
 import type { CSSProperties, ReactNode } from 'react';
 import type { SortDirection } from '../types/ui';
 
@@ -168,24 +167,6 @@ const UniversalSearchBar = ({
       </div>
     </div>
   );
-};
-
-UniversalSearchBar.propTypes = {
-  placeholder: PropTypes.string,
-  value: PropTypes.string.isRequired,
-  onChange: PropTypes.func.isRequired,
-  sortValue: PropTypes.string,
-  onSortChange: PropTypes.func,
-  sortOrder: PropTypes.oneOf(["asc", "desc", null]),
-  onSortOrderChange: PropTypes.func,
-  sortOptions: PropTypes.arrayOf(PropTypes.shape({
-    value: PropTypes.string.isRequired,
-    label: PropTypes.string.isRequired
-  })),
-  sortLabel: PropTypes.string,
-  extraActions: PropTypes.node,
-  containerStyle: PropTypes.object,
-  inputStyle: PropTypes.object
 };
 
 export default UniversalSearchBar;

@@ -15,7 +15,7 @@ function stripVariableInfo(
 ): string {
   if (!name) return "";
 
-  let cleanName = name.replace(/(?<!\d)\s+(KG|G|ML|L|UN|PC|CX)\b$/i, "").trim();
+  const cleanName = name.replace(/(?<!\d)\s+(KG|G|ML|L|UN|PC|CX)\b$/i, "").trim();
 
   const qtyNum = parseFloat(String(qty || "0").replace(",", "."));
 

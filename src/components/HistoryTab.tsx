@@ -8,7 +8,6 @@ import {
   Upload,
   Save,
 } from "lucide-react";
-import PropTypes from "prop-types";
 import { toast } from "react-hot-toast";
 import UniversalSearchBar from "./UniversalSearchBar";
 import { motion, AnimatePresence } from "framer-motion";
@@ -944,25 +943,5 @@ function HistoryTab({
     </>
   );
 }
-
-HistoryTab.propTypes = {
-  savedReceipts: PropTypes.arrayOf(PropTypes.object).isRequired,
-  setSavedReceipts: PropTypes.func.isRequired,
-  historyFilter: PropTypes.string.isRequired,
-  setHistoryFilter: PropTypes.func.isRequired,
-  historyFilters: PropTypes.shape({
-    period: PropTypes.string.isRequired,
-    sortBy: PropTypes.string.isRequired,
-    sortOrder: PropTypes.string.isRequired,
-    startDate: PropTypes.string,
-    endDate: PropTypes.string,
-  }).isRequired,
-  setHistoryFilters: PropTypes.func.isRequired,
-  expandedReceipts: PropTypes.arrayOf(PropTypes.string).isRequired,
-  setExpandedReceipts: PropTypes.func.isRequired,
-  deleteReceipt: PropTypes.func.isRequired,
-  loading: PropTypes.bool.isRequired,
-  loadReceipts: PropTypes.func.isRequired,
-};
 
 export default HistoryTab;

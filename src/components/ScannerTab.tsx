@@ -15,7 +15,6 @@ import {
    ZapOff,
    Aperture,
  } from "lucide-react";
-import PropTypes from "prop-types";
 import { toast } from "react-hot-toast";
 import { parseBRL, formatBRL } from "../utils/currency";
 import type { ScannerTabProps } from "../types/ui";
@@ -770,43 +769,5 @@ function ScannerTab({
     </>
   );
 }
-
-ScannerTab.propTypes = {
-  manualMode: PropTypes.bool.isRequired,
-  setManualMode: PropTypes.func.isRequired,
-  manualData: PropTypes.shape({
-    establishment: PropTypes.string,
-    date: PropTypes.string,
-    items: PropTypes.arrayOf(PropTypes.object),
-  }).isRequired,
-  setManualData: PropTypes.func.isRequired,
-  manualItem: PropTypes.shape({
-    name: PropTypes.string,
-    qty: PropTypes.string,
-    unitPrice: PropTypes.string,
-  }).isRequired,
-  setManualItem: PropTypes.func.isRequired,
-  handleSaveManualReceipt: PropTypes.func.isRequired,
-  startCamera: PropTypes.func.isRequired,
-  stopCamera: PropTypes.func.isRequired,
-  handleFileUpload: PropTypes.func.isRequired,
-  loading: PropTypes.bool.isRequired,
-  scanning: PropTypes.bool.isRequired,
-  error: PropTypes.string,
-  currentReceipt: PropTypes.shape({
-    id: PropTypes.string,
-    establishment: PropTypes.string,
-    date: PropTypes.string,
-    items: PropTypes.arrayOf(PropTypes.object),
-  }),
-   setCurrentReceipt: PropTypes.func.isRequired,
-   handleUrlSubmit: PropTypes.func.isRequired,
-   zoom: PropTypes.number,
-   zoomSupported: PropTypes.bool,
-   applyZoom: PropTypes.func,
-   torch: PropTypes.bool,
-   torchSupported: PropTypes.bool,
-   applyTorch: PropTypes.func,
- };
 
 export default ScannerTab;

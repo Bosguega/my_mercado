@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { Key, ShieldCheck, X, Save, CheckCircle, AlertCircle, Cpu, RefreshCw } from "lucide-react";
-import PropTypes from "prop-types";
 import { toast } from "react-hot-toast";
 import { detectProvider, getApiModel, setApiModel } from "../utils/aiConfig";
 import { testAiConnection } from "../utils/aiClient";
@@ -227,10 +226,3 @@ export default function ApiKeyModal({ isOpen, onClose, currentKey, onSave }: Api
     </div>
   );
 }
-
-ApiKeyModal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  currentKey: PropTypes.string,
-  onSave: PropTypes.func.isRequired,
-};

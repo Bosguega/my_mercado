@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import UniversalSearchBar from "./UniversalSearchBar";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
+import {
   getFullDictionaryFromDB, 
   updateDictionaryEntryInDB, 
   deleteDictionaryEntryFromDB,
@@ -17,7 +17,6 @@ import {
   applyDictionaryEntryToSavedItems,
 } from "../services/dbMethods";
 import { toast } from "react-hot-toast";
-import PropTypes from "prop-types";
 import { filterBySearch, sortItems } from "../utils/analytics";
 import type { SortDirection, DictionaryTabProps } from "../types/ui";
 import type { DictionaryEntry, Receipt, ReceiptItem } from "../types/domain";
@@ -414,8 +413,3 @@ function DictionaryTab({
 }
 
 export default DictionaryTab;
-
-DictionaryTab.propTypes = {
-  setSavedReceipts: PropTypes.func,
-  loadReceipts: PropTypes.func,
-};

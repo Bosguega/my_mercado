@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { login, register } from '../services/auth';
 import { toast } from 'react-hot-toast';
-import PropTypes from 'prop-types';
 import type { LoginProps } from '../types/ui';
 
 export default function Login({ setSessionUser }: LoginProps) {
@@ -89,7 +88,3 @@ export default function Login({ setSessionUser }: LoginProps) {
     </div>
   );
 }
-
-Login.propTypes = {
-  setSessionUser: PropTypes.func.isRequired,
-};
