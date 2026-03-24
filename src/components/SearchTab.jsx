@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { LineChart as LineChartIcon, ArrowLeft } from "lucide-react";
 import UniversalSearchBar from "./UniversalSearchBar";
 import { motion, AnimatePresence } from "framer-motion";
@@ -57,56 +57,66 @@ function SearchTab({
   const [showChart, setShowChart] = useState(false);
   const showSkeleton = loading && savedReceipts.length === 0;
 
-  // Flatten all items across all receipts
-  const allPurchasedItems = [];
-  savedReceipts.forEach((receipt) => {
-    if (receipt && Array.isArray(receipt.items)) {
-      receipt.items.forEach((item) => {
-        allPurchasedItems.push({
-          ...item,
-          purchasedAt: receipt.date,
-          store: receipt.establishment,
+  // Memoize flattening of all items
+  const allPurchasedItems = useMemo(() => {
+    const items = [];
+    savedReceipts.forEach((receipt) => {
+      if (receipt && Array.isArray(receipt.items)) {
+        receipt.items.forEach((item) => {
+          items.push({
+            ...item,
+            purchasedAt: receipt.date,
+            store: receipt.establishment,
+          });
         });
-      });
-    }
-  });
+      }
+    });
+    return items;
+  }, [savedReceipts]);
 
-  const filtered = (() => {
+  // Memoize filtered and sorted items
+  const { filteredItems, totalCount } = useMemo(() => {
     const base =
       searchQuery.trim() === ""
-        ? allPurchasedItems.slice(0, 20) // show only 20 recent if no search
+        ? allPurchasedItems.slice(0, 50) 
         : allPurchasedItems.filter((i) =>
             i.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             (i.normalized_name && i.normalized_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
             (i.category && i.category.toLowerCase().includes(searchQuery.toLowerCase()))
           );
 
+    let result = [...base];
+
     if (sortOrder === "price") {
-      return [...base].sort((a, b) => {
-        const priceA = parseBRL(a.unitPrice);
-        const priceB = parseBRL(b.unitPrice);
+      result.sort((a, b) => {
+        const priceA = parseBRL(a.price);
+        const priceB = parseBRL(b.price);
         return sortDirection === "asc" ? priceA - priceB : priceB - priceA;
       });
+    } else if (sortOrder === "recent" && sortDirection === "asc") {
+       result.reverse();
     }
     
-    // 'recent' — mantém a ordem original (mais recente primeiro, garantida pela inserção)
-    // Se for 'recent' e direção 'asc', mostramos os mais antigos primeiro (invertendo a lista)
-    if (sortOrder === "recent" && sortDirection === "asc") {
-       return [...base].reverse();
-    }
+    return {
+      filteredItems: result.slice(0, 100),
+      totalCount: result.length
+    };
+  }, [allPurchasedItems, searchQuery, sortOrder, sortDirection]);
+
+  // Group items by normalized name for the chart - memoized
+  const groupedItems = useMemo(() => {
+    return filteredItems.reduce((acc, curr) => {
+      const key = curr.normalized_name || curr.name;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(curr);
+      return acc;
+    }, {});
+  }, [filteredItems]);
+
+  // Memoize chart data calculation
+  const chartData = useMemo(() => {
+    if (!showChart) return [];
     
-    return base;
-  })();
-
-  // Group items by normalized name for the chart
-  const groupedItems = filtered.reduce((acc, curr) => {
-    const key = curr.normalized_name || curr.name;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(curr);
-    return acc;
-  }, {});
-
-  if (showChart) {
     const allDates = new Set();
     Object.keys(groupedItems).forEach((key) => {
       groupedItems[key].forEach((historyItem) => {
@@ -121,19 +131,21 @@ function SearchTab({
       return getTime(a) - getTime(b);
     });
 
-    const chartData = sortedDates.map((dateStr) => {
+    return sortedDates.map((dateStr) => {
       const dataPoint = { date: dateStr };
       Object.keys(groupedItems).forEach((itemName) => {
         const match = groupedItems[itemName].find(
           (h) => h.purchasedAt && h.purchasedAt.startsWith(dateStr),
         );
         if (match) {
-          dataPoint[itemName] = parseBRL(match.unitPrice);
+          dataPoint[itemName] = parseBRL(match.price || match.unitPrice);
         }
       });
       return dataPoint;
     });
+  }, [showChart, groupedItems]);
 
+  if (showChart) {
     const colors = [
       "#3b82f6",
       "#10b981",
@@ -231,23 +243,28 @@ function SearchTab({
           { value: "price", label: "💰 Preço" }
         ]}
         extraActions={
-          searchQuery && filtered.length > 0 && (
-            <button
-              onClick={() => setShowChart(true)}
-              style={{
-                background: "none",
-                border: "none",
-                color: "var(--success)",
-                fontSize: "0.8rem",
-                fontWeight: 600,
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                cursor: "pointer"
-              }}
-            >
-              <LineChartIcon size={16} /> Gráfico
-            </button>
+          searchQuery && filteredItems.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+              <span style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                {totalCount > 100 ? "Exibindo 100+" : `${totalCount} itens`}
+              </span>
+              <button
+                onClick={() => setShowChart(true)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "var(--success)",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  cursor: "pointer"
+                }}
+              >
+                <LineChartIcon size={16} /> Gráfico
+              </button>
+            </div>
           )
         }
       />
@@ -255,7 +272,7 @@ function SearchTab({
       <div className="items-list">
         {showSkeleton ? (
           [...Array(6)].map((_, i) => <SkeletonSearch key={i} />)
-        ) : filtered.length === 0 ? (
+        ) : filteredItems.length === 0 ? (
           <div
             style={{
               textAlign: "center",
@@ -267,7 +284,7 @@ function SearchTab({
           </div>
         ) : (
           <AnimatePresence mode="popLayout">
-            {filtered.map((item, idx) => (
+            {filteredItems.map((item, idx) => (
               <motion.div
                 key={`${item.normalized_name || item.name}-${item.purchasedAt}-${idx}`}
                 layout

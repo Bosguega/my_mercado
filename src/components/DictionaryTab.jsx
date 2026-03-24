@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   Book, 
   Trash2, 
@@ -205,26 +205,33 @@ function DictionaryTab({ setSavedReceipts, loadReceipts }) {
     }
   };
 
-  const filteredDictionary = dictionary.filter(item => 
-    item.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (item.normalized_name && item.normalized_name.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredDictionary = useMemo(() => {
+    return dictionary.filter(item => 
+      item.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.normalized_name && item.normalized_name.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  }, [dictionary, searchQuery]);
 
-  const sortedDictionary = [...filteredDictionary].sort((a, b) => {
-    if (sortBy === "recent") {
-      // Ordena por data de criação
-      const dateA = new Date(a.created_at || 0);
-      const dateB = new Date(b.created_at || 0);
-      return sortDirection === "asc" ? dateA - dateB : dateB - dateA;
-    } else {
-      // Ordena alfabeticamente pelo nome amigável (ou chave se não houver nome)
-      const nameA = (a.normalized_name || a.key).toLowerCase();
-      const nameB = (b.normalized_name || b.key).toLowerCase();
-      return sortDirection === "asc" 
-        ? nameA.localeCompare(nameB) 
-        : nameB.localeCompare(nameA);
-    }
-  });
+  const sortedDictionary = useMemo(() => {
+    const result = [...filteredDictionary].sort((a, b) => {
+      if (sortBy === "recent") {
+        const dateA = new Date(a.created_at || 0);
+        const dateB = new Date(b.created_at || 0);
+        return sortDirection === "asc" ? dateA - dateB : dateB - dateA;
+      } else {
+        const nameA = (a.normalized_name || a.key).toLowerCase();
+        const nameB = (b.normalized_name || b.key).toLowerCase();
+        return sortDirection === "asc" 
+          ? nameA.localeCompare(nameB) 
+          : nameB.localeCompare(nameA);
+      }
+    });
+    
+    return {
+      items: result.slice(0, 100),
+      totalCount: result.length
+    };
+  }, [filteredDictionary, sortBy, sortDirection]);
 
   return (
     <div className="dictionary-tab">
@@ -270,7 +277,7 @@ function DictionaryTab({ setSavedReceipts, loadReceipts }) {
         ]}
         extraActions={
           <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
-            {sortedDictionary.length} itens
+            {sortedDictionary.totalCount > 100 ? "Exibindo 100+" : `${sortedDictionary.totalCount} itens`}
           </div>
         }
       />
@@ -281,13 +288,13 @@ function DictionaryTab({ setSavedReceipts, loadReceipts }) {
             <div className="skeleton-line" style={{ width: "100%", height: "80px", marginBottom: "1rem" }} />
             <div className="skeleton-line" style={{ width: "100%", height: "80px" }} />
           </div>
-        ) : sortedDictionary.length === 0 ? (
+        ) : sortedDictionary.items.length === 0 ? (
           <div className="glass-card" style={{ textAlign: "center", padding: "3rem" }}>
             <p style={{ color: "#64748b" }}>Nenhum item encontrado no dicionário.</p>
           </div>
         ) : (
           <AnimatePresence mode="popLayout">
-            {sortedDictionary.map((item) => (
+            {sortedDictionary.items.map((item) => (
               <motion.div
                 key={item.key}
                 layout

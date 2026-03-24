@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import {
   History,
   Trash2,
@@ -77,24 +78,26 @@ function HistoryTab({
   loadReceipts,
 }) {
   const showSkeleton = loading && savedReceipts.length === 0;
-  const filteredReceipts = historyFilter.trim()
-    ? savedReceipts.filter((receipt) =>
-        receipt.establishment
-          ?.toLowerCase()
-          .includes(historyFilter.toLowerCase()),
-      )
-    : savedReceipts;
+  
+  const filteredReceipts = useMemo(() => {
+    return historyFilter.trim()
+      ? savedReceipts.filter((receipt) =>
+          receipt.establishment
+            ?.toLowerCase()
+            .includes(historyFilter.toLowerCase()),
+        )
+      : savedReceipts;
+  }, [savedReceipts, historyFilter]);
 
-  // Apply advanced filters
-  const applyFilters = (receipts) => {
-    let filtered = [...receipts];
+  // Apply advanced filters - memoized
+  const finalFilteredReceipts = useMemo(() => {
+    let filtered = [...filteredReceipts];
 
     // Filter by period
     if (historyFilters.period !== "all") {
       const now = new Date();
-      // Corrigir: Este mês deve considerar do dia 1 até o final do mês atual
       const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      thisMonthStart.setHours(0, 0, 0, 0); // Início do dia
+      thisMonthStart.setHours(0, 0, 0, 0);
       const thisMonthEnd = new Date(
         now.getFullYear(),
         now.getMonth() + 1,
@@ -103,13 +106,13 @@ function HistoryTab({
         59,
         59,
       );
-      thisMonthEnd.setHours(23, 59, 59, 999); // Fim do dia
+      thisMonthEnd.setHours(23, 59, 59, 999);
       const last3Months = new Date(now.getFullYear(), now.getMonth() - 3, 1);
       last3Months.setHours(0, 0, 0, 0);
 
       filtered = filtered.filter((receipt) => {
         const receiptDate = parseToDate(receipt.date);
-        receiptDate.setHours(0, 0, 0, 0); // Normalizar hora para meia-noite
+        receiptDate.setHours(0, 0, 0, 0);
 
         let passes = false;
 
@@ -122,7 +125,6 @@ function HistoryTab({
           historyFilters.startDate &&
           historyFilters.endDate
         ) {
-          // Parse strings AAAA-MM-DD para componentes numéricos para evitar problemas de fuso horário/UTC
           const [sYear, sMonth, sDay] = historyFilters.startDate
             .split("-")
             .map(Number);
@@ -144,9 +146,6 @@ function HistoryTab({
 
     // Sort
     filtered.sort((a, b) => {
-      const totalA = a.items.reduce((acc, item) => acc + parseBRL(item.total), 0);
-      const totalB = b.items.reduce((acc, item) => acc + parseBRL(item.total), 0);
-
       if (historyFilters.sortBy === "date") {
         const dateA = parseDate(a.date);
         const dateB = parseDate(b.date);
@@ -156,28 +155,29 @@ function HistoryTab({
       }
 
       if (historyFilters.sortBy === "value") {
+        const totalA = a.items.reduce((acc, item) => acc + (parseBRL(item.price) * parseBRL(item.quantity)), 0);
+        const totalB = b.items.reduce((acc, item) => acc + (parseBRL(item.price) * parseBRL(item.quantity)), 0);
         return historyFilters.sortOrder === "asc"
           ? totalA - totalB
           : totalB - totalA;
       }
 
       if (historyFilters.sortBy === "store") {
-        const storeA = a.establishment.toLowerCase();
-        const storeB = b.establishment.toLowerCase();
-        if (historyFilters.sortOrder === "asc") {
-          return storeA.localeCompare(storeB);
-        } else {
-          return storeB.localeCompare(storeA);
-        }
+        const storeA = (a.establishment || "").toLowerCase();
+        const storeB = (b.establishment || "").toLowerCase();
+        return historyFilters.sortOrder === "asc"
+          ? storeA.localeCompare(storeB)
+          : storeB.localeCompare(storeA);
       }
 
       return 0;
     });
 
-    return filtered;
-  };
-
-  const finalFilteredReceipts = applyFilters(filteredReceipts);
+    return {
+      items: filtered.slice(0, 50),
+      totalCount: filtered.length
+    };
+  }, [filteredReceipts, historyFilters]);
 
   const toggleExpand = (id) => {
     setExpandedReceipts((prev) =>
@@ -187,7 +187,7 @@ function HistoryTab({
 
   // Export to CSV function
   const handleExportCSV = () => {
-    if (finalFilteredReceipts.length === 0) {
+    if (finalFilteredReceipts.items.length === 0) {
       toast.error("Não há dados para exportar");
       return;
     }
@@ -204,7 +204,7 @@ function HistoryTab({
     ];
 
     // CSV Rows - flatten receipts and items
-    const rows = finalFilteredReceipts.flatMap((receipt) =>
+    const rows = finalFilteredReceipts.items.flatMap((receipt) =>
       receipt.items.map((item) => [
         receipt.date,
         receipt.establishment,
@@ -370,7 +370,7 @@ function HistoryTab({
           <div
             style={{ fontSize: "0.75rem", color: "#64748b", marginLeft: "2rem" }}
           >
-            {finalFilteredReceipts.length} de {savedReceipts.length} notas
+            {finalFilteredReceipts.totalCount} de {savedReceipts.length} notas
           </div>
         </div>
         <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -524,10 +524,10 @@ function HistoryTab({
               </p>
               <h3 style={{ color: "#fff", fontSize: "1.8rem", fontWeight: 800 }}>
                 R${" "}
-                {finalFilteredReceipts
+                {finalFilteredReceipts.items
                   .reduce((acc, r) => {
                     const total = r.items.reduce(
-                      (sum, item) => sum + parseBRL(item.total),
+                      (sum, item) => sum + (parseBRL(item.price) * parseBRL(item.quantity)),
                       0,
                     );
                     return acc + total;
@@ -553,7 +553,7 @@ function HistoryTab({
                   fontWeight: 700,
                 }}
               >
-                {finalFilteredReceipts.length}
+                {finalFilteredReceipts.totalCount}
               </h4>
             </div>
           </div>
@@ -697,7 +697,7 @@ function HistoryTab({
           )}
 
           <div className="items-list" style={{ gap: "1rem" }}>
-            {finalFilteredReceipts.length === 0 ? (
+            {finalFilteredReceipts.items.length === 0 ? (
               // Mensagem quando filtro não retorna nada
               <div
                 className="glass-card"
@@ -712,15 +712,12 @@ function HistoryTab({
               </div>
             ) : (
               <AnimatePresence mode="popLayout">
-                {finalFilteredReceipts.map((receipt) => {
+                {finalFilteredReceipts.items.map((receipt) => {
                   const isExpanded = expandedReceipts.includes(receipt.id);
 
-                  // Calcular total de forma segura, evitando NaN
+                  // Calcular total de forma segura usando parseBRL para garantir valores numéricos
                   const total = receipt.items.reduce((acc, curr) => {
-                    const value = parseFloat(
-                      (curr.total || "").toString().replace(",", "."),
-                    );
-                    return acc + (isNaN(value) ? 0 : value);
+                    return acc + (parseBRL(curr.price) * parseBRL(curr.quantity) || 0);
                   }, 0);
 
                   return (
