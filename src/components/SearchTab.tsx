@@ -14,8 +14,10 @@ import {
 import { parseBRL } from "../utils/currency";
 import { parseToDate } from "../utils/date";
 import { groupBy, filterBySearch, sortItems } from "../utils/analytics";
-import type { SearchTabProps, PurchasedItem, SearchSortBy } from "../types/ui";
+import type { PurchasedItem, SearchSortBy } from "../types/ui";
 import type { Receipt, ReceiptItem } from "../types/domain";
+import { useReceiptsStore } from "../stores/useReceiptsStore";
+import { useUiStore } from "../stores/useUiStore";
 
 // Skeleton para itens da pesquisa
 const SkeletonSearch = () => (
@@ -46,16 +48,15 @@ const SkeletonSearch = () => (
   </div>
 );
 
-function SearchTab({
-  savedReceipts,
-  searchQuery,
-  setSearchQuery,
-  sortOrder,
-  setSortOrder,
-  sortDirection,
-  setSortDirection,
-  loading,
-}: SearchTabProps) {
+function SearchTab() {
+  const savedReceipts = useReceiptsStore((state) => state.savedReceipts);
+  const loading = useReceiptsStore((state) => state.loading);
+  const searchQuery = useUiStore((state) => state.searchQuery);
+  const setSearchQuery = useUiStore((state) => state.setSearchQuery);
+  const sortOrder = useUiStore((state) => state.sortOrder);
+  const setSortOrder = useUiStore((state) => state.setSortOrder);
+  const sortDirection = useUiStore((state) => state.searchSortDirection);
+  const setSortDirection = useUiStore((state) => state.setSearchSortDirection);
   const [showChart, setShowChart] = useState(false);
   const showSkeleton = loading && savedReceipts.length === 0;
 

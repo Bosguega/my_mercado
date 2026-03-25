@@ -1,4 +1,4 @@
-import { useMemo, type ChangeEvent } from "react";
+import { useMemo, useState, type ChangeEvent } from "react";
 import {
   History,
   Trash2,
@@ -10,14 +10,17 @@ import {
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import UniversalSearchBar from "./UniversalSearchBar";
+import ConfirmDialog from "./ConfirmDialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { restoreReceiptsToDB } from "../services/dbMethods";
 import { parseBRL } from "../utils/currency";
 import { parseToDate } from "../utils/date";
 import { calculateReceiptTotal, calculateTotalSpent } from "../utils/analytics";
-import type { HistoryTabProps } from "../types/ui";
 import type { HistoryFilters } from "../types/ui";
+import type { ConfirmDialogConfig } from "../types/ui";
 import type { Receipt, ReceiptItem } from "../types/domain";
+import { useReceiptsStore } from "../stores/useReceiptsStore";
+import { useUiStore } from "../stores/useUiStore";
 
 // Moved to module scope: utiliza utilitário centralizado
 const parseDate = (d: string | Date) => parseToDate(d);
@@ -67,20 +70,39 @@ const SkeletonReceipt = () => (
   </div>
 );
 
-function HistoryTab({
-  savedReceipts,
-  setSavedReceipts,
-  historyFilter,
-  setHistoryFilter,
-  historyFilters,
-  setHistoryFilters,
-  expandedReceipts,
-  setExpandedReceipts,
-  deleteReceipt,
-  loading,
-  loadReceipts,
-}: HistoryTabProps) {
+function HistoryTab() {
+  const savedReceipts = useReceiptsStore((state) => state.savedReceipts);
+  const setSavedReceipts = useReceiptsStore((state) => state.setSavedReceipts);
+  const deleteReceipt = useReceiptsStore((state) => state.deleteReceipt);
+  const loading = useReceiptsStore((state) => state.loading);
+  const loadReceipts = useReceiptsStore((state) => state.loadReceipts);
+
+  const historyFilter = useUiStore((state) => state.historyFilter);
+  const setHistoryFilter = useUiStore((state) => state.setHistoryFilter);
+  const historyFilters = useUiStore((state) => state.historyFilters);
+  const setHistoryFilters = useUiStore((state) => state.setHistoryFilters);
+  const expandedReceipts = useUiStore((state) => state.expandedReceipts);
+  const setExpandedReceipts = useUiStore((state) => state.setExpandedReceipts);
   const showSkeleton = loading && savedReceipts.length === 0;
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+
+  const closeConfirm = () => {
+    confirmDialog?.onCancel?.();
+    setConfirmDialog(null);
+    setConfirmBusy(false);
+  };
+
+  const runConfirm = async () => {
+    if (!confirmDialog) return;
+    setConfirmBusy(true);
+    try {
+      await confirmDialog.onConfirm();
+      setConfirmDialog(null);
+    } finally {
+      setConfirmBusy(false);
+    }
+  };
   
   const filteredReceipts = useMemo(() => {
     return historyFilter.trim()
@@ -303,59 +325,67 @@ function HistoryTab({
 
         const backupData = JSON.parse(resultText);
 
-        // Validate backup structure
         if (!backupData.receipts || !Array.isArray(backupData.receipts)) {
           toast.error("Arquivo de backup inválido ou corrompido");
           return;
         }
 
-        // Confirm restore
-        const confirmRestore = window.confirm(
-          `⚠️ Atenção! Isso irá substituir suas ${savedReceipts.length} notas atuais por ${backupData.receipts.length} notas do backup.\n\nTem certeza que deseja continuar?`,
-        );
+        const input = event.target;
+        const restoredReceipts = backupData.receipts as Receipt[];
 
-        if (!confirmRestore) {
-          // Reset file input
-          event.target.value = "";
-          return;
-        }
+        setConfirmDialog({
+          title: "Restaurar backup?",
+          message: `Isso vai substituir suas ${savedReceipts.length} notas atuais por ${restoredReceipts.length} notas do backup.`,
+          confirmText: "Restaurar",
+          danger: true,
+          onCancel: () => {
+            input.value = "";
+          },
+          onConfirm: async () => {
+            setSavedReceipts(restoredReceipts);
+            localStorage.setItem(
+              "@MyMercado:receipts",
+              JSON.stringify(restoredReceipts),
+            );
 
-        // Restore receipts locally
-        const restoredReceipts = backupData.receipts;
-        setSavedReceipts(restoredReceipts);
-        localStorage.setItem(
-          "@MyMercado:receipts",
-          JSON.stringify(restoredReceipts),
-        );
+            try {
+              await restoreReceiptsToDB(restoredReceipts);
+              await loadReceipts();
+            } catch (syncErr) {
+              console.warn(
+                "Não foi possível sincronizar backup com o Supabase:",
+                syncErr,
+              );
+            }
 
-        // Sincronizar com o backend Supabase
-        try {
-          await restoreReceiptsToDB(restoredReceipts);
-          await loadReceipts();
-        } catch (syncErr) {
-          console.warn(
-            "Não foi possível sincronizar backup com o Supabase:",
-            syncErr,
-          );
-        }
-
-        toast.success(
-          `Backup restaurado com ${restoredReceipts.length} notas!`,
-        );
-
-        // Reset file input
-        event.target.value = "";
+            toast.success(
+              `Backup restaurado com ${restoredReceipts.length} notas!`,
+            );
+            input.value = "";
+          },
+        });
       } catch (error) {
         console.error("Error restoring backup:", error);
         toast.error("Erro ao ler arquivo de backup");
       }
     };
-
     reader.onerror = () => {
       toast.error("Erro ao ler arquivo");
     };
 
     reader.readAsText(file);
+  };
+
+  const requestDeleteReceipt = (id: string) => {
+    setConfirmDialog({
+      title: "Remover nota?",
+      message: "Essa ação remove a nota do histórico e não pode ser desfeita.",
+      confirmText: "Remover",
+      danger: true,
+      onConfirm: async () => {
+        await deleteReceipt(id);
+      },
+    });
   };
 
   return (
@@ -815,7 +845,7 @@ function HistoryTab({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                deleteReceipt(receipt.id);
+                                requestDeleteReceipt(receipt.id);
                               }}
                               style={{
                                 background: "rgba(239, 68, 68, 0.1)",
@@ -940,8 +970,20 @@ function HistoryTab({
           </div>
         </>
       )}
+      <ConfirmDialog
+        isOpen={Boolean(confirmDialog)}
+        title={confirmDialog?.title || ""}
+        message={confirmDialog?.message || ""}
+        confirmText={confirmDialog?.confirmText}
+        cancelText={confirmDialog?.cancelText}
+        danger={confirmDialog?.danger}
+        busy={confirmBusy}
+        onCancel={closeConfirm}
+        onConfirm={runConfirm}
+      />
     </>
   );
 }
 
 export default HistoryTab;
+

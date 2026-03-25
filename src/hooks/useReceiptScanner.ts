@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useRef, type ChangeEvent } from 'react';
 import { BrowserMultiFormatReader, DecodeHintType } from '@zxing/library';
 import { toast } from 'react-hot-toast';
 import { parseNFCeSP } from '../services/receiptParser';
+import { useScannerStore } from '../stores/useScannerStore';
 import type { Receipt, ReceiptItem } from '../types/domain';
-import type { AppTab } from '../types/ui';
+import type { AppTab, ScannerManualData } from '../types/ui';
 
 type SaveReceiptResponse =
   | { duplicate: true; existingReceipt: Receipt }
@@ -15,13 +16,13 @@ type SaveReceiptFn = (receipt: Receipt, forceReplace?: boolean) => Promise<SaveR
 function isDuplicateResult(
   result: SaveReceiptResponse,
 ): result is { duplicate: true; existingReceipt: Receipt } {
-  return "duplicate" in result && result.duplicate === true;
+  return 'duplicate' in result && result.duplicate === true;
 }
 
 function isSuccessResult(
   result: SaveReceiptResponse,
 ): result is { success: true; receipt: Receipt } {
-  return "success" in result && result.success === true;
+  return 'success' in result && result.success === true;
 }
 
 type CameraCapabilities = MediaTrackCapabilities & {
@@ -38,18 +39,6 @@ type BarcodeDetectorLike = {
 
 type BarcodeDetectorCtor = new (options: { formats: string[] }) => BarcodeDetectorLike;
 
-type ManualData = {
-  establishment: string;
-  date: string;
-  items: ReceiptItem[];
-};
-
-type ManualItem = {
-  name: string;
-  qty: string;
-  unitPrice: string;
-};
-
 export function useReceiptScanner({
   saveReceipt,
   tab,
@@ -57,21 +46,34 @@ export function useReceiptScanner({
   saveReceipt: SaveReceiptFn;
   tab: AppTab;
 }) {
-  const [currentReceipt, setCurrentReceipt] = useState<Receipt | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [scanning, setScanning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [duplicateReceipt, setDuplicateReceipt] = useState<Receipt | null>(null);
+  const currentReceipt = useScannerStore((state) => state.currentReceipt);
+  const setCurrentReceipt = useScannerStore((state) => state.setCurrentReceipt);
+  const loading = useScannerStore((state) => state.loading);
+  const setLoading = useScannerStore((state) => state.setLoading);
+  const scanning = useScannerStore((state) => state.scanning);
+  const setScanning = useScannerStore((state) => state.setScanning);
+  const error = useScannerStore((state) => state.error);
+  const setError = useScannerStore((state) => state.setError);
+  const duplicateReceipt = useScannerStore((state) => state.duplicateReceipt);
+  const setDuplicateReceipt = useScannerStore((state) => state.setDuplicateReceipt);
+  const manualMode = useScannerStore((state) => state.manualMode);
+  const setManualMode = useScannerStore((state) => state.setManualMode);
+  const manualData = useScannerStore((state) => state.manualData);
+  const setManualData = useScannerStore((state) => state.setManualData);
+  const manualItem = useScannerStore((state) => state.manualItem);
+  const setManualItem = useScannerStore((state) => state.setManualItem);
+  const zoom = useScannerStore((state) => state.zoom);
+  const setZoom = useScannerStore((state) => state.setZoom);
+  const zoomSupported = useScannerStore((state) => state.zoomSupported);
+  const setZoomSupported = useScannerStore((state) => state.setZoomSupported);
+  const torch = useScannerStore((state) => state.torch);
+  const setTorch = useScannerStore((state) => state.setTorch);
+  const torchSupported = useScannerStore((state) => state.torchSupported);
+  const setTorchSupported = useScannerStore((state) => state.setTorchSupported);
 
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
   const startTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const processingRef = useRef(false);
- 
-  const [zoom, setZoom] = useState(1);
-  const [zoomSupported, setZoomSupported] = useState(false);
-  const [torch, setTorch] = useState(false);
-  const [torchSupported, setTorchSupported] = useState(false);
-
   const streamRef = useRef<MediaStream | null>(null);
 
   const applyZoom = useCallback(async (value: number) => {
@@ -95,7 +97,7 @@ export function useReceiptScanner({
         }
       }
     }
-  }, []);
+  }, [setZoom]);
 
   const applyTorch = useCallback(async (on: boolean) => {
     const video = document.getElementById('reader-video') as HTMLVideoElement | null;
@@ -105,8 +107,8 @@ export function useReceiptScanner({
     const track = stream.getVideoTracks()[0];
     if (track) {
       const caps = (track.getCapabilities ? track.getCapabilities() : {}) as CameraCapabilities;
-      const torchSupported = Boolean(caps.torch);
-      if (torchSupported) {
+      const canUseTorch = Boolean(caps.torch);
+      if (canUseTorch) {
         try {
           await track.applyConstraints({
             advanced: [{ torch: on }] as unknown as MediaTrackConstraintSet[],
@@ -117,7 +119,7 @@ export function useReceiptScanner({
         }
       }
     }
-  }, []);
+  }, [setTorch]);
 
   const stopCamera = useCallback(() => {
     if (startTimeoutRef.current) {
@@ -150,12 +152,12 @@ export function useReceiptScanner({
       video.srcObject = null;
     }
 
-     setScanning(false);
-     setZoom(1);
-     setZoomSupported(false);
-     setTorch(false);
-     setTorchSupported(false);
-   }, []);
+    setScanning(false);
+    setZoom(1);
+    setZoomSupported(false);
+    setTorch(false);
+    setTorchSupported(false);
+  }, [setScanning, setTorch, setTorchSupported, setZoom, setZoomSupported]);
 
   const handleScanSuccess = useCallback(
     async (decodedText: string) => {
@@ -166,7 +168,7 @@ export function useReceiptScanner({
       setLoading(true);
       try {
         if (!decodedText || typeof decodedText !== 'string') {
-          throw new Error('Conteúdo do QR Code inválido.');
+          throw new Error('Conteudo do QR Code invalido.');
         }
 
         setError(null);
@@ -178,7 +180,7 @@ export function useReceiptScanner({
           extractedData.items.length === 0
         ) {
           toast.error(
-            'Não conseguimos ler os itens dessa nota. Verifique se o QR Code é de uma NFC-e válida.',
+            'Nao conseguimos ler os itens dessa nota. Verifique se o QR Code e de uma NFC-e valida.',
           );
           setError('Falha ao extrair itens da nota.');
           return;
@@ -189,7 +191,7 @@ export function useReceiptScanner({
         if (isDuplicateResult(result)) {
           setDuplicateReceipt(extractedData);
           toast(
-            `Esta nota já está no seu histórico desde ${result.existingReceipt.date.split(' ')[0]}`,
+            `Esta nota ja esta no seu historico desde ${result.existingReceipt.date.split(' ')[0]}`,
             { icon: '⚠️' },
           );
         } else if (isSuccessResult(result)) {
@@ -200,14 +202,14 @@ export function useReceiptScanner({
         const message = err instanceof Error ? err.message : 'Desconhecido';
         toast.error('Erro ao processar nota. Tente novamente.');
         setError(
-          `Erro de conexão ou processamento: ${message}`,
+          `Erro de conexao ou processamento: ${message}`,
         );
       } finally {
         setLoading(false);
         processingRef.current = false;
       }
     },
-    [saveReceipt],
+    [saveReceipt, setCurrentReceipt, setDuplicateReceipt, setError, setLoading, setScanning],
   );
 
   const startCamera = useCallback(async () => {
@@ -216,7 +218,7 @@ export function useReceiptScanner({
 
     startTimeoutRef.current = setTimeout(async () => {
       startTimeoutRef.current = null;
-      
+
       const video = document.getElementById('reader-video') as HTMLVideoElement | null;
       if (!video) {
         console.error('Video element not found');
@@ -224,54 +226,52 @@ export function useReceiptScanner({
         return;
       }
 
-      // Try Google ML Kit (Native BarcodeDetector) first
       const BarcodeDetectorCtor = (window as Window & { BarcodeDetector?: BarcodeDetectorCtor })
         .BarcodeDetector;
-      
+
       if (BarcodeDetectorCtor) {
         try {
           const detector = new BarcodeDetectorCtor({ formats: ['qr_code'] });
           const stream = await navigator.mediaDevices.getUserMedia({
-            video: { 
-              facingMode: 'environment', 
-              width: { ideal: 1920 }, 
+            video: {
+              facingMode: 'environment',
+              width: { ideal: 1920 },
               height: { ideal: 1080 },
-              advanced: [{ focusMode: 'continuous' } as unknown as MediaTrackConstraintSet]
+              advanced: [{ focusMode: 'continuous' } as unknown as MediaTrackConstraintSet],
             },
-            audio: false
+            audio: false,
           });
-          
-           streamRef.current = stream;
-           video.srcObject = stream;
-           await video.play();
- 
-           const track = stream.getVideoTracks()[0];
-           const caps = (track.getCapabilities ? track.getCapabilities() : {}) as CameraCapabilities;
-           const zoomCaps = caps.zoom;
-           const hasTorch = Boolean(caps.torch);
-           
-           if (zoomCaps) {
-             setZoomSupported(true);
-             // Para QR codes pequenos, iniciar com um leve zoom pode ajudar
-             const initialZoom = Math.min(zoomCaps.max, 1.25);
-             try {
-               await track.applyConstraints({
-                 advanced: [{ zoom: initialZoom }] as unknown as MediaTrackConstraintSet[],
-               });
-               setZoom(initialZoom);
-             } catch (_e) {
-               setZoom(1);
-             }
-           }
 
-           if (hasTorch) {
-             setTorchSupported(true);
-             setTorch(false);
-           }
+          streamRef.current = stream;
+          video.srcObject = stream;
+          await video.play();
+
+          const track = stream.getVideoTracks()[0];
+          const caps = (track.getCapabilities ? track.getCapabilities() : {}) as CameraCapabilities;
+          const zoomCaps = caps.zoom;
+          const hasTorch = Boolean(caps.torch);
+
+          if (zoomCaps) {
+            setZoomSupported(true);
+            const initialZoom = Math.min(zoomCaps.max, 1.25);
+            try {
+              await track.applyConstraints({
+                advanced: [{ zoom: initialZoom }] as unknown as MediaTrackConstraintSet[],
+              });
+              setZoom(initialZoom);
+            } catch (_e) {
+              setZoom(1);
+            }
+          }
+
+          if (hasTorch) {
+            setTorchSupported(true);
+            setTorch(false);
+          }
 
           const detectFrame = async () => {
             if (!streamRef.current || !video || video.paused || video.ended) return;
-            
+
             if (!processingRef.current && video.readyState >= 2) {
               try {
                 const barcodes = await detector.detect(video);
@@ -287,27 +287,25 @@ export function useReceiptScanner({
                 console.error('ML Kit detection error:', err);
               }
             }
-            
+
             if (streamRef.current) {
-              // Delay next detection to prevent CPU throttling on mobile
               setTimeout(() => {
                 if (streamRef.current) requestAnimationFrame(detectFrame);
               }, 150);
             }
           };
-          
+
           requestAnimationFrame(detectFrame);
           return;
         } catch (err) {
           console.warn('Falha ao iniciar ML Kit, tentando ZXing...', err);
           if (streamRef.current) {
-            streamRef.current.getTracks().forEach(t => t.stop());
+            streamRef.current.getTracks().forEach((t) => t.stop());
             streamRef.current = null;
           }
         }
       }
 
-      // Fallback to ZXing
       try {
         const hints = new Map();
         hints.set(DecodeHintType.TRY_HARDER, true);
@@ -315,61 +313,70 @@ export function useReceiptScanner({
         const codeReader = new BrowserMultiFormatReader(hints);
         codeReaderRef.current = codeReader;
 
-          const constraints = {
-            audio: false,
-            video: {
-              facingMode: 'environment',
-              width: { ideal: 1920 },
-              height: { ideal: 1080 },
-              advanced: [{ focusMode: 'continuous' } as unknown as MediaTrackConstraintSet],
-            },
-          };
+        const constraints = {
+          audio: false,
+          video: {
+            facingMode: 'environment',
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            advanced: [{ focusMode: 'continuous' } as unknown as MediaTrackConstraintSet],
+          },
+        };
 
-         await codeReader.decodeFromConstraints(
-           constraints as MediaStreamConstraints,
-           video,
-           (result) => {
-             if (result) {
-               if (processingRef.current) return;
-               const text = result.getText();
-               stopCamera();
-               handleScanSuccess(text);
-             }
-           },
-         );
+        await codeReader.decodeFromConstraints(
+          constraints as MediaStreamConstraints,
+          video,
+          (result) => {
+            if (result) {
+              if (processingRef.current) return;
+              const text = result.getText();
+              stopCamera();
+              handleScanSuccess(text);
+            }
+          },
+        );
 
-         // Check zoom for ZXing fallback too
-         const track = streamRef.current?.getVideoTracks()[0];
-         if (track?.getCapabilities) {
-           const caps = track.getCapabilities() as CameraCapabilities;
-           const zoomCaps = caps.zoom;
-           const hasTorch = Boolean(caps.torch);
-           if (zoomCaps) {
-             setZoomSupported(true);
-             const initialZoom = Math.min(zoomCaps.max, 1.25);
-             try {
-               await track.applyConstraints({
-                 advanced: [{ zoom: initialZoom }] as unknown as MediaTrackConstraintSet[],
-               });
-               setZoom(initialZoom);
-             } catch (_e) {
-               setZoom(1);
-             }
-           }
-           if (hasTorch) {
-             setTorchSupported(true);
-             setTorch(false);
-           }
-         }
+        const track = streamRef.current?.getVideoTracks()[0];
+        if (track?.getCapabilities) {
+          const caps = track.getCapabilities() as CameraCapabilities;
+          const zoomCaps = caps.zoom;
+          const hasTorch = Boolean(caps.torch);
+          if (zoomCaps) {
+            setZoomSupported(true);
+            const initialZoom = Math.min(zoomCaps.max, 1.25);
+            try {
+              await track.applyConstraints({
+                advanced: [{ zoom: initialZoom }] as unknown as MediaTrackConstraintSet[],
+              });
+              setZoom(initialZoom);
+            } catch (_e) {
+              setZoom(1);
+            }
+          }
+          if (hasTorch) {
+            setTorchSupported(true);
+            setTorch(false);
+          }
+        }
       } catch (err) {
         setScanning(false);
         toast.error(
-          'Câmera não disponível. Verifique as permissões ou se o site usa HTTPS.',
+          'Camera nao disponivel. Verifique as permissoes ou se o site usa HTTPS.',
         );
         console.error('Camera fail:', err);
       }
     }, 150);
-  }, [handleScanSuccess, loading, scanning, stopCamera]);
+  }, [
+    handleScanSuccess,
+    loading,
+    scanning,
+    setScanning,
+    setTorch,
+    setTorchSupported,
+    setZoom,
+    setZoomSupported,
+    stopCamera,
+  ]);
 
   const handleFileUpload = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
@@ -380,8 +387,7 @@ export function useReceiptScanner({
       let imageUrl = null;
       try {
         imageUrl = URL.createObjectURL(file);
-        
-        // Try Native BarcodeDetector first
+
         const BarcodeDetectorCtor = (window as Window & { BarcodeDetector?: BarcodeDetectorCtor })
           .BarcodeDetector;
         if (BarcodeDetectorCtor) {
@@ -393,7 +399,7 @@ export function useReceiptScanner({
               img.onload = resolve;
               img.onerror = reject;
             });
-            
+
             const barcodes = await detector.detect(img);
             if (barcodes.length > 0) {
               const rawValue = barcodes[0].rawValue;
@@ -407,7 +413,6 @@ export function useReceiptScanner({
           }
         }
 
-        // Fallback to ZXing
         const hints = new Map();
         hints.set(DecodeHintType.TRY_HARDER, true);
         const codeReader = new BrowserMultiFormatReader(hints);
@@ -416,17 +421,17 @@ export function useReceiptScanner({
         if (result) {
           await handleScanSuccess(result.getText());
         } else {
-          throw new Error('Não detectado');
+          throw new Error('Nao detectado');
         }
       } catch (err) {
         console.error('Upload detection fail:', err);
-        toast.error('QR Code não detectado na imagem.');
+        toast.error('QR Code nao detectado na imagem.');
         setLoading(false);
       } finally {
         if (imageUrl) URL.revokeObjectURL(imageUrl);
       }
     },
-    [handleScanSuccess],
+    [handleScanSuccess, setLoading],
   );
 
   const handleForceSaveDuplicate = useCallback(async () => {
@@ -438,19 +443,12 @@ export function useReceiptScanner({
       setDuplicateReceipt(null);
       toast.success('Nota atualizada com sucesso!');
     }
-  }, [duplicateReceipt, saveReceipt]);
+  }, [duplicateReceipt, saveReceipt, setCurrentReceipt, setDuplicateReceipt]);
 
-  // Manual Mode State
-  const [manualMode, setManualMode] = useState(false);
-  const [manualData, setManualData] = useState<ManualData>({
+  const getDefaultManualData = (): ScannerManualData => ({
     establishment: '',
     date: new Date().toLocaleDateString('pt-BR'),
     items: [],
-  });
-  const [manualItem, setManualItem] = useState<ManualItem>({
-    name: '',
-    qty: '1',
-    unitPrice: '',
   });
 
   const handleSaveManualReceipt = useCallback(async () => {
@@ -463,14 +461,12 @@ export function useReceiptScanner({
       return;
     }
 
-    // Validar data
     const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
     if (!dateRegex.test(manualData.date)) {
-      toast.error('Data inválida! Use DD/MM/AAAA');
+      toast.error('Data invalida! Use DD/MM/AAAA');
       return;
     }
 
-    // Validar itens (preços e quantidades)
     const hasInvalidItems = manualData.items.some((item: ReceiptItem) => {
       const price = parseFloat((item.unitPrice || '').toString().replace(',', '.'));
       const qty = parseFloat((item.qty || '').toString().replace(',', '.'));
@@ -479,7 +475,7 @@ export function useReceiptScanner({
 
     if (hasInvalidItems) {
       toast.error(
-        'Existem itens com valores inválidos. Verifique os preços e quantidades.',
+        'Existem itens com valores invalidos. Verifique os precos e quantidades.',
       );
       return;
     }
@@ -522,11 +518,7 @@ export function useReceiptScanner({
         setCurrentReceipt(result.receipt);
 
         setManualMode(false);
-        setManualData({
-          establishment: '',
-          date: new Date().toLocaleDateString('pt-BR'),
-          items: [],
-        });
+        setManualData(getDefaultManualData());
         toast.success('Nota manual salva com sucesso!');
       }
     } catch (err) {
@@ -535,7 +527,7 @@ export function useReceiptScanner({
     } finally {
       setLoading(false);
     }
-  }, [manualData, saveReceipt]);
+  }, [manualData, saveReceipt, setCurrentReceipt, setLoading, setManualData, setManualMode]);
 
   useEffect(() => {
     if (tab !== 'scan') stopCamera();
@@ -562,14 +554,14 @@ export function useReceiptScanner({
     setManualMode,
     manualData,
     setManualData,
-     manualItem,
-     setManualItem,
-     handleSaveManualReceipt,
-     zoom,
-     zoomSupported,
-     applyZoom,
-     torch,
-     torchSupported,
-     applyTorch
-   };
+    manualItem,
+    setManualItem,
+    handleSaveManualReceipt,
+    zoom,
+    zoomSupported,
+    applyZoom,
+    torch,
+    torchSupported,
+    applyTorch,
+  };
 }

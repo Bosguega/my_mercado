@@ -1,6 +1,5 @@
-import type { Receipt, SessionUser } from "./domain";
+import type { SessionUser } from "./domain";
 import type { ReceiptItem } from "./domain";
-import type { ChangeEvent, Dispatch, SetStateAction } from "react";
 
 export type AppTab = "scan" | "history" | "search" | "dictionary";
 export type SortDirection = "asc" | "desc";
@@ -25,36 +24,26 @@ export interface ApiKeyModalProps {
   onSave: (key: string) => void;
 }
 
-export interface SearchTabProps {
-  savedReceipts: Receipt[];
-  searchQuery: string;
-  setSearchQuery: (value: string) => void;
-  sortOrder: SearchSortBy;
-  setSortOrder: (value: SearchSortBy) => void;
-  sortDirection: SortDirection;
-  setSortDirection: (value: SortDirection) => void;
-  loading: boolean;
+export interface ConfirmDialogProps {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  danger?: boolean;
+  busy?: boolean;
+  onConfirm: () => void | Promise<void>;
+  onCancel: () => void;
 }
 
-export interface HistoryTabProps {
-  savedReceipts: Receipt[];
-  setSavedReceipts: (value: Receipt[] | ((prev: Receipt[]) => Receipt[])) => void;
-  historyFilter: string;
-  setHistoryFilter: (value: string) => void;
-  historyFilters: HistoryFilters;
-  setHistoryFilters: (
-    value: HistoryFilters | ((prev: HistoryFilters) => HistoryFilters)
-  ) => void;
-  expandedReceipts: string[];
-  setExpandedReceipts: (value: string[] | ((prev: string[]) => string[])) => void;
-  deleteReceipt: (id: string) => Promise<boolean>;
-  loading: boolean;
-  loadReceipts: () => Promise<void>;
-}
-
-export interface DictionaryTabProps {
-  setSavedReceipts?: (value: Receipt[] | ((prev: Receipt[]) => Receipt[])) => void;
-  loadReceipts?: () => Promise<void>;
+export interface ConfirmDialogConfig {
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  danger?: boolean;
+  onConfirm: () => void | Promise<void>;
+  onCancel?: () => void;
 }
 
 export interface PurchasedItem extends ReceiptItem {
@@ -72,29 +61,4 @@ export interface ScannerManualItem {
   name: string;
   qty: string;
   unitPrice: string;
-}
-
-export interface ScannerTabProps {
-  manualMode: boolean;
-  setManualMode: Dispatch<SetStateAction<boolean>>;
-  manualData: ScannerManualData;
-  setManualData: Dispatch<SetStateAction<ScannerManualData>>;
-  manualItem: ScannerManualItem;
-  setManualItem: Dispatch<SetStateAction<ScannerManualItem>>;
-  handleSaveManualReceipt: () => Promise<void>;
-  startCamera: () => Promise<void>;
-  stopCamera: () => void;
-  handleFileUpload: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
-  loading: boolean;
-  scanning: boolean;
-  error: string | null;
-  currentReceipt: Receipt | null;
-  setCurrentReceipt: Dispatch<SetStateAction<Receipt | null>>;
-  handleUrlSubmit: (decodedText: string) => Promise<void>;
-  zoom: number;
-  zoomSupported: boolean;
-  applyZoom: (value: number) => Promise<void>;
-  torch: boolean;
-  torchSupported: boolean;
-  applyTorch: (on: boolean) => Promise<void>;
 }

@@ -1,325 +1,215 @@
-# My Mercado — Arquitetura
+# My Mercado - Arquitetura
 
-**My Mercado** é um PWA (Progressive Web App) para gerenciamento de compras de supermercado.
-O usuário escaneia o QR Code de notas fiscais eletrônicas brasileiras (NFC-e), consulta o histórico de compras e compara preços de produtos ao longo do tempo. Toda a persistência é feita via nuvem (Supabase) sem necessidade de servidor Node.js local.
+**My Mercado** e um PWA para gerenciamento de compras de supermercado.
+O usuario escaneia QR Code de NFC-e, consulta historico e compara precos ao longo do tempo.
+Persistencia principal: Supabase (PostgreSQL + Auth + RLS), com fallback local.
 
 ---
 
-<a id="índice"></a>
-
-## Índice
-
+## Indice
 1. [Diagrama de Camadas](#diagrama-de-camadas)
 2. [Tecnologias Utilizadas](#tecnologias-utilizadas)
-3. [Lista de Dependências (package.json)](#lista-de-dependências-packagejson)
+3. [Lista de Dependencias](#lista-de-dependencias)
 4. [Modelo Mental](#modelo-mental)
 5. [Treeview](#treeview)
-6. [Mapa de Dependências](#mapa-de-dependências)
-7. [Glossário de Domínio](#glossário-de-domínio)
-8. [Estrutura de Dados Principal](#estrutura-de-dados-principal)
-9. [Matriz de Tarefas](#matriz-de-tarefas)
-10. [Fluxo de Dados](#fluxo-de-dados)
-11. [Regras de Arquitetura](#regras-de-arquitetura)
-12. [Registro de Decisões](#registro-de-decisões)
-13. [Não-Objetivos](#não-objetivos)
-14. [Estado Atual de Desenvolvimento](#estado-atual-de-desenvolvimento)
-15. [Como Executar](#como-executar)
-16. [Variáveis de Ambiente](#variáveis-de-ambiente)
-17. [Estratégia de Tratamento de Erros](#estratégia-de-tratamento-de-erros)
-18. [Pontos Frágeis](#pontos-frágeis)
-19. [Convenções do Projeto](#convenções-do-projeto)
+6. [Mapa de Dependencias](#mapa-de-dependencias)
+7. [Estrutura de Dados Principal](#estrutura-de-dados-principal)
+8. [Matriz de Tarefas](#matriz-de-tarefas)
+9. [Fluxo de Dados](#fluxo-de-dados)
+10. [Regras de Arquitetura](#regras-de-arquitetura)
 
 ---
 
-<a id="diagrama-de-camadas"></a>
-
-# Diagrama de Camadas
+## Diagrama de Camadas
 
 ```mermaid
 graph TD
     UI["Interface React (PWA)"]
-    App["App.tsx — Orquestrador"]
-    Hook["useReceipts.ts — State Management"]
+    App["App.tsx - Shell/Navegacao"]
+    Stores["Zustand Stores (ui, receipts, scanner)"]
+    ScannerHook["useReceiptScanner.ts - Scanner Orchestration"]
     Analytics["Analytics Engine (utils/analytics/)"]
     Pipeline["Pipeline (productService.ts)"]
-    Services["Conversão Sefaz (receiptParser.ts)"]
-    AI["IA — Google Gemini / OpenAI (BYOK)"]
-    DictionaryTab["Aba Dicionário (Correção Manual)"]
+    Services["Conversao Sefaz (receiptParser.ts)"]
+    AI["IA - Google Gemini / OpenAI (BYOK)"]
     Dictionary["Tabela product_dictionary (Cache)"]
-    Supabase["Supabase (Relacional: receipts, items)"]
-    LocalStorage["sessionStorage (API Key) + localStorage (Fallback de dados)"]
+    Supabase["Supabase (receipts, items)"]
+    LocalStorage["sessionStorage + localStorage"]
 
     UI --> App
-    App --> Hook
-    Hook --> Analytics
-    Analytics --> UI
-    Hook --> Pipeline
-    UI --> DictionaryTab
-    DictionaryTab --> Dictionary
+    UI --> Stores
+    App --> Stores
+    Stores --> ScannerHook
+    Stores --> Analytics
+    ScannerHook --> Pipeline
     Pipeline --> Services
     Pipeline --> Dictionary
     Pipeline --> AI
-    App --> LocalStorage
-    Pipeline -- "Persistência" --> Supabase
+    Pipeline -- "Persistencia" --> Supabase
+    Stores --> LocalStorage
+    Analytics --> UI
 ```
 
-A regra principal de dependência é:
-**Interface → App/Hooks → Analytics Engine → Pipeline/Serviços → Backend como Serviço (Supabase) / Proxy Externo**
-
-[↑ Voltar ao índice](#índice)
+Regra principal de dependencia:
+**Interface -> Stores/Hook de Scanner -> Analytics -> Pipeline/Servicos -> Supabase/Proxies**
 
 ---
 
-<a id="tecnologias-utilizadas"></a>
+## Tecnologias Utilizadas
 
-# Tecnologias Utilizadas
+### Frontend
+- React 18
+- TypeScript 5.9
+- Vite 6
+- vite-plugin-pwa
+- Zustand 5 (estado global)
+- Framer Motion
+- Recharts
+- Lucide React
+- React Hot Toast
 
-O My Mercado utiliza uma stack moderna voltada para performance, resiliência e experiência do usuário (UX) de alta fidelidade.
+### Persistencia / Backend
+- Supabase JS (Auth + Postgres + RLS)
 
-### **Frontend & Framework**
-- **React 18**: Biblioteca principal para construção da interface baseada em componentes.
-- **TypeScript 5.9**: Tipagem estática em toda a base (`.ts`/`.tsx`) para reduzir regressões na evolução do app.
-- **Vite 6**: Ferramenta de build e dev server de próxima geração, focada em velocidade e compatibilidade de plugins.
-- **Vite PWA Plugin**: Transforma o site em um Progressive Web App instalável com suporte offline básico.
-- **Framer Motion**: Motor de animações utilizado para reordenamento fluido de listas e transições de interface.
-- **Analytics Engine**: Módulo interno customizado (`src/utils/analytics/`) para processamento pesado de dados (filtros, agrupamentos, séries temporais) desacoplado da UI.
+### Scanner e Parsing
+- @zxing/library
+- BarcodeDetector nativo (quando disponivel)
+- Parsing HTML da Sefaz via `DOMParser`
 
-### **Performance & Otimização**
-- **Code Splitting (Manual Chunks)**: Configuração avançada no Vite para separar bibliotecas grandes (Recharts, Supabase, Framer Motion) em arquivos menores, acelerando o carregamento inicial.
-- **Memoization Estratégica**: Uso intensivo de `useMemo` e `useCallback` para evitar re-renderizações desnecessárias em listas grandes.
-
-### **Backend & Persistência (BaaS)**
-- **Supabase**: Backend-as-a-Service (BaaS) que provê:
-  - **PostgreSQL**: Banco de dados relacional para armazenamento de notas e itens.
-  - **Supabase Auth**: Sistema de autenticação Email/Senha.
-  - **RLS (Row Level Security)**: Garante que cada usuário acesse apenas seus próprios dados diretamente via frontend.
-- **SDK do Supabase**: Comunicação direta e segura entre o React e o banco de dados.
-
-### **Inteligência Artificial (BYOK)**
-- **Google Gemini / OpenAI API**: Utilizadas para normalizar nomes brutos de produtos e categorizá-los automaticamente.
-- **Abordagem BYOK (Bring Your Own Key)**: O usuário fornece sua própria chave, garantindo privacidade e descentralização de custos.
-- **Armazenamento de Chave em Sessão**: A API Key é mantida em `sessionStorage` (com migração automática de legado em `localStorage`), reduzindo persistência indevida em disco.
-- **Model Discovery**: Suporte a busca dinâmica de modelos disponíveis na conta do Google AI Studio diretamente pelo modal de configuração.
-
-### **Câmera & Scraping**
-- **@zxing/library**: Biblioteca de processamento de imagem para leitura nativa de QR Codes no navegador.
-- **Proxy Rotation (CORS)**: Sistema resiliente que rotaciona entre múltiplos proxies (`corsproxy.io`, `allorigins`, `cors-anywhere`) para contornar bloqueios de CORS ao acessar portais da Sefaz.
-- **DOMParser Nativo**: Extração de dados estruturados a partir do HTML "sujo" retornado pelos portais governamentais.
-
-### **Interface & Visualização**
-- **Universal Components**: Centralização de componentes de UI como `UniversalSearchBar.tsx` para garantir consistência visual e lógica entre as abas.
-- **Lucide React**: Biblioteca de ícones vetoriais modernos.
-- **Recharts**: Biblioteca de gráficos para visualização das tendências de preços dos produtos.
-- **React Hot Toast**: Sistema de notificações dinâmicas para feedback de ações (sucesso, erro, avisos).
-- **Glassmorphism CSS**: Estética visual moderna baseada em transparências e desfoque de fundo.
-
-[↑ Voltar ao índice](#índice)
+### IA (BYOK)
+- Google Gemini / OpenAI
+- Chave em `sessionStorage` (migracao de legado quando necessario)
 
 ---
 
-<a id="lista-de-dependências-packagejson"></a>
+## Lista de Dependencias
 
-# Lista de Dependências (package.json)
-
-Abaixo estão listadas as dependências principais e de desenvolvimento com suas respectivas versões.
-
-### **Dependências (Dependencies)**
-| Biblioteca | Versão |
+| Biblioteca | Versao |
 |---|---|
 | `@supabase/supabase-js` | `2.99.3` |
 | `@zxing/library` | `0.21.3` |
 | `framer-motion` | `12.38.0` |
 | `lucide-react` | `0.577.0` |
-| `prop-types` | `15.8.1` |
 | `react` | `18.3.1` |
 | `react-dom` | `18.3.1` |
 | `react-hot-toast` | `2.6.0` |
 | `recharts` | `3.8.0` |
-
-### **Dependências de Desenvolvimento (DevDependencies)**
-| Biblioteca | Versão |
-|---|---|
-| `@eslint/js` | `9.13.0` |
-| `@types/react` | `18.3.12` |
-| `@types/react-dom` | `18.3.1` |
-| `@vitejs/plugin-basic-ssl` | `1.2.0` |
-| `@vitejs/plugin-react` | `4.3.0` |
-| `eslint` | `9.13.0` |
-| `eslint-plugin-react` | `7.37.2` |
-| `eslint-plugin-react-hooks` | `5.0.0` |
-| `eslint-plugin-react-refresh` | `0.4.14` |
-| `globals` | `15.11.0` |
-| `typescript` | `5.9.3` |
-| `typescript-eslint` | `8.57.2` |
-| `vite` | `6.0.0` |
-| `vite-plugin-pwa` | `0.21.0` |
-
-[↑ Voltar ao índice](#índice)
+| `zustand` | `5.0.12` |
 
 ---
 
-<a id="modelo-mental"></a>
+## Modelo Mental
 
-# Modelo Mental
+### 1. Notas (Receipt)
+Estado e operacoes de notas estao centralizados em:
+- `src/stores/useReceiptsStore.ts`
 
-## 1. Nota Fiscal (Receipt)
+Esse store concentra:
+- carregamento (`loadReceipts`)
+- salvamento (`saveReceipt`)
+- remocao (`deleteReceipt`)
+- fallback local (`@MyMercado:receipts`)
+- sincronizacao por usuario autenticado (`sessionUserId`)
 
-A entidade central do sistema. Uma nota é criada a partir da leitura do QR Code de uma NFC-e ou inserida manualmente pelo usuário.
+### 2. Scanner
+Orquestracao:
+- `src/hooks/useReceiptScanner.ts`
 
-Arquivo principal: `src/App.tsx` — funções `saveReceipt`, `deleteReceipt` (via `useReceipts.ts`)
+Estado do scanner:
+- `src/stores/useScannerStore.ts`
 
-Fluxo de escaneamento:
+Inclui camera, upload, leitura por link, modo manual, zoom/torch e tratamento de duplicidade.
 
-```
-Usuário aponta câmera para o QR Code (ou cola link)
-↓
-receiptParser.ts extrai os itens brutos via rotação de 3 CORS Proxies (resiliência)
-↓
-productService.ts (Pipeline): normaliza chaves via regex avançado (preserva 5kg, remove KG genérico)
-↓
-Consulta ao Dicionário Global (Supabase) para evitar chamadas de IA desnecessárias
-↓
-Itens desconhecidos são enviados em lote para a IA (Gemini/OpenAI) com prompt refinado
-↓
-Dicionário é atualizado (incluindo categorias como 'Petshop')
-↓
-dbMethods.ts persiste a nota e itens com segurança numérica (parseBRL)
-```
+### 3. UI Global
+Estado de interface em:
+- `src/stores/useUiStore.ts`
 
----
+Inclui aba ativa, filtros de historico, ordenacao e busca.
 
-## 2. Scraping Frontend-Only (Sefaz)
-
-Navegadores bloqueiam requisições diretas a portais governamentais (Sefaz SP) por CORS. Como não rodamos mais um servidor Node.js, contornamos isso passando a requisição por um proxy de CORS gratuito. Para garantir resiliência, o sistema rotaciona entre 3 proxies diferentes (`corsproxy.io`, `allorigins`, `cors-anywhere`) caso um falhe ou bloqueie o IP. O navegador recebe o texto em HTML sujo e o converte nativamente via `DOMParser` no serviço `receiptParser.ts`.
-
----
-
-## 3. Persistência em Nuvem (BaaS)
-
-A estrutura antiga em SQLite foi completamente suprimida a favor do Supabase (BaaS em PostgreSQL). Todo o tratamento (`select`, `upsert`, `delete`) acontece no cliente usando o SDK do Supabase. O `localStorage` da aplicação continua sendo usado apenas como fallback emergencial para dados de notas; a API Key de IA fica restrita à sessão (`sessionStorage`).
+### 4. Dominio e processamento
+- Parse da nota: `src/services/receiptParser.ts`
+- Pipeline de normalizacao/categorizacao: `src/services/productService.ts`
+- Persistencia relacional: `src/services/dbMethods.ts`
+- Analytics puro: `src/utils/analytics/`
 
 ---
 
-## 4. Normalização e Agrupamento (Chave Normalizada)
-
-Todos os itens são armazenados individualmente na tabela `items`. Isso permite uma normalização poderosa via IA, onde um item "ARROZ TIO JOAO 5KG" é vinculado a uma chave única, permitindo rastrear o menor preço de "Arroz" independente da variação do nome na nota. O sistema remove unidades genéricas (KG, UN) mas preserva medidas quantitativas (5kg, 350ml) para diferenciar produtos.
-
-Arquivo principal: `src/components/SearchTab.tsx`, `src/components/DictionaryTab.tsx`
-Apoio: `src/utils/currency.ts`, `src/utils/date.ts`
-
-Fluxo:
-```
-Usuário digita nome ou categoria
-↓
-Busca filtrada na tabela 'items' vinculada à 'receipts'
-↓
-Agrupamento por 'normalized_key'
-↓
-Gráfico de tendência de preço e histórico exibido
-```
-
-[↑ Voltar ao índice](#índice)
-
----
-
-<a id="treeview"></a>
-
-# Treeview
+## Treeview
 
 ```text
 my_mercado/
-│
-├── public/                     # Assets estáticos e ícones do PWA
-├── src/                        # Frontend React (Vite)
-│   ├── components/
-│   │   ├── ApiKeyModal.tsx     # Configuração de chave própria (BYOK)
-│   │   ├── DictionaryTab.tsx   # Gerenciamento manual de normalização
-│   │   ├── ScannerTab.tsx      
-│   │   ├── HistoryTab.tsx      
-│   │   ├── SearchTab.tsx       
-│   │   └── UniversalSearchBar.tsx # Barra de busca e filtros unificada
-│   │
-│   ├── hooks/
-│   │   ├── useApiKey.ts        # Hook para gestão de estado da Key/IA
-│   │   └── useReceipts.ts      # Centraliza lógica de Notas e Banco
-│   │
-│   ├── services/
-│   │   ├── productService.ts   # Pipeline de IA, Dicionário e Normalização
-│   │   ├── dbMethods.ts        # Persistência Relacional (CRUD e Backup)
-│   │   ├── receiptParser.ts    # Decodificação do HTML da Sefaz (com Proxy Rotation)
-│   │   └── auth.ts             # Lógica Supabase Auth
-│   │
-│   ├── utils/
-│   │   ├── analytics/          # Analytics Engine (Filtros, Agrupamentos, Cálculos)
-│   │   │   ├── groupBy.ts
-│   │   │   ├── aggregate.ts
-│   │   │   ├── filters.ts
-│   │   │   ├── timeSeries.ts
-│   │   │   └── index.ts
-│   │   ├── aiConfig.ts         # Persistência da API Key em sessão (com migração de legado)
-│   │   ├── currency.ts         # Parsing e formatação BRL
-│   │   └── date.ts             # Padronização de datas ISO/BR
-│   │
-│   ├── App.tsx                 # Orquestrador global (Abas e Mobile Nav)
-│   └── index.css               # Design System (Glassmorphism e Responsividade)
-├── .env                        # Chaves e URLs do Supabase (VITE_SUPABASE_...)
-├── index.html                  # Entry point HTML & PWA manifest link
-└── vite.config.js              # Configuração Vite & vite-plugin-pwa
+|
+|-- src/
+|   |-- components/
+|   |   |-- ApiKeyModal.tsx
+|   |   |-- ConfirmDialog.tsx
+|   |   |-- ScannerTab.tsx
+|   |   |-- HistoryTab.tsx
+|   |   |-- SearchTab.tsx
+|   |   |-- DictionaryTab.tsx
+|   |   `-- UniversalSearchBar.tsx
+|   |
+|   |-- hooks/
+|   |   |-- useApiKey.ts
+|   |   |-- useReceiptScanner.ts
+|   |   `-- useSupabaseSession.ts
+|   |
+|   |-- stores/
+|   |   |-- useUiStore.ts
+|   |   |-- useReceiptsStore.ts
+|   |   `-- useScannerStore.ts
+|   |
+|   |-- services/
+|   |   |-- auth.ts
+|   |   |-- dbMethods.ts
+|   |   |-- productService.ts
+|   |   `-- receiptParser.ts
+|   |
+|   |-- utils/
+|   |   |-- aiConfig.ts
+|   |   |-- currency.ts
+|   |   |-- date.ts
+|   |   `-- analytics/
+|   |
+|   |-- App.tsx
+|   `-- index.css
+|
+|-- ARCHITECTURE.md
+|-- package.json
+`-- vite.config.js
 ```
-
-[↑ Voltar ao índice](#índice)
 
 ---
 
-<a id="mapa-de-dependências"></a>
-
-# Mapa de Dependências
+## Mapa de Dependencias
 
 ```mermaid
 graph TD
     main["main.tsx"] --> App
-    App --> useReceipts["hooks/useReceipts.ts"]
-    useReceipts --> dbMethods["services/dbMethods.ts"]
-    useReceipts --> productService["services/productService.ts"]
-    
-    App --> ScannerTab
-    App --> HistoryTab
-    App --> SearchTab
-    App --> DictionaryTab
-    
-    dbMethods --> supabase["supabaseClient.ts"]
-    productService --> AI["Gemini / OpenAI"]
 
-    receiptParser["services/receiptParser.ts"] -- "Fetch via Proxy Rotation" --> proxies["CORS Proxy Pool"]
-    proxies --> Sefaz["Sefaz SP"]
+    App --> uiStore["stores/useUiStore.ts"]
+    App --> receiptsStore["stores/useReceiptsStore.ts"]
+
+    ScannerTab --> scannerHook["hooks/useReceiptScanner.ts"]
+    scannerHook --> scannerStore["stores/useScannerStore.ts"]
+    scannerHook --> receiptsStore
+
+    HistoryTab --> receiptsStore
+    SearchTab --> receiptsStore
+    DictionaryTab --> receiptsStore
+
+    receiptsStore --> dbMethods["services/dbMethods.ts"]
+    receiptsStore --> productService["services/productService.ts"]
+
+    dbMethods --> supabase["services/supabaseClient.ts"]
+    productService --> ai["Gemini / OpenAI"]
 ```
 
-[↑ Voltar ao índice](#índice)
-
 ---
 
-<a id="glossário-de-domínio"></a>
-
-# Glossário de Domínio
-
-| Termo | Definição |
-|---|---|
-| **PWA** | Progressive Web App: Permite que a página se instale como um app falso no celular, acessando a câmera nativamente mesmo sendo feito apenas de HTML/JS. |
-| **Analytics Engine** | Módulo de processamento de dados (`src/utils/analytics/`) que centraliza lógicas de filtragem, agrupamento e cálculos, garantindo funções puras e alta performance. |
-| **Supabase** | Backend-as-a-Service, alternativa ao Firebase baseada em Postgres que expõe APIs baseadas nas próprias tabelas do banco. |
-| **Sefaz** | Secretaria da Fazenda — órgão responsável pelas NFC-e. Apenas Sefaz SP é suportada. |
-| **BRL** | Formato monetário brasileiro mantido como `string` em armazenamento (`"12,90"`) para evitar arredondamento de JS. |
-
-[↑ Voltar ao índice](#índice)
-
----
-
-<a id="estrutura-de-dados-principal"></a>
-
-**Schema Supabase (Nuvem)** com RLS e Autenticação Atrelada:
+## Estrutura de Dados Principal
 
 ```sql
--- Tabela de Notas
 create table public.receipts (
   id text primary key,
   establishment text,
@@ -328,7 +218,6 @@ create table public.receipts (
   created_at timestamp with time zone default now() not null
 );
 
--- Tabela de Itens (Relacional)
 create table public.items (
   id uuid primary key default gen_random_uuid(),
   receipt_id text references receipts(id) on delete cascade,
@@ -341,198 +230,50 @@ create table public.items (
   price numeric
 );
 
--- Tabela de Dicionário (Cache de IA)
 create table public.product_dictionary (
   key text primary key,
   normalized_name text,
   category text
 );
-alter table public.receipts enable row level security;
-
-create policy "Usuário vê as próprias notas" 
-on public.receipts for select 
-using (auth.uid() = user_id);
-
-create policy "Usuário insere as próprias notas" 
-on public.receipts for insert 
-with check (auth.uid() = user_id);
-
-create policy "Usuário atualiza as próprias notas" 
-on public.receipts for update 
-using (auth.uid() = user_id)
-with check (auth.uid() = user_id);
-
-create policy "Usuário deleta as próprias notas" 
-on public.receipts for delete 
-using (auth.uid() = user_id);
 ```
-
-> **Migração Relacional:** O campo `items_json` foi removido. Agora os itens são entidades independentes, o que permite consultas complexas de cross-shopping e análise de categorias. O sistema utiliza um pipeline de IA para garantir que itens com nomes diferentes (ex: "ARROZ TIO JOAO" e "ARROZ T. JOAO") sejam agrupados sob a mesma `normalized_key`.
-
-[↑ Voltar ao índice](#índice)
 
 ---
 
-<a id="matriz-de-tarefas"></a>
-
-# Matriz de Tarefas
+## Matriz de Tarefas
 
 | Quero alterar | Arquivo principal | Arquivo de apoio |
 |---|---|---|
-| Lógica de escaneamento da câmera | `src/components/ScannerTab.tsx` | `src/App.tsx` |
-| Gerenciamento de Notas (CRUD) | `src/hooks/useReceipts.ts` | `src/services/dbMethods.ts` |
-| Configuração de IA (BYOK) | `src/components/ApiKeyModal.tsx` | `src/utils/aiConfig.ts` |
-| Processamento de Itens / IA | `src/services/productService.ts` | `src/hooks/useApiKey.ts` |
-| Dicionário e Normalização Manual | `src/components/DictionaryTab.tsx` | `src/services/productService.ts` |
-| Scraping / Captura de dados da nota | `src/services/receiptParser.ts` | — |
-| Comunicação com banco de dados | `src/services/dbMethods.ts` | `src/services/supabaseClient.ts` |
-| Processamento e Filtros de Dados | `src/utils/analytics/` | `src/components/UniversalSearchBar.tsx` |
-| Gráfico de tendência de preços | `src/components/SearchTab.tsx` | `src/utils/analytics/` |
-| Estilização e Layout Mobile | `src/index.css` | `src/App.tsx` |
-
-[↑ Voltar ao índice](#índice)
+| Escaneamento (camera/upload/link/manual) | `src/hooks/useReceiptScanner.ts` | `src/stores/useScannerStore.ts` |
+| CRUD de notas e sincronizacao | `src/stores/useReceiptsStore.ts` | `src/services/dbMethods.ts` |
+| Estado de abas/filtros | `src/stores/useUiStore.ts` | `src/components/*Tab.tsx` |
+| Dicionario manual | `src/components/DictionaryTab.tsx` | `src/services/dbMethods.ts` |
+| Tendencia de precos | `src/components/SearchTab.tsx` | `src/utils/analytics/` |
+| Parse da NFC-e | `src/services/receiptParser.ts` | - |
+| Pipeline de normalizacao/IA | `src/services/productService.ts` | `src/utils/normalize.ts` |
 
 ---
 
-<a id="fluxo-de-dados"></a>
+## Fluxo de Dados
 
-# Fluxo de Dados
+```text
+Camera/Upload/Link -> useReceiptScanner -> receiptParser
+-> productService (normaliza/categoriza)
+-> useReceiptsStore.saveReceipt
+-> dbMethods -> Supabase (receipts + items)
 
-## Escaneamento da NFC-e
-```
-Câmera ou Link → itens extraídos via receiptParser.ts (Pool de Proxies)
-↓
-normalize.ts: gera chaves únicas preservando volumes e variantes (ex: "COCA COLA 2L", "LEITE INTEGRAL")
-↓
-productService.ts: separa itens de peso variável (Hortifruti/Carnes) para agrupar por nome base
-↓
-Consulta ao product_dictionary via Supabase para identificar itens conhecidos
-↓
-Itens desconhecidos são enviados em lote (max 10) para Google Gemini / OpenAI
-↓
-IA transforma nomes brutos em amigáveis (ex: "CERV BRAHMA LTA" → "Cerveja Brahma Lata")
-↓
-Novas categorizações e nomes normalizados são salvos no dicionário
-↓
-Nota é salva no banco relacional (receipts + items) com datas padronizadas
+Historico/Pesquisa/Dicionario
+-> componentes leem stores (ui + receipts)
+-> analytics utils para filtro/ordenacao/agregacao
+-> render da UI
 ```
 
-[↑ Voltar ao índice](#índice)
-
 ---
 
-<a id="regras-de-arquitetura"></a>
+## Regras de Arquitetura
 
-# Regras de Arquitetura
-
-1. **Sem servidor Node.js backend local.** O app deve se manter leve como PWA. Toda interligação externa (Sefaz, Postgres) deve ser feita usando o ecossistema frontend (React, Fetch, APIs de Supabase).
-2. **`localStorage` atua apenas como cópia de dados de notas.** O histórico primordial vive no bucket do Supabase. A API Key de IA usa `sessionStorage` para reduzir exposição.
-3. **Parseamento e regras de domínio em serviços/hooks tipados (`.ts`).** Lógica pesada de `DOMParser` e IA fica isolada fora das views, não no `App.tsx`.
-4. **Mobile-First Design.** O layout deve ser otimizado para touch, com navegação inferior e visual "glassmorphism" moderno.
-
-[↑ Voltar ao índice](#índice)
-
----
-
-<a id="registro-de-decisões"></a>
-
-# Registro de Decisões
-
-| Decisão | Alternativas consideradas | Motivo |
-|---|---|---|
-| Analytics Engine | Lógica dentro de cada aba (Search/History) | Centralizar cálculos e filtros em um motor de funções puras (`src/utils/analytics/`) reduz duplicação, facilita manutenção e permite que a UI foque apenas na exibição. |
-| Downgrade Vite 6 | Manter Vite 8 | O Vite 8 é muito recente e causou conflitos de dependências peer com plugins essenciais como `vite-plugin-pwa` e `basic-ssl`. O downgrade garante estabilidade no build do GitHub Actions. |
-| Manual Chunks (Build) | Bundle único (SPA padrão) | Com o crescimento das bibliotecas (Recharts, Supabase), o bundle ultrapassou 500kB. A divisão manual melhora o tempo de carregamento inicial e a performance do PWA. |
-| Componentes Universais | Componentes locais por aba | O uso de `UniversalSearchBar.tsx` unifica a lógica de busca e ordenação, garantindo que o usuário tenha a mesma experiência em todas as abas do app. |
-| Migração Relacional (Adeus JSONB) | Guardar itens dentro da nota como JSON | O modelo JSONB dificultava buscas cross-nota (ex: "Qual o preço médio da maçã em todas as notas?"). O modelo relacional de `items` torna a pesquisa instantânea e rica. |
-| BYOK (Bring Your Own Key) | API Key fixa no servidor / Proxy | Como o app não tem backend centralizado, a abordagem BYOK (o usuário fornece sua chave Gemini/OpenAI) garante privacidade, custo zero para o desenvolvedor e longevidade do app. |
-| API Key em Sessão | Persistir API Key indefinidamente em `localStorage` | A chave foi movida para `sessionStorage` (com migração automática de legado) para reduzir risco em cenários de XSS e exposição persistente. |
-| IA em Lote (Batching) | IA por item individual | Chamar a IA para cada item separadamente é lento e consome tokens de forma ineficiente. O pipeline agrupa itens desconhecidos em lotes de 10, reduzindo latência e custos. |
-| Logs de Pipeline apenas em DEV | Logs de debug em produção | Logs detalhados do pipeline foram condicionados a `import.meta.env.DEV`, reduzindo exposição de dados e ruído em produção. |
-| Cleanup de Câmera no Unmount | Parar câmera apenas ao trocar de aba | O hook de scanner agora garante `stopCamera()` no cleanup do `useEffect`, evitando stream preso e vazamento de recurso em desmontagem inesperada. |
-| Aba Dicionário | Confiar 100% na IA | IA pode errar categorias ou normalizações. A aba Dicionário permite ao usuário corrigir manualmente e limpar o cache, garantindo dados perfeitos. |
-| Normalização Granular | Remover volumes da chave | Chaves de normalização agora preservam volumes (ex: 1L, 2L, 350ml) para que o app diferencie preços de tamanhos diferentes, mas agrupam pesos variáveis (Hortifruti) para simplificar o dicionário. |
-| Rotação de Proxies | Proxy único fixo | Evita que o app pare de funcionar caso um proxy gratuito específico sofra queda ou bloqueio por parte da Sefaz. |
-
-[↑ Voltar ao índice](#índice)
-
----
-
-<a id="não-objetivos"></a>
-
-# Não-Objetivos
-
-- **Confirmação de E-mail:** A autenticação é simples ("Email / Senha" nativo do Supabase) e a confirmação de e-mail deve estar sempre desativada no painel web do Supabase para facilitar a usabilidade contínua.
-- **Portais Governamentais Adicionais:** A estrutura da Sefaz SP é hardcoded e delicada. Expandir de cara para MT, PR, RJ implicaria em muitos if/elses de parsers distintos.
-
-[↑ Voltar ao índice](#índice)
-
----
-
-<a id="estado-atual-de-desenvolvimento"></a>
-
-# Estado Atual de Desenvolvimento
-
-| Funcionalidade | Status | Observação |
-|---|---|---|
-| IA e Categorização | ✅ Estável | Suporta Gemini / OpenAI com prompt refinado |
-| Modelo Relacional | ✅ Estável | `items` normalizados e vinculados a `receipts` |
-| Dicionário de Produtos | ✅ Estável | Aprendizagem contínua e edição manual do usuário |
-| Histórico de Preços | ✅ Estável | Gráficos baseados em itens normalizados |
-| Mobile UI | ✅ Estável | Navegação inferior, glassmorphism e responsividade |
-
-[↑ Voltar ao índice](#índice)
-
----
-
-<a id="como-executar"></a>
-
-# Como Executar
-
-**Pré-requisitos:**
-1. Ter uma conta no [Supabase](https://supabase.com/).
-2. Criar as tabelas conforme o schema em `supabase_schema.sql`.
-3. Copiar suas chaves (`URL` e `ANON_KEY`) e colar nas respectivas chaves do seu `.env`.
-
-**Passos:**
-```bash
-# 1. Instalar dependências
-npm install
-
-# 2. Iniciar a aplicação localmente
-npm run dev
-
-# 3. Iniciar com HTTPS forçado (Permite testar PWA e câmera pelo celular na mesma rede)
-npm run dev:https
-```
-
-[↑ Voltar ao índice](#índice)
-
----
-
-<a id="variáveis-de-ambiente"></a>
-
-# Variáveis de Ambiente
-
-| Variável | Descrição |
-|---|---|
-| `VITE_SUPABASE_URL` | URL do seu projeto Supabase. |
-| `VITE_SUPABASE_ANON_KEY` | Chave anônima pública de API do Supabase. |
-| `VITE_BASIC_SSL` | Quando `true` via `dev:https`, fornece certificado para testar leitura de QRCode. |
-
-[↑ Voltar ao índice](#índice)
-
----
-
-<a id="pontos-frágeis"></a>
-
-# Pontos Frágeis
-
-### 1. Robustez do Proxy de CORS
-Servidores governamentais detestam requisições massivas. Embora utilizemos uma rotação de 3 proxies, se a Sefaz SP bloquear todos os IPs desses serviços, o scan falhará. O usuário pode sempre inserir manualmente em caso de queda total.
-
-### 2. Tratamento de Sincronia
-Quando abrimos a aplicação ela sincroniza com o Supabase. Caso o PWA seja manipulado longo tempo 100% offline, as alterações são mantidas em memória/localStorage, mas exigem conexão para persistência final no banco relacional.
-
-[↑ Voltar ao índice](#índice)
-
+1. Sem backend Node local; app continua frontend-first (PWA).
+2. Estado global compartilhado fica em stores Zustand.
+3. Componentes de tela nao devem concentrar regra de negocio de persistencia.
+4. Parse e logica de dominio ficam em `services/` e hooks tipados.
+5. `localStorage` e fallback; fonte principal e Supabase.
+6. Mobile-first e UX consistente (confirmacoes, feedback por toast, navegacao inferior).

@@ -17,10 +17,12 @@ import {
  } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { parseBRL, formatBRL } from "../utils/currency";
-import type { ScannerTabProps } from "../types/ui";
 import type { ReceiptItem } from "../types/domain";
+import { useReceiptScanner } from "../hooks/useReceiptScanner";
+import { useReceiptsStore } from "../stores/useReceiptsStore";
+import { useUiStore } from "../stores/useUiStore";
 
-// Skeleton para loading durante extração
+// Skeleton para loading durante extraÃ§Ã£o
 const ScannerSkeleton = () => (
   <div className="glass-card" style={{ padding: "2rem" }}>
     <div
@@ -63,48 +65,55 @@ const ScannerSkeleton = () => (
   </div>
 );
 
-function ScannerTab({
-  manualMode,
-  setManualMode,
-  manualData,
-  setManualData,
-  manualItem,
-  setManualItem,
-  handleSaveManualReceipt,
-  startCamera,
-  stopCamera,
-  handleFileUpload,
-  loading,
-  scanning,
-  error,
-  currentReceipt,
-   setCurrentReceipt,
-   handleUrlSubmit,
-   zoom,
-   zoomSupported,
-   applyZoom,
-   torch,
-   torchSupported,
-   applyTorch,
- }: ScannerTabProps) {
+function ScannerTab() {
+  const saveReceipt = useReceiptsStore((state) => state.saveReceipt);
+  const tab = useUiStore((state) => state.tab);
+  const {
+    manualMode,
+    setManualMode,
+    manualData,
+    setManualData,
+    manualItem,
+    setManualItem,
+    handleSaveManualReceipt,
+    startCamera,
+    stopCamera,
+    handleFileUpload,
+    loading,
+    scanning,
+    error,
+    currentReceipt,
+    setCurrentReceipt,
+    handleUrlSubmit,
+    zoom,
+    zoomSupported,
+    applyZoom,
+    torch,
+    torchSupported,
+    applyTorch,
+    duplicateReceipt,
+    setDuplicateReceipt,
+    handleForceSaveDuplicate,
+  } = useReceiptScanner({ saveReceipt, tab });
+
   const [pasteMode, setPasteMode] = useState(false);
   const [pastedUrl, setPastedUrl] = useState("");
 
   const handleLinkSubmit = () => {
     const rawUrl = pastedUrl.trim();
     if (!rawUrl) {
-      toast.error("Cole um link válido");
+      toast.error("Cole um link vÃ¡lido");
       return;
     }
 
     try {
       const parsed = new URL(rawUrl);
       if (!["http:", "https:"].includes(parsed.protocol)) {
-        toast.error("Link inválido para NFC-e");
+        toast.error("Link invÃ¡lido para NFC-e");
         return;
       }
     } catch {
-      toast.error("Link inválido");
+      toast.error("Link invÃ¡lido");
       return;
     }
 
@@ -114,14 +123,14 @@ function ScannerTab({
   };
   const handleAddManualItem = () => {
     if (!manualItem.name?.trim() || !manualItem.unitPrice) {
-      toast.error("Preencha nome e preço do item");
+      toast.error("Preencha nome e preÃ§o do item");
       return;
     }
 
-    // Validar preço
+    // Validar preÃ§o
     const priceNum = parseBRL(manualItem.unitPrice);
     if (isNaN(priceNum) || priceNum < 0) {
-      toast.error("Preço inválido! Use apenas números");
+      toast.error("PreÃ§o invÃ¡lido! Use apenas nÃºmeros");
       return;
     }
 
@@ -195,7 +204,7 @@ function ScannerTab({
           <input
             type="text"
             className="search-input"
-            placeholder="🛒 Nome do Mercado"
+            placeholder="ðŸ›’ Nome do Mercado"
             value={manualData.establishment}
             onChange={(e) =>
               setManualData({ ...manualData, establishment: e.target.value })
@@ -204,7 +213,7 @@ function ScannerTab({
           <input
             type="text"
             className="search-input"
-            placeholder="📅 Data (DD/MM/AAAA)"
+            placeholder="ðŸ“… Data (DD/MM/AAAA)"
             value={manualData.date}
             onChange={(e) =>
               setManualData({ ...manualData, date: e.target.value })
@@ -378,7 +387,7 @@ function ScannerTab({
                 fontSize: "0.95rem"
               }}
             >
-              Aponte a câmera para o QR Code ou faça upload da galeria.
+              Aponte a cÃ¢mera para o QR Code ou faÃ§a upload da galeria.
             </p>
           </div>
 
@@ -397,7 +406,7 @@ function ScannerTab({
               disabled={loading || scanning}
             >
               <Camera size={20} />
-              Câmera
+              CÃ¢mera
             </button>
 
             <label
@@ -764,6 +773,89 @@ function ScannerTab({
             <Plus size={20} />
             Registrar Nova Nota
           </button>
+        </div>
+      )}
+
+      {duplicateReceipt && (
+        <div className="duplicate-modal-overlay" style={{ zIndex: 3000 }}>
+          <div className="glass-card duplicate-modal-card">
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                marginBottom: "1.5rem",
+              }}
+            >
+              <div
+                style={{
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "50%",
+                  background: "rgba(245, 158, 11, 0.1)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <span style={{ fontSize: "24px" }}>âš ï¸</span>
+              </div>
+              <h2 style={{ color: "#fff", fontSize: "1.25rem" }}>
+                Nota JÃ¡ Existente
+              </h2>
+            </div>
+
+            <p
+              style={{
+                color: "#94a3b8",
+                fontSize: "0.95rem",
+                marginBottom: "1.5rem",
+                lineHeight: "1.6",
+              }}
+            >
+              Esta nota fiscal jÃ¡ estÃ¡ no seu histÃ³rico desde{" "}
+              <strong style={{ color: "#fbbf24" }}>
+                {duplicateReceipt.date}
+              </strong>
+              .
+            </p>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "12px",
+              }}
+            >
+              <button
+                className="btn"
+                onClick={() => setDuplicateReceipt(null)}
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid var(--card-border)",
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                className="btn btn-success"
+                onClick={handleForceSaveDuplicate}
+              >
+                Atualizar Nota
+              </button>
+            </div>
+
+            <p
+              style={{
+                color: "#64748b",
+                fontSize: "0.8rem",
+                marginTop: "1rem",
+                textAlign: "center",
+              }}
+            >
+              Isso substituirÃ¡ a nota anterior
+            </p>
+          </div>
         </div>
       )}
     </>

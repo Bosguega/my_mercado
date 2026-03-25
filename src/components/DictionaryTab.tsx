@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { 
+import {
   Book, 
   Trash2, 
   Edit3, 
@@ -8,6 +8,7 @@ import {
   RotateCcw
 } from "lucide-react";
 import UniversalSearchBar from "./UniversalSearchBar";
+import ConfirmDialog from "./ConfirmDialog";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   getFullDictionaryFromDB, 
@@ -18,18 +19,18 @@ import {
 } from "../services/dbMethods";
 import { toast } from "react-hot-toast";
 import { filterBySearch, sortItems } from "../utils/analytics";
-import type { SortDirection, DictionaryTabProps } from "../types/ui";
+import type { SortDirection, ConfirmDialogConfig } from "../types/ui";
 import type { DictionaryEntry, Receipt, ReceiptItem } from "../types/domain";
+import { useReceiptsStore } from "../stores/useReceiptsStore";
 
 const CATEGORIES = [
   "Açougue", "Hortifruti", "Laticínios", "Padaria", 
   "Limpeza", "Higiene", "Bebidas", "Mercearia", "Petshop", "Outros"
 ];
 
-function DictionaryTab({
-  setSavedReceipts,
-  loadReceipts,
-}: DictionaryTabProps) {
+function DictionaryTab() {
+  const setSavedReceipts = useReceiptsStore((state) => state.setSavedReceipts);
+  const loadReceipts = useReceiptsStore((state) => state.loadReceipts);
   const [dictionary, setDictionary] = useState<DictionaryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,6 +39,25 @@ function DictionaryTab({
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ normalized_name: "", category: "" });
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+
+  const closeConfirm = () => {
+    confirmDialog?.onCancel?.();
+    setConfirmDialog(null);
+    setConfirmBusy(false);
+  };
+
+  const runConfirm = async () => {
+    if (!confirmDialog) return;
+    setConfirmBusy(true);
+    try {
+      await confirmDialog.onConfirm();
+      setConfirmDialog(null);
+    } finally {
+      setConfirmBusy(false);
+    }
+  };
 
   const applyChangesToSavedReceipts = async (
     key: string,
@@ -52,30 +72,28 @@ function DictionaryTab({
         category,
       );
 
-      if (typeof setSavedReceipts === "function") {
-        setSavedReceipts((prev) => {
-          const updated = (prev || []).map((receipt: Receipt) => ({
-            ...receipt,
-            items: Array.isArray(receipt.items)
-              ? receipt.items.map((item: ReceiptItem) => {
-                  const itemKey = item.normalized_key ?? item.normalizedKey;
-                  if (itemKey !== key) return item;
+      setSavedReceipts((prev) => {
+        const updated = (prev || []).map((receipt: Receipt) => ({
+          ...receipt,
+          items: Array.isArray(receipt.items)
+            ? receipt.items.map((item: ReceiptItem) => {
+                const itemKey = item.normalized_key ?? item.normalizedKey;
+                if (itemKey !== key) return item;
 
-                  return {
-                    ...item,
-                    normalized_name: normalizedName,
-                    category,
-                  };
-                })
-              : receipt.items,
-          }));
+                return {
+                  ...item,
+                  normalized_name: normalizedName,
+                  category,
+                };
+              })
+            : receipt.items,
+        }));
 
-          localStorage.setItem("@MyMercado:receipts", JSON.stringify(updated));
-          return updated;
-        });
-      } else if (typeof loadReceipts === "function") {
-        await loadReceipts();
-      }
+        localStorage.setItem("@MyMercado:receipts", JSON.stringify(updated));
+        return updated;
+      });
+
+      await loadReceipts();
 
       if (!updatedCount) {
         toast.success("Nenhum item salvo precisou ser atualizado.", { id: toastId });
@@ -191,28 +209,41 @@ function DictionaryTab({
   };
 
   const handleDeleteEntry = async (key: string) => {
-    if (!window.confirm("Remover este item do dicionário?")) return;
-    try {
-      await deleteDictionaryEntryFromDB(key);
-      setDictionary(prev => prev.filter(item => item.key !== key));
-      toast.success("Item removido!");
-    } catch (err) {
-      console.error("Erro ao remover item:", err);
-      toast.error("Erro ao remover item.");
-    }
+    setConfirmDialog({
+      title: "Remover item?",
+      message: "Essa ação remove o item do dicionário.",
+      confirmText: "Remover",
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await deleteDictionaryEntryFromDB(key);
+          setDictionary(prev => prev.filter(item => item.key !== key));
+          toast.success("Item removido!");
+        } catch (err) {
+          console.error("Erro ao remover item:", err);
+          toast.error("Erro ao remover item.");
+        }
+      },
+    });
   };
 
   const handleClearDictionary = async () => {
-    if (!window.confirm("⚠️ ATENÇÃO: Isso apagará TODO o dicionário de produtos. A IA terá que reaprender tudo. Deseja continuar?")) return;
-    
-    try {
-      await clearDictionaryInDB();
-      setDictionary([]);
-      toast.success("Dicionário limpo com sucesso!");
-    } catch (err) {
-      console.error("Erro ao limpar dicionário:", err);
-      toast.error("Erro ao limpar dicionário.");
-    }
+    setConfirmDialog({
+      title: "Limpar dicionário?",
+      message: "Isso apagará todo o dicionário de produtos e a IA precisará reaprender.",
+      confirmText: "Limpar tudo",
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await clearDictionaryInDB();
+          setDictionary([]);
+          toast.success("Dicionário limpo com sucesso!");
+        } catch (err) {
+          console.error("Erro ao limpar dicionário:", err);
+          toast.error("Erro ao limpar dicionário.");
+        }
+      },
+    });
   };
 
   const filteredDictionary = useMemo(() => {
@@ -243,6 +274,7 @@ function DictionaryTab({
   }, [filteredDictionary, sortBy, sortDirection]);
 
   return (
+    <>
     <div className="dictionary-tab">
       <div
         style={{
@@ -409,7 +441,20 @@ function DictionaryTab({
         )}
       </div>
     </div>
+    <ConfirmDialog
+      isOpen={Boolean(confirmDialog)}
+      title={confirmDialog?.title || ""}
+      message={confirmDialog?.message || ""}
+      confirmText={confirmDialog?.confirmText}
+      cancelText={confirmDialog?.cancelText}
+      danger={confirmDialog?.danger}
+      busy={confirmBusy}
+      onCancel={closeConfirm}
+      onConfirm={runConfirm}
+    />
+    </>
   );
 }
 
 export default DictionaryTab;
+

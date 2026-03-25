@@ -9,29 +9,34 @@ import { Toaster, toast } from "react-hot-toast";
 import { logout } from "./services/auth";
 import { isSupabaseConfigured } from "./services/supabaseClient";
 import { useApiKey } from "./hooks/useApiKey";
-import { useReceipts } from "./hooks/useReceipts";
-import { usePersistedTab } from "./hooks/usePersistedTab";
-import { useReceiptScanner } from "./hooks/useReceiptScanner";
 import { useSupabaseSession } from "./hooks/useSupabaseSession";
 import ApiKeyModal from "./components/ApiKeyModal";
-import type { AppTab, HistoryFilters, SearchSortBy, SortDirection } from "./types/ui";
+import type { AppTab } from "./types/ui";
+import { useReceiptsStore } from "./stores/useReceiptsStore";
+import { useUiStore } from "./stores/useUiStore";
 import "./index.css";
 
 function App() {
   const { sessionUser, setSessionUser, authLoading } = useSupabaseSession();
 
-  const { tab, setTab } = usePersistedTab();
-
-  // Custom Hook para gestão de notas
   const {
-    savedReceipts,
-    setSavedReceipts,
-    loading: receiptsLoading,
+    setSessionUserId,
+    clearReceipts,
     error: receiptsError,
     loadReceipts,
-    saveReceipt,
-    deleteReceipt
-  } = useReceipts(sessionUser);
+  } = useReceiptsStore();
+
+  const tab = useUiStore((state) => state.tab);
+  const setTab = useUiStore((state) => state.setTab);
+
+  useEffect(() => {
+    setSessionUserId(sessionUser?.id ?? null);
+    if (sessionUser) {
+      loadReceipts();
+    } else {
+      clearReceipts();
+    }
+  }, [clearReceipts, loadReceipts, sessionUser, setSessionUserId]);
 
   useEffect(() => {
     if (receiptsError) {
@@ -39,58 +44,10 @@ function App() {
     }
   }, [receiptsError]);
 
-  const {
-    currentReceipt,
-    setCurrentReceipt,
-    loading: scanLoading,
-    scanning,
-    error: scanError,
-    duplicateReceipt,
-    setDuplicateReceipt,
-    handleForceSaveDuplicate,
-    startCamera,
-    stopCamera,
-    handleFileUpload,
-    handleUrlSubmit,
-    manualMode,
-    setManualMode,
-    manualData,
-    setManualData,
-    manualItem,
-    setManualItem,
-    handleSaveManualReceipt,
-    zoom,
-    zoomSupported,
-    applyZoom,
-    torch,
-    torchSupported,
-    applyTorch,
-  } = useReceiptScanner({ saveReceipt, tab });
-
-  // Search State
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortOrder, setSortOrder] = useState<SearchSortBy>("recent");
-  const [searchSortDirection, setSearchSortDirection] = useState<SortDirection>("desc");
-
-  // History filter state
-  const [historyFilter, setHistoryFilter] = useState("");
-
-  // Advanced filters for HistoryTab
-  const [historyFilters, setHistoryFilters] = useState<HistoryFilters>({
-    period: "all", // all, this-month, last-3-months, custom
-    sortBy: "date", // date, value, store
-    sortOrder: "desc", // asc, desc
-    startDate: "", // for custom period
-    endDate: "", // for custom period
-  });
-  const [expandedReceipts, setExpandedReceipts] = useState<string[]>([]);
-
-  // AI Key Management (BYOK)
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const { apiKey, setApiKey, hasKey } = useApiKey();
 
   useEffect(() => {
-    // Check if AI Key exists on startup
     if (!hasKey) {
       setShowApiKeyModal(true);
     }
@@ -129,8 +86,8 @@ function App() {
 
   if (authLoading) {
     return (
-      <div className="app-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <h2 style={{ color: '#fff' }}>Carregando...</h2>
+      <div className="app-container" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
+        <h2 style={{ color: "#fff" }}>Carregando...</h2>
       </div>
     );
   }
@@ -151,41 +108,41 @@ function App() {
           <h1>My Mercado</h1>
           <p>Economize comparando preços.</p>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
           <button
-             onClick={() => setShowApiKeyModal(true)}
-             style={{
-               background: 'rgba(59, 130, 246, 0.1)',
-               border: 'none',
-               color: 'var(--primary)',
-               cursor: 'pointer',
-               padding: '0.6rem',
-               borderRadius: '10px',
-               display: 'flex',
-               alignItems: 'center',
-               justifyContent: 'center'
-             }}
-             title="Configurar IA"
+            onClick={() => setShowApiKeyModal(true)}
+            style={{
+              background: "rgba(59, 130, 246, 0.1)",
+              border: "none",
+              color: "var(--primary)",
+              cursor: "pointer",
+              padding: "0.6rem",
+              borderRadius: "10px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            title="Configurar IA"
           >
-            <span style={{ fontSize: '1.2rem' }}>⚙️</span>
+            <span style={{ fontSize: "1.2rem" }}>⚙️</span>
           </button>
           <button
-             onClick={async () => {
-               await logout();
-               toast.success('Sessão encerrada.');
-             }}
-             style={{
-               background: 'rgba(239, 68, 68, 0.1)',
-               border: 'none',
-               color: '#ef4444',
-               cursor: 'pointer',
-               padding: '0.6rem',
-               borderRadius: '10px',
-               display: 'flex',
-               alignItems: 'center',
-               justifyContent: 'center'
-             }}
-             title="Sair"
+            onClick={async () => {
+              await logout();
+              toast.success("Sessão encerrada.");
+            }}
+            style={{
+              background: "rgba(239, 68, 68, 0.1)",
+              border: "none",
+              color: "#ef4444",
+              cursor: "pointer",
+              padding: "0.6rem",
+              borderRadius: "10px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            title="Sair"
           >
             <LogOut size={20} />
           </button>
@@ -193,149 +150,11 @@ function App() {
       </header>
 
       <main style={{ minHeight: "60vh" }}>
-        {tab === "scan" && (
-          <ScannerTab
-            manualMode={manualMode}
-            setManualMode={setManualMode}
-            manualData={manualData}
-            setManualData={setManualData}
-            manualItem={manualItem}
-            setManualItem={setManualItem}
-            handleSaveManualReceipt={handleSaveManualReceipt}
-            startCamera={startCamera}
-            stopCamera={stopCamera}
-            handleFileUpload={handleFileUpload}
-            loading={scanLoading}
-            scanning={scanning}
-            error={scanError}
-             currentReceipt={currentReceipt}
-             handleUrlSubmit={handleUrlSubmit}
-             setCurrentReceipt={setCurrentReceipt}
-             zoom={zoom}
-             zoomSupported={zoomSupported}
-             applyZoom={applyZoom}
-             torch={torch}
-             torchSupported={torchSupported}
-             applyTorch={applyTorch}
-           />
-        )}
-
-        {tab === "history" && (
-          <HistoryTab
-            savedReceipts={savedReceipts}
-            setSavedReceipts={setSavedReceipts}
-            historyFilter={historyFilter}
-            setHistoryFilter={setHistoryFilter}
-            historyFilters={historyFilters}
-            setHistoryFilters={setHistoryFilters}
-            expandedReceipts={expandedReceipts}
-            setExpandedReceipts={setExpandedReceipts}
-            deleteReceipt={deleteReceipt}
-            loading={receiptsLoading}
-            loadReceipts={loadReceipts}
-          />
-        )}
-
-        {tab === "search" && (
-          <SearchTab
-            savedReceipts={savedReceipts}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            sortOrder={sortOrder}
-            setSortOrder={setSortOrder}
-            sortDirection={searchSortDirection}
-            setSortDirection={setSearchSortDirection}
-            loading={receiptsLoading}
-          />
-        )}
-
-        {tab === "dictionary" && (
-          <DictionaryTab setSavedReceipts={setSavedReceipts} loadReceipts={loadReceipts} />
-        )}
+        {tab === "scan" && <ScannerTab />}
+        {tab === "history" && <HistoryTab />}
+        {tab === "search" && <SearchTab />}
+        {tab === "dictionary" && <DictionaryTab />}
       </main>
-
-      {duplicateReceipt && (
-        <div className="duplicate-modal-overlay" style={{ zIndex: 3000 }}>
-          <div className="glass-card duplicate-modal-card">
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                marginBottom: "1.5rem",
-              }}
-            >
-              <div
-                style={{
-                  width: "48px",
-                  height: "48px",
-                  borderRadius: "50%",
-                  background: "rgba(245, 158, 11, 0.1)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <span style={{ fontSize: "24px" }}>⚠️</span>
-              </div>
-              <h2 style={{ color: "#fff", fontSize: "1.25rem" }}>
-                Nota Já Existente
-              </h2>
-            </div>
-
-            <p
-              style={{
-                color: "#94a3b8",
-                fontSize: "0.95rem",
-                marginBottom: "1.5rem",
-                lineHeight: "1.6",
-              }}
-            >
-              Esta nota fiscal já está no seu histórico desde{" "}
-              <strong style={{ color: "#fbbf24" }}>
-                {duplicateReceipt.date}
-              </strong>
-              .
-            </p>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "12px",
-              }}
-            >
-              <button
-                className="btn"
-                onClick={() => setDuplicateReceipt(null)}
-                style={{
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid var(--card-border)",
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                className="btn btn-success"
-                onClick={handleForceSaveDuplicate}
-              >
-                Atualizar Nota
-              </button>
-            </div>
-
-            <p
-              style={{
-                color: "#64748b",
-                fontSize: "0.8rem",
-                marginTop: "1rem",
-                textAlign: "center",
-              }}
-            >
-              Isso substituirá a nota anterior
-            </p>
-          </div>
-        </div>
-      )}
 
       <Toaster
         position="top-center"
