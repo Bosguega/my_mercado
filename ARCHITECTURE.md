@@ -320,7 +320,10 @@ graph TD
 
 ## Estrutura de Dados Principal
 
+### Tabelas Principais
+
 ```sql
+-- Notas fiscais
 create table public.receipts (
   id text primary key,
   establishment text,
@@ -329,6 +332,7 @@ create table public.receipts (
   created_at timestamp with time zone default now() not null
 );
 
+-- Itens das notas
 create table public.items (
   id uuid primary key default gen_random_uuid(),
   receipt_id text references receipts(id) on delete cascade,
@@ -336,17 +340,50 @@ create table public.items (
   normalized_key text,
   normalized_name text,
   category text,
+  canonical_product_id uuid references canonical_products(id),
   quantity numeric,
   unit text,
   price numeric
 );
 
+-- Dicionário de produtos
 create table public.product_dictionary (
   key text primary key,
   normalized_name text,
-  category text
+  category text,
+  canonical_product_id uuid references canonical_products(id)
+);
+
+-- Produtos canônicos (identidade única de produto)
+create table public.canonical_products (
+  id uuid primary key default gen_random_uuid(),
+  slug text not null unique,
+  name text not null,
+  category text,
+  brand text,
+  user_id uuid references auth.users(id) default auth.uid() not null,
+  merge_count integer default 1,
+  created_at timestamp with time zone default now(),
+  updated_at timestamp with time zone default now()
 );
 ```
+
+### Sistema de Produtos Canônicos
+
+O sistema de produtos canônicos resolve o problema de fragmentação de dados onde o mesmo produto aparece com variações de nome (ex: "Coca-Cola 2L", "Coca Cola 2 litros", "Coca cola pet 2l").
+
+**Como funciona**:
+1. Cada produto canônico tem um `slug` único (ex: `coca_cola_2l`)
+2. Itens e dicionário podem ser associados a um produto canônico via `canonical_product_id`
+3. Analytics usam `canonical_product_id` para agrupar dados consistentemente
+4. Usuário gerencia produtos canônicos via UI (criar, editar, mesclar)
+
+**Hooks disponíveis**:
+- `useCanonicalProductsQuery()` - Listar produtos
+- `useCreateCanonicalProduct()` - Criar novo
+- `useUpdateCanonicalProduct()` - Atualizar
+- `useDeleteCanonicalProduct()` - Deletar (com verificação de segurança)
+- `useMergeCanonicalProducts()` - Mesclar produtos similares
 
 ---
 
