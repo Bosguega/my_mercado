@@ -447,6 +447,20 @@ Estado de UI (Zustand)
 
 ---
 
+## Utilitários Centralizados
+
+### Módulos de Utilidade
+- **`src/utils/logger.ts`**: Sistema de logs centralizado (apenas em dev)
+- **`src/utils/notifications.ts`**: Notificações padronizadas (toast)
+- **`src/utils/storage.ts`**: Abstração para localStorage/sessionStorage
+- **`src/utils/validation.ts`**: Validações de formulário reutilizáveis
+
+### Benefícios
+- **Redução de código**: ~125 linhas podem ser removidas
+- **Consistência**: Mensagens e validações padronizadas
+- **Manutenção**: Mudanças centralizadas
+- **Performance**: Logs desabilitados em produção
+
 ## Otimizações de Performance
 
 ### Fase 1: Redução de Complexidade
