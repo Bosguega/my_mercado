@@ -13,7 +13,6 @@ import {
 import { toast } from "react-hot-toast";
 import UniversalSearchBar from "./UniversalSearchBar";
 import ConfirmDialog from "./ConfirmDialog";
-import { motion, AnimatePresence } from "framer-motion";
 import {
     useCanonicalProductsQuery,
     useCreateCanonicalProduct,
@@ -294,16 +293,11 @@ function CanonicalProductsTab() {
                         </p>
                     </div>
                 ) : (
-                    <AnimatePresence mode="popLayout">
+                    <>
                         {filteredProducts.map((product) => (
-                            <motion.div
+                            <div
                                 key={product.id}
-                                layout
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                                transition={{ duration: 0.2 }}
-                                className="glass-card"
+                                className="glass-card animated-item"
                                 style={{
                                     padding: "1.25rem",
                                     border: mergeMode && mergeMode.primaryId !== product.id
@@ -468,9 +462,9 @@ function CanonicalProductsTab() {
                                         </div>
                                     </div>
                                 )}
-                            </motion.div>
+                            </div>
                         ))}
-                    </AnimatePresence>
+                    </>
                 )}
             </div>
 

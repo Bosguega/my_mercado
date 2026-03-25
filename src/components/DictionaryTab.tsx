@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import UniversalSearchBar from "./UniversalSearchBar";
 import ConfirmDialog from "./ConfirmDialog";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   getFullDictionaryFromDB,
   updateDictionaryEntryInDB,
@@ -341,19 +340,11 @@ function DictionaryTab() {
               <p style={{ color: "#64748b" }}>Nenhum item encontrado no dicionário.</p>
             </div>
           ) : (
-            <AnimatePresence mode="popLayout">
+            <>
               {sortedDictionary.items.map((item) => (
-                <motion.div
+                <div
                   key={item.key}
-                  layout
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{
-                    duration: 0.2,
-                    layout: { type: "spring", stiffness: 300, damping: 30 }
-                  }}
-                  className="glass-card"
+                  className="glass-card animated-item"
                   style={{ marginBottom: 0, padding: "1rem" }}
                 >
                   {editingKey === item.key ? (
@@ -415,9 +406,9 @@ function DictionaryTab() {
                       </div>
                     </div>
                   )}
-                </motion.div>
+                </div>
               ))}
-            </AnimatePresence>
+            </>
           )}
         </div>
       </div>

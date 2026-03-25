@@ -9,7 +9,6 @@ import { toast } from "react-hot-toast";
 // react-window removido temporariamente - paginação infinita já otimiza performance
 import UniversalSearchBar from "./UniversalSearchBar";
 import ConfirmDialog from "./ConfirmDialog";
-import { AnimatePresence } from "framer-motion";
 import { restoreReceiptsToDB } from "../services/dbMethods";
 import { parseBRL } from "../utils/currency";
 import { parseToDate } from "../utils/date";
@@ -740,7 +739,7 @@ function HistoryTab() {
                 </p>
               </div>
             ) : (
-              <AnimatePresence mode="popLayout">
+              <>
                 {finalFilteredReceipts.items.map((receipt: Receipt) => (
                   <ReceiptCard
                     key={receipt.id}
@@ -750,7 +749,7 @@ function HistoryTab() {
                     onDelete={requestDeleteReceipt}
                   />
                 ))}
-              </AnimatePresence>
+              </>
             )}
           </div>
         </>

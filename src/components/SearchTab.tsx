@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import { LineChart as LineChartIcon, ArrowLeft } from "lucide-react";
 import UniversalSearchBar from "./UniversalSearchBar";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   LineChart as RechartsLineChart,
   Line,
@@ -275,19 +274,11 @@ function SearchTab() {
             <p>Nenhum item encontrado.</p>
           </div>
         ) : (
-          <AnimatePresence mode="popLayout">
+          <>
             {filteredItems.map((item, idx) => (
-              <motion.div
+              <div
                 key={`${item.normalized_name || item.name}-${item.purchasedAt}-${idx}`}
-                layout
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{
-                  duration: 0.2,
-                  layout: { type: "spring", stiffness: 300, damping: 30 }
-                }}
-                className="item-row"
+                className="item-row animated-item"
               >
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -353,9 +344,9 @@ function SearchTab() {
                     por {item.unit || "un."}
                   </div>
                 </div>
-              </motion.div>
+              </div>
             ))}
-          </AnimatePresence>
+          </>
         )}
       </div>
     </div>
