@@ -37,6 +37,7 @@ type ScannerState = {
   setTorch: (value: boolean) => void;
   torchSupported: boolean;
   setTorchSupported: (value: boolean) => void;
+  resetScannerState: () => void;
 };
 
 const defaultManualData: ScannerManualData = {
@@ -86,4 +87,27 @@ export const useScannerStore = create<ScannerState>()((set) => ({
   setTorch: (value) => set({ torch: value }),
   torchSupported: false,
   setTorchSupported: (value) => set({ torchSupported: value }),
+  resetScannerState: () =>
+    set({
+      currentReceipt: null,
+      loading: false,
+      scanning: false,
+      error: null,
+      duplicateReceipt: null,
+      manualMode: false,
+      manualData: {
+        establishment: "",
+        date: new Date().toLocaleDateString("pt-BR"),
+        items: [],
+      },
+      manualItem: {
+        name: "",
+        qty: "1",
+        unitPrice: "",
+      },
+      zoom: 1,
+      zoomSupported: false,
+      torch: false,
+      torchSupported: false,
+    }),
 }));

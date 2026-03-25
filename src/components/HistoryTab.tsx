@@ -513,7 +513,7 @@ function HistoryTab() {
             </div>
           </div>
           <h2 style={{ marginTop: "1.5rem", color: "#e2e8f0" }}>
-            Histórico Vazio
+            Histórico vazio
           </h2>
           <p
             style={{
@@ -534,7 +534,7 @@ function HistoryTab() {
               fontWeight: 500,
             }}
           >
-            Você também pode restaurar um backup JSON acima ⬆️
+            Você também pode restaurar um backup JSON acima.
           </p>
         </div>
       ) : (
@@ -561,7 +561,7 @@ function HistoryTab() {
                   marginBottom: "4px",
                 }}
               >
-                Total Gasto no Período
+                Total gasto no período
               </p>
               <h3 style={{ color: "#fff", fontSize: "1.8rem", fontWeight: 800 }}>
                 R${" "}
@@ -608,9 +608,9 @@ function HistoryTab() {
               setHistoryFilters({ ...historyFilters, sortOrder: val })
             }
             sortOptions={[
-              { value: "date", label: "📊 Data" },
-              { value: "value", label: "💰 Valor" },
-              { value: "store", label: "🏪 Mercado" },
+              { value: "date", label: "Data" },
+              { value: "value", label: "Valor" },
+              { value: "store", label: "Mercado" },
             ]}
             extraActions={
               <>
@@ -646,16 +646,16 @@ function HistoryTab() {
                       outline: "none",
                     }}
                   >
-                    <option value="all">📅 Todo período</option>
-                    <option value="this-month">📅 Este mês</option>
-                    <option value="last-3-months">📅 Últimos 3 meses</option>
-                    <option value="custom">📅 Personalizado</option>
+                    <option value="all">Todo período</option>
+                    <option value="this-month">Este mês</option>
+                    <option value="last-3-months">Últimos 3 meses</option>
+                    <option value="custom">Personalizado</option>
                   </select>
                 </div>
               </>
             }
           >
-            {/* Custom Period Date Pickers se necessário injetar dentro do card */}
+            {/* Custom period date pickers, se necessário injetar dentro do card */}
           </UniversalSearchBar>
 
           {/* Date pickers fora do UniversalSearchBar para manter layout limpo */}

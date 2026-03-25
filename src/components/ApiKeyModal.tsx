@@ -1,11 +1,25 @@
-import { useState, useEffect, useMemo } from "react";
-import { Key, ShieldCheck, X, Save, CheckCircle, AlertCircle, Cpu, RefreshCw } from "lucide-react";
+﻿import { useState, useEffect, useMemo } from "react";
+import {
+  Key,
+  ShieldCheck,
+  X,
+  Save,
+  CheckCircle,
+  AlertCircle,
+  Cpu,
+  RefreshCw,
+} from "lucide-react";
 import { toast } from "react-hot-toast";
 import { detectProvider, getApiModel, setApiModel } from "../utils/aiConfig";
 import { testAiConnection } from "../utils/aiClient";
 import type { ApiKeyModalProps } from "../types/ui";
 
-export default function ApiKeyModal({ isOpen, onClose, currentKey, onSave }: ApiKeyModalProps) {
+export default function ApiKeyModal({
+  isOpen,
+  onClose,
+  currentKey,
+  onSave,
+}: ApiKeyModalProps) {
   const [key, setKey] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
   const [testing, setTesting] = useState(false);
@@ -25,18 +39,23 @@ export default function ApiKeyModal({ isOpen, onClose, currentKey, onSave }: Api
 
   // Detectar provedor com base na chave atual (estado local)
   const provider = useMemo(() => detectProvider(key), [key]);
-  
+
   // Gerar lista de modelos combinando hardcoded + buscados da API
   const models = useMemo(() => {
     const isGoogle = provider === "Google AI Studio";
     const hardcoded = isGoogle
-      ? ["gemini-1.5-flash", "gemini-1.5-flash-lite", "gemini-1.5-pro", "gemini-1.0-pro"]
+      ? [
+          "gemini-1.5-flash",
+          "gemini-1.5-flash-lite",
+          "gemini-1.5-pro",
+          "gemini-1.0-pro",
+        ]
       : ["gpt-3.5-turbo", "gpt-4o-mini", "gpt-4o"];
-    
+
     // Unificar listas e remover duplicatas
     const all = Array.from(new Set([...hardcoded, ...fetchedModels]));
-    
-    // Garantir que o modelo selecionado apareça na lista (caso seja um customizado salvo)
+
+    // Garantir que o modelo selecionado apareça na lista (caso seja customizado)
     if (selectedModel && !all.includes(selectedModel)) {
       all.push(selectedModel);
     }
@@ -61,7 +80,7 @@ export default function ApiKeyModal({ isOpen, onClose, currentKey, onSave }: Api
       toast.error("Insira a chave para listar modelos");
       return;
     }
-    
+
     if (provider !== "Google AI Studio") {
       toast.error("Listagem automática disponível apenas para Google AI Studio");
       return;
@@ -71,7 +90,7 @@ export default function ApiKeyModal({ isOpen, onClose, currentKey, onSave }: Api
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${trimmedKey}`;
       const res = await fetch(url);
-      
+
       if (!res.ok) {
         throw new Error(`Erro na API (${res.status})`);
       }
@@ -80,8 +99,11 @@ export default function ApiKeyModal({ isOpen, onClose, currentKey, onSave }: Api
       if (data && data.models && Array.isArray(data.models)) {
         const names = data.models
           .map((m) => (m.name || "").replace("models/", ""))
-          .filter((name: string) => !name.includes('vision') && !name.includes('embedding'));
-        
+          .filter(
+            (name: string) =>
+              !name.includes("vision") && !name.includes("embedding"),
+          );
+
         setFetchedModels(names);
         toast.success(`${names.length} modelos encontrados!`);
       } else {
@@ -121,65 +143,132 @@ export default function ApiKeyModal({ isOpen, onClose, currentKey, onSave }: Api
 
   return (
     <div className="duplicate-modal-overlay" style={{ zIndex: 5000 }}>
-      <div className="glass-card duplicate-modal-card" style={{ maxWidth: "450px", border: "1px solid var(--primary)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+      <div
+        className="glass-card duplicate-modal-card"
+        style={{ maxWidth: "450px", border: "1px solid var(--primary)" }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "1.5rem",
+          }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <Key className="text-primary" size={24} color="var(--primary)" />
             <h2 style={{ color: "#fff", fontSize: "1.25rem", margin: 0 }}>
-              {currentKey ? "🔑 API Key configurada" : "Configurar IA"}
+              {currentKey ? "API Key configurada" : "Configurar IA"}
             </h2>
           </div>
-          <button 
-            onClick={onClose} 
-            style={{ background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer" }}
+          <button
+            onClick={onClose}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "#94a3b8",
+              cursor: "pointer",
+            }}
           >
             <X size={20} />
           </button>
         </div>
 
-        <div style={{ marginBottom: "1.5rem", background: "rgba(15, 23, 42, 0.4)", padding: "1rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.05)" }}>
-           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
-              <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Provedor detectado:</span>
-              <span style={{ fontSize: "0.75rem", color: "var(--primary)", fontWeight: "bold" }}>{provider}</span>
-           </div>
-           
-           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <label style={{ fontSize: "0.75rem", color: "#64748b" }}>Modelo:</label>
-                {provider === "Google AI Studio" && (
-                  <button
-                    onClick={handleListModels}
-                    disabled={fetchingModels || !key.trim()}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: "var(--primary)",
-                      fontSize: "0.7rem",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      opacity: !key.trim() ? 0.5 : 1
-                    }}
-                  >
-                    {fetchingModels ? <RefreshCw size={12} className="spin" /> : <Cpu size={12} />}
-                    Buscar Modelos
-                  </button>
-                )}
-              </div>
-              <select 
-                className="search-input" 
-                style={{ width: "100%", background: "var(--bg-color)", border: "1px solid var(--card-border)" }}
-                value={selectedModel}
-                onChange={(e) => setSelectedModel(e.target.value)}
-              >
-                {models.map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
-           </div>
+        <div
+          style={{
+            marginBottom: "1.5rem",
+            background: "rgba(15, 23, 42, 0.4)",
+            padding: "1rem",
+            borderRadius: "12px",
+            border: "1px solid rgba(255,255,255,0.05)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginBottom: "12px",
+            }}
+          >
+            <span style={{ fontSize: "0.75rem", color: "#64748b" }}>
+              Provedor detectado:
+            </span>
+            <span
+              style={{
+                fontSize: "0.75rem",
+                color: "var(--primary)",
+                fontWeight: "bold",
+              }}
+            >
+              {provider}
+            </span>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <label style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                Modelo:
+              </label>
+              {provider === "Google AI Studio" && (
+                <button
+                  onClick={handleListModels}
+                  disabled={fetchingModels || !key.trim()}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "var(--primary)",
+                    fontSize: "0.7rem",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    opacity: !key.trim() ? 0.5 : 1,
+                  }}
+                >
+                  {fetchingModels ? (
+                    <RefreshCw size={12} className="spin" />
+                  ) : (
+                    <Cpu size={12} />
+                  )}
+                  Buscar modelos
+                </button>
+              )}
+            </div>
+            <select
+              className="search-input"
+              style={{
+                width: "100%",
+                background: "var(--bg-color)",
+                border: "1px solid var(--card-border)",
+              }}
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+            >
+              {models.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div style={{ marginBottom: "1.5rem" }}>
-          <label style={{ display: "block", fontSize: "0.8rem", color: "#64748b", marginBottom: "0.5rem", fontWeight: "bold" }}>
+          <label
+            style={{
+              display: "block",
+              fontSize: "0.8rem",
+              color: "#64748b",
+              marginBottom: "0.5rem",
+              fontWeight: "bold",
+            }}
+          >
             API KEY
           </label>
           <div style={{ position: "relative" }}>
@@ -194,26 +283,60 @@ export default function ApiKeyModal({ isOpen, onClose, currentKey, onSave }: Api
                 setTestResult(null);
               }}
             />
-            <ShieldCheck size={18} style={{ position: "absolute", left: "1rem", top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
+            <ShieldCheck
+              size={18}
+              style={{
+                position: "absolute",
+                left: "1rem",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "#64748b",
+              }}
+            />
           </div>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <button 
-            className="btn" 
-            onClick={handleTest} 
+          <button
+            className="btn"
+            onClick={handleTest}
             disabled={testing}
-            style={{ 
-              background: testResult === "success" ? "rgba(16, 185, 129, 0.1)" : "rgba(255,255,255,0.05)",
-              border: testResult === "success" ? "1px solid var(--success)" : "1px solid var(--card-border)",
-              color: testResult === "success" ? "var(--success)" : "#fff"
+            style={{
+              background:
+                testResult === "success"
+                  ? "rgba(16, 185, 129, 0.1)"
+                  : "rgba(255,255,255,0.05)",
+              border:
+                testResult === "success"
+                  ? "1px solid var(--success)"
+                  : "1px solid var(--card-border)",
+              color: testResult === "success" ? "var(--success)" : "#fff",
             }}
           >
-            {testing ? "Testando..." : testResult === "success" ? <><CheckCircle size={18} /> Conexão OK</> : testResult === "error" ? <><AlertCircle size={18} /> Erro na conexão</> : "Testar conexão"}
+            {testing ? (
+              "Testando..."
+            ) : testResult === "success" ? (
+              <>
+                <CheckCircle size={18} /> Conexão OK
+              </>
+            ) : testResult === "error" ? (
+              <>
+                <AlertCircle size={18} /> Erro na conexão
+              </>
+            ) : (
+              "Testar conexão"
+            )}
           </button>
-          
+
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-            <button className="btn" onClick={onClose} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.05)" }}>
+            <button
+              className="btn"
+              onClick={onClose}
+              style={{
+                background: "transparent",
+                border: "1px solid rgba(255,255,255,0.05)",
+              }}
+            >
               Cancelar
             </button>
             <button className="btn btn-success" onClick={handleSave}>

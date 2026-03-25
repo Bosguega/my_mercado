@@ -88,7 +88,7 @@ const UniversalSearchBar = ({
         />
       </div>
 
-      {/* Seletor de Ordenação / Filtros / Ações Extras */}
+      {/* Seletor de ordenação / Filtros / Ações Extras */}
       <div
         style={{
           display: "flex",

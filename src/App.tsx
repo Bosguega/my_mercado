@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Scan, History as HistoryIcon, Search, LogOut, Book } from "lucide-react";
 import SearchTab from "./components/SearchTab";
 import HistoryTab from "./components/HistoryTab";
@@ -13,6 +13,7 @@ import { useSupabaseSession } from "./hooks/useSupabaseSession";
 import ApiKeyModal from "./components/ApiKeyModal";
 import type { AppTab } from "./types/ui";
 import { useReceiptsStore } from "./stores/useReceiptsStore";
+import { useScannerStore } from "./stores/useScannerStore";
 import { useUiStore } from "./stores/useUiStore";
 import "./index.css";
 
@@ -25,6 +26,7 @@ function App() {
     error: receiptsError,
     loadReceipts,
   } = useReceiptsStore();
+  const resetScannerState = useScannerStore((state) => state.resetScannerState);
 
   const tab = useUiStore((state) => state.tab);
   const setTab = useUiStore((state) => state.setTab);
@@ -35,8 +37,9 @@ function App() {
       loadReceipts();
     } else {
       clearReceipts();
+      resetScannerState();
     }
-  }, [clearReceipts, loadReceipts, sessionUser, setSessionUserId]);
+  }, [clearReceipts, loadReceipts, resetScannerState, sessionUser, setSessionUserId]);
 
   useEffect(() => {
     if (receiptsError) {
@@ -68,14 +71,14 @@ function App() {
           <p style={{ color: "#94a3b8", lineHeight: "1.6", marginBottom: "1rem" }}>
             Este deploy não tem o Supabase configurado. Para publicar no GitHub Pages, defina as variáveis
             <strong style={{ color: "#e2e8f0" }}> VITE_SUPABASE_URL</strong> e
-            <strong style={{ color: "#e2e8f0" }}> VITE_SUPABASE_ANON_KEY</strong> como <strong style={{ color: "#e2e8f0" }}>Secrets</strong> do repositório.
+            <strong style={{ color: "#e2e8f0" }}> VITE_SUPABASE_ANON_KEY</strong> como <strong style={{ color: "#e2e8f0" }}>secrets</strong> do repositório.
           </p>
           <div style={{ color: "#94a3b8", lineHeight: "1.6" }}>
             <p style={{ marginBottom: "0.5rem" }}><strong style={{ color: "#e2e8f0" }}>Passo a passo:</strong></p>
             <ol style={{ paddingLeft: "1.25rem", margin: 0 }}>
               <li>GitHub → Settings → Secrets and variables → Actions → New repository secret</li>
               <li>Crie <code>VITE_SUPABASE_URL</code> e <code>VITE_SUPABASE_ANON_KEY</code></li>
-              <li>Vá em Actions e aguarde o workflow “Deploy to GitHub Pages” rodar novamente</li>
+              <li>Vá em Actions e aguarde o workflow &quot;Deploy to GitHub Pages&quot; rodar novamente</li>
               <li>Depois, limpe o cache do site (Application → Clear storage) se ainda ficar em branco</li>
             </ol>
           </div>
@@ -128,6 +131,7 @@ function App() {
           </button>
           <button
             onClick={async () => {
+              resetScannerState();
               await logout();
               toast.success("Sessão encerrada.");
             }}

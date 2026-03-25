@@ -231,8 +231,8 @@ function SearchTab() {
         sortOrder={sortDirection}
         onSortOrderChange={setSortDirection}
         sortOptions={[
-          { value: "recent", label: "🕒 Recentes" },
-          { value: "price", label: "💰 Preço" }
+          { value: "recent", label: "Recentes" },
+          { value: "price", label: "Preço" }
         ]}
         extraActions={
           searchQuery && filteredItems.length > 0 && (

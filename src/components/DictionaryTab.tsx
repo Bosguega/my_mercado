@@ -88,8 +88,6 @@ function DictionaryTab() {
               })
             : receipt.items,
         }));
-
-        localStorage.setItem("@MyMercado:receipts", JSON.stringify(updated));
         return updated;
       });
 

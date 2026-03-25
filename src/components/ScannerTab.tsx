@@ -22,7 +22,7 @@ import { useReceiptScanner } from "../hooks/useReceiptScanner";
 import { useReceiptsStore } from "../stores/useReceiptsStore";
 import { useUiStore } from "../stores/useUiStore";
 
-// Skeleton para loading durante extraÃ§Ã£o
+// Skeleton para loading durante extração
 const ScannerSkeleton = () => (
   <div className="glass-card" style={{ padding: "2rem" }}>
     <div
@@ -102,18 +102,18 @@ function ScannerTab() {
   const handleLinkSubmit = () => {
     const rawUrl = pastedUrl.trim();
     if (!rawUrl) {
-      toast.error("Cole um link vÃ¡lido");
+      toast.error("Cole um link válido");
       return;
     }
 
     try {
       const parsed = new URL(rawUrl);
       if (!["http:", "https:"].includes(parsed.protocol)) {
-        toast.error("Link invÃ¡lido para NFC-e");
+        toast.error("Link inválido para NFC-e");
         return;
       }
     } catch {
-      toast.error("Link invÃ¡lido");
+      toast.error("Link inválido");
       return;
     }
 
@@ -123,14 +123,14 @@ function ScannerTab() {
   };
   const handleAddManualItem = () => {
     if (!manualItem.name?.trim() || !manualItem.unitPrice) {
-      toast.error("Preencha nome e preÃ§o do item");
+      toast.error("Preencha nome e preço do item");
       return;
     }
 
-    // Validar preÃ§o
+    // Validar preço
     const priceNum = parseBRL(manualItem.unitPrice);
     if (isNaN(priceNum) || priceNum < 0) {
-      toast.error("PreÃ§o invÃ¡lido! Use apenas nÃºmeros");
+      toast.error("Preço inválido! Use apenas números");
       return;
     }
 
@@ -204,7 +204,7 @@ function ScannerTab() {
           <input
             type="text"
             className="search-input"
-            placeholder="ðŸ›’ Nome do Mercado"
+            placeholder="Nome do Mercado"
             value={manualData.establishment}
             onChange={(e) =>
               setManualData({ ...manualData, establishment: e.target.value })
@@ -213,7 +213,7 @@ function ScannerTab() {
           <input
             type="text"
             className="search-input"
-            placeholder="ðŸ“… Data (DD/MM/AAAA)"
+            placeholder="Data (DD/MM/AAAA)"
             value={manualData.date}
             onChange={(e) =>
               setManualData({ ...manualData, date: e.target.value })
@@ -387,7 +387,7 @@ function ScannerTab() {
                 fontSize: "0.95rem"
               }}
             >
-              Aponte a cÃ¢mera para o QR Code ou faÃ§a upload da galeria.
+              Aponte a câmera para o QR Code ou faça upload da galeria.
             </p>
           </div>
 
@@ -405,9 +405,7 @@ function ScannerTab() {
               onClick={startCamera}
               disabled={loading || scanning}
             >
-              <Camera size={20} />
-              CÃ¢mera
-            </button>
+              <Camera size={20} />Câmera</button>
 
             <label
               className="btn"
@@ -798,10 +796,10 @@ function ScannerTab() {
                   justifyContent: "center",
                 }}
               >
-                <span style={{ fontSize: "24px" }}>âš ï¸</span>
+                <span style={{ fontSize: "24px" }}>⚠️</span>
               </div>
               <h2 style={{ color: "#fff", fontSize: "1.25rem" }}>
-                Nota JÃ¡ Existente
+                Nota Já Existente
               </h2>
             </div>
 
@@ -813,7 +811,7 @@ function ScannerTab() {
                 lineHeight: "1.6",
               }}
             >
-              Esta nota fiscal jÃ¡ estÃ¡ no seu histÃ³rico desde{" "}
+              Esta nota fiscal já está no seu histórico desde{" "}
               <strong style={{ color: "#fbbf24" }}>
                 {duplicateReceipt.date}
               </strong>
@@ -853,7 +851,7 @@ function ScannerTab() {
                 textAlign: "center",
               }}
             >
-              Isso substituirÃ¡ a nota anterior
+              Isso substituirá a nota anterior
             </p>
           </div>
         </div>

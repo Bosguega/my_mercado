@@ -168,7 +168,7 @@ export function useReceiptScanner({
       setLoading(true);
       try {
         if (!decodedText || typeof decodedText !== 'string') {
-          throw new Error('Conteudo do QR Code invalido.');
+          throw new Error('Conteúdo do QR Code inválido.');
         }
 
         setError(null);
@@ -180,7 +180,7 @@ export function useReceiptScanner({
           extractedData.items.length === 0
         ) {
           toast.error(
-            'Nao conseguimos ler os itens dessa nota. Verifique se o QR Code e de uma NFC-e valida.',
+            'Não conseguimos ler os itens dessa nota. Verifique se o QR Code é de uma NFC-e válida.',
           );
           setError('Falha ao extrair itens da nota.');
           return;
@@ -191,7 +191,7 @@ export function useReceiptScanner({
         if (isDuplicateResult(result)) {
           setDuplicateReceipt(extractedData);
           toast(
-            `Esta nota ja esta no seu historico desde ${result.existingReceipt.date.split(' ')[0]}`,
+            `Esta nota já está no seu histórico desde ${result.existingReceipt.date.split(' ')[0]}`,
             { icon: '⚠️' },
           );
         } else if (isSuccessResult(result)) {
@@ -202,7 +202,7 @@ export function useReceiptScanner({
         const message = err instanceof Error ? err.message : 'Desconhecido';
         toast.error('Erro ao processar nota. Tente novamente.');
         setError(
-          `Erro de conexao ou processamento: ${message}`,
+          `Erro de conexão ou processamento: ${message}`,
         );
       } finally {
         setLoading(false);
@@ -361,7 +361,7 @@ export function useReceiptScanner({
       } catch (err) {
         setScanning(false);
         toast.error(
-          'Camera nao disponivel. Verifique as permissoes ou se o site usa HTTPS.',
+          'Câmera não disponível. Verifique as permissões ou se o site usa HTTPS.',
         );
         console.error('Camera fail:', err);
       }
@@ -421,11 +421,11 @@ export function useReceiptScanner({
         if (result) {
           await handleScanSuccess(result.getText());
         } else {
-          throw new Error('Nao detectado');
+          throw new Error('Não detectado');
         }
       } catch (err) {
         console.error('Upload detection fail:', err);
-        toast.error('QR Code nao detectado na imagem.');
+        toast.error('QR Code Não detectado na imagem.');
         setLoading(false);
       } finally {
         if (imageUrl) URL.revokeObjectURL(imageUrl);
@@ -463,7 +463,7 @@ export function useReceiptScanner({
 
     const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
     if (!dateRegex.test(manualData.date)) {
-      toast.error('Data invalida! Use DD/MM/AAAA');
+      toast.error('Data inválida! Use DD/MM/AAAA');
       return;
     }
 
@@ -475,7 +475,7 @@ export function useReceiptScanner({
 
     if (hasInvalidItems) {
       toast.error(
-        'Existem itens com valores invalidos. Verifique os precos e quantidades.',
+        'Existem itens com valores inválidos. Verifique os preços e quantidades.',
       );
       return;
     }
