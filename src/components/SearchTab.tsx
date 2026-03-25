@@ -16,8 +16,8 @@ import { parseToDate } from "../utils/date";
 import { groupBy, filterBySearch, sortItems } from "../utils/analytics";
 import type { PurchasedItem, SearchSortBy } from "../types/ui";
 import type { Receipt, ReceiptItem } from "../types/domain";
-import { useReceiptsStore } from "../stores/useReceiptsStore";
 import { useUiStore } from "../stores/useUiStore";
+import { useAllReceiptsQuery } from "../hooks/queries/useReceiptsQuery";
 
 // Skeleton para itens da pesquisa
 const SkeletonSearch = () => (
@@ -49,8 +49,8 @@ const SkeletonSearch = () => (
 );
 
 function SearchTab() {
-  const savedReceipts = useReceiptsStore((state) => state.savedReceipts);
-  const loading = useReceiptsStore((state) => state.loading);
+  // React Query para dados de receipts
+  const { data: savedReceipts = [], isLoading: loading } = useAllReceiptsQuery();
   const searchQuery = useUiStore((state) => state.searchQuery);
   const setSearchQuery = useUiStore((state) => state.setSearchQuery);
   const sortOrder = useUiStore((state) => state.sortOrder);
@@ -79,7 +79,7 @@ function SearchTab() {
 
   // Memoize filtered and sorted items
   const { filteredItems, totalCount } = useMemo(() => {
-    const baseItems = searchQuery.trim() === "" 
+    const baseItems = searchQuery.trim() === ""
       ? allPurchasedItems.slice(0, 50)
       : filterBySearch(allPurchasedItems, searchQuery, ["name", "normalized_name", "category"]);
 
@@ -93,7 +93,7 @@ function SearchTab() {
     };
 
     const sorted = sortItems(baseItems, sortOrder, sortDirection, customSorters);
-    
+
     return {
       filteredItems: sorted.slice(0, 100),
       totalCount: sorted.length
@@ -108,7 +108,7 @@ function SearchTab() {
   // Memoize chart data calculation
   const chartData = useMemo(() => {
     if (!showChart) return [];
-    
+
     const allDates = new Set<string>();
     Object.keys(groupedItems).forEach((key) => {
       groupedItems[key].forEach((historyItem: PurchasedItem) => {
@@ -283,7 +283,7 @@ function SearchTab() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ 
+                transition={{
                   duration: 0.2,
                   layout: { type: "spring", stiffness: 300, damping: 30 }
                 }}

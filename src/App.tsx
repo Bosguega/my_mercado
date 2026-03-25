@@ -12,6 +12,7 @@ import type { AppTab } from "./types/ui";
 import { useReceiptsStore } from "./stores/useReceiptsStore";
 import { useScannerStore } from "./stores/useScannerStore";
 import { useUiStore } from "./stores/useUiStore";
+import { useAllReceiptsQuery } from "./hooks/queries/useReceiptsQuery";
 import "./index.css";
 
 // Lazy loading das abas para melhor performance
@@ -31,32 +32,31 @@ const TabSkeleton = () => (
 function App() {
   const { sessionUser, setSessionUser, authLoading } = useSupabaseSession();
 
-  const {
-    setSessionUserId,
-    clearReceipts,
-    error: receiptsError,
-    loadReceipts,
-  } = useReceiptsStore();
+  const setSessionUserId = useReceiptsStore((state) => state.setSessionUserId);
+  const setError = useReceiptsStore((state) => state.setError);
   const resetScannerState = useScannerStore((state) => state.resetScannerState);
 
   const tab = useUiStore((state) => state.tab);
   const setTab = useUiStore((state) => state.setTab);
 
+  // React Query para carregar receipts quando usuário logar
+  const { error: receiptsError } = useAllReceiptsQuery(!!sessionUser);
+
   useEffect(() => {
     setSessionUserId(sessionUser?.id ?? null);
-    if (sessionUser) {
-      loadReceipts();
-    } else {
-      clearReceipts();
+    if (!sessionUser) {
       resetScannerState();
     }
-  }, [clearReceipts, loadReceipts, resetScannerState, sessionUser, setSessionUserId]);
+  }, [resetScannerState, sessionUser, setSessionUserId]);
 
   useEffect(() => {
     if (receiptsError) {
+      setError(receiptsError);
       toast.error("Erro ao sincronizar dados com o servidor. Exibindo dados locais.");
+    } else {
+      setError(null);
     }
-  }, [receiptsError]);
+  }, [receiptsError, setError]);
 
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const { apiKey, setApiKey, hasKey } = useApiKey();

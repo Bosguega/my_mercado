@@ -19,8 +19,12 @@ import { useInfiniteReceipts } from "../hooks/useInfiniteReceipts";
 import type { HistoryFilters } from "../types/ui";
 import type { ConfirmDialogConfig } from "../types/ui";
 import type { Receipt, ReceiptItem } from "../types/domain";
-import { useReceiptsStore } from "../stores/useReceiptsStore";
 import { useUiStore } from "../stores/useUiStore";
+import {
+  useAllReceiptsQuery,
+  useDeleteReceipt,
+  useRestoreReceipts
+} from "../hooks/queries/useReceiptsQuery";
 
 // Moved to module scope: utiliza utilitário centralizado
 const parseDate = (d: string | Date) => parseToDate(d);
@@ -71,11 +75,10 @@ const SkeletonReceipt = () => (
 );
 
 function HistoryTab() {
-  const savedReceipts = useReceiptsStore((state) => state.savedReceipts);
-  const setSavedReceipts = useReceiptsStore((state) => state.setSavedReceipts);
-  const deleteReceipt = useReceiptsStore((state) => state.deleteReceipt);
-  const loading = useReceiptsStore((state) => state.loading);
-  const loadReceipts = useReceiptsStore((state) => state.loadReceipts);
+  // React Query para dados de receipts
+  const { data: savedReceipts = [], isLoading: loading, refetch: refetchReceipts } = useAllReceiptsQuery();
+  const deleteReceiptMutation = useDeleteReceipt();
+  const restoreReceiptsMutation = useRestoreReceipts();
 
   const historyFilter = useUiStore((state) => state.historyFilter);
   const setHistoryFilter = useUiStore((state) => state.setHistoryFilter);
@@ -342,26 +345,15 @@ function HistoryTab() {
             input.value = "";
           },
           onConfirm: async () => {
-            setSavedReceipts(restoredReceipts);
-            localStorage.setItem(
-              "@MyMercado:receipts",
-              JSON.stringify(restoredReceipts),
-            );
-
             try {
-              await restoreReceiptsToDB(restoredReceipts);
-              await loadReceipts();
+              await restoreReceiptsMutation.mutateAsync(restoredReceipts);
+              input.value = "";
             } catch (syncErr) {
               console.warn(
                 "Não foi possível sincronizar backup com o Supabase:",
                 syncErr,
               );
             }
-
-            toast.success(
-              `Backup restaurado com ${restoredReceipts.length} notas!`,
-            );
-            input.value = "";
           },
         });
       } catch (error) {
@@ -383,7 +375,7 @@ function HistoryTab() {
       confirmText: "Remover",
       danger: true,
       onConfirm: async () => {
-        await deleteReceipt(id);
+        await deleteReceiptMutation.mutateAsync(id);
       },
     });
   };
@@ -413,7 +405,7 @@ function HistoryTab() {
         </div>
         <div style={{ display: "flex", gap: "0.5rem" }}>
           <button
-            onClick={loadReceipts}
+            onClick={() => refetchReceipts()}
             className="btn"
             style={{
               padding: "0.5rem",

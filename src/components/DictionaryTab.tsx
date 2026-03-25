@@ -1,18 +1,18 @@
 import { useState, useEffect, useMemo } from "react";
 import {
-  Book, 
-  Trash2, 
-  Edit3, 
-  Save, 
-  X, 
+  Book,
+  Trash2,
+  Edit3,
+  Save,
+  X,
   RotateCcw
 } from "lucide-react";
 import UniversalSearchBar from "./UniversalSearchBar";
 import ConfirmDialog from "./ConfirmDialog";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  getFullDictionaryFromDB, 
-  updateDictionaryEntryInDB, 
+  getFullDictionaryFromDB,
+  updateDictionaryEntryInDB,
   deleteDictionaryEntryFromDB,
   clearDictionaryInDB,
   applyDictionaryEntryToSavedItems,
@@ -21,16 +21,16 @@ import { toast } from "react-hot-toast";
 import { filterBySearch, sortItems } from "../utils/analytics";
 import type { SortDirection, ConfirmDialogConfig } from "../types/ui";
 import type { DictionaryEntry, Receipt, ReceiptItem } from "../types/domain";
-import { useReceiptsStore } from "../stores/useReceiptsStore";
+import { useAllReceiptsQuery } from "../hooks/queries/useReceiptsQuery";
 
 const CATEGORIES = [
-  "Açougue", "Hortifruti", "Laticínios", "Padaria", 
+  "Açougue", "Hortifruti", "Laticínios", "Padaria",
   "Limpeza", "Higiene", "Bebidas", "Mercearia", "Petshop", "Outros"
 ];
 
 function DictionaryTab() {
-  const setSavedReceipts = useReceiptsStore((state) => state.setSavedReceipts);
-  const loadReceipts = useReceiptsStore((state) => state.loadReceipts);
+  // React Query para dados de receipts
+  const { data: savedReceipts = [], refetch: refetchReceipts } = useAllReceiptsQuery();
   const [dictionary, setDictionary] = useState<DictionaryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,26 +72,8 @@ function DictionaryTab() {
         category,
       );
 
-      setSavedReceipts((prev) => {
-        const updated = (prev || []).map((receipt: Receipt) => ({
-          ...receipt,
-          items: Array.isArray(receipt.items)
-            ? receipt.items.map((item: ReceiptItem) => {
-                const itemKey = item.normalized_key ?? item.normalizedKey;
-                if (itemKey !== key) return item;
-
-                return {
-                  ...item,
-                  normalized_name: normalizedName,
-                  category,
-                };
-              })
-            : receipt.items,
-        }));
-        return updated;
-      });
-
-      await loadReceipts();
+      // Atualizar cache do React Query
+      refetchReceipts();
 
       if (!updatedCount) {
         toast.success("Nenhum item salvo precisou ser atualizado.", { id: toastId });
@@ -123,9 +105,9 @@ function DictionaryTab() {
 
   const handleStartEdit = (item: DictionaryEntry) => {
     setEditingKey(item.key);
-    setEditForm({ 
-      normalized_name: item.normalized_name || "", 
-      category: item.category || "Outros" 
+    setEditForm({
+      normalized_name: item.normalized_name || "",
+      category: item.category || "Outros"
     });
   };
 
@@ -143,7 +125,7 @@ function DictionaryTab() {
         previousCategory !== nextCategory;
 
       await updateDictionaryEntryInDB(key, nextNormalizedName, nextCategory);
-      setDictionary(prev => prev.map(item => 
+      setDictionary(prev => prev.map(item =>
         item.key === key ? { ...item, normalized_name: nextNormalizedName, category: nextCategory } : item
       ));
       setEditingKey(null);
@@ -264,7 +246,7 @@ function DictionaryTab() {
     };
 
     const sorted = sortItems(filteredDictionary, sortBy, sortDirection, customSorters);
-    
+
     return {
       items: sorted.slice(0, 100),
       totalCount: sorted.length
@@ -273,183 +255,183 @@ function DictionaryTab() {
 
   return (
     <>
-    <div className="dictionary-tab">
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "1.25rem",
-        }}
-      >
-        <h2 className="section-title" style={{ marginBottom: "0" }}>
-          <Book color="var(--primary)" size={20} />
-          Dicionário
-        </h2>
-        <button
-          className="btn"
-          onClick={handleClearDictionary}
+      <div className="dictionary-tab">
+        <div
           style={{
-            background: "rgba(239, 68, 68, 0.1)",
-            border: "none",
-            color: "#f87171",
-            padding: "0.5rem",
-            borderRadius: "8px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "1.25rem",
           }}
-          title="Limpar Dicionário"
         >
-          <RotateCcw size={20} />
-        </button>
-      </div>
+          <h2 className="section-title" style={{ marginBottom: "0" }}>
+            <Book color="var(--primary)" size={20} />
+            Dicionário
+          </h2>
+          <button
+            className="btn"
+            onClick={handleClearDictionary}
+            style={{
+              background: "rgba(239, 68, 68, 0.1)",
+              border: "none",
+              color: "#f87171",
+              padding: "0.5rem",
+              borderRadius: "8px",
+            }}
+            title="Limpar Dicionário"
+          >
+            <RotateCcw size={20} />
+          </button>
+        </div>
 
-      <UniversalSearchBar
-        placeholder="Pesquisar no dicionário..."
-        value={searchQuery}
-        onChange={setSearchQuery}
-        sortValue={sortBy}
-        onSortChange={setSortBy}
-        sortOrder={sortDirection}
-        onSortOrderChange={setSortDirection}
-        sortOptions={[
-          { value: "recent", label: "RECENTE" },
-          { value: "alpha", label: "A-Z" }
-        ]}
-        extraActions={
-          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <span style={{ fontSize: "0.8rem", color: "#64748b", fontWeight: 500 }}>
-                CATEGORIA:
-              </span>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                style={{
-                  background: "rgba(59, 130, 246, 0.1)",
-                  border: "none",
-                  borderRadius: "6px",
-                  color: "var(--primary)",
-                  fontSize: "0.8rem",
-                  fontWeight: 600,
-                  padding: "0.25rem 0.5rem",
-                  cursor: "pointer",
-                  outline: "none",
-                }}
-              >
-                <option value="all">TODAS</option>
-                {CATEGORIES.map(cat => (
-                  <option key={cat} value={cat}>{cat.toUpperCase()}</option>
-                ))}
-              </select>
+        <UniversalSearchBar
+          placeholder="Pesquisar no dicionário..."
+          value={searchQuery}
+          onChange={setSearchQuery}
+          sortValue={sortBy}
+          onSortChange={setSortBy}
+          sortOrder={sortDirection}
+          onSortOrderChange={setSortDirection}
+          sortOptions={[
+            { value: "recent", label: "RECENTE" },
+            { value: "alpha", label: "A-Z" }
+          ]}
+          extraActions={
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <span style={{ fontSize: "0.8rem", color: "#64748b", fontWeight: 500 }}>
+                  CATEGORIA:
+                </span>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  style={{
+                    background: "rgba(59, 130, 246, 0.1)",
+                    border: "none",
+                    borderRadius: "6px",
+                    color: "var(--primary)",
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    padding: "0.25rem 0.5rem",
+                    cursor: "pointer",
+                    outline: "none",
+                  }}
+                >
+                  <option value="all">TODAS</option>
+                  {CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat.toUpperCase()}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                {sortedDictionary.totalCount > 100 ? "Exibindo 100+" : `${sortedDictionary.totalCount} itens`}
+              </div>
             </div>
-            <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
-              {sortedDictionary.totalCount > 100 ? "Exibindo 100+" : `${sortedDictionary.totalCount} itens`}
+          }
+        />
+
+        <div className="items-list" style={{ gap: "1rem" }}>
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "3rem" }}>
+              <div className="skeleton-line" style={{ width: "100%", height: "80px", marginBottom: "1rem" }} />
+              <div className="skeleton-line" style={{ width: "100%", height: "80px" }} />
             </div>
-          </div>
-        }
+          ) : sortedDictionary.items.length === 0 ? (
+            <div className="glass-card" style={{ textAlign: "center", padding: "3rem" }}>
+              <p style={{ color: "#64748b" }}>Nenhum item encontrado no dicionário.</p>
+            </div>
+          ) : (
+            <AnimatePresence mode="popLayout">
+              {sortedDictionary.items.map((item) => (
+                <motion.div
+                  key={item.key}
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{
+                    duration: 0.2,
+                    layout: { type: "spring", stiffness: 300, damping: 30 }
+                  }}
+                  className="glass-card"
+                  style={{ marginBottom: 0, padding: "1rem" }}
+                >
+                  {editingKey === item.key ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                      <div style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: "bold" }}>CHAVE: {item.key}</div>
+                      <input
+                        type="text"
+                        className="search-input"
+                        style={{ background: "var(--bg-color)" }}
+                        value={editForm.normalized_name}
+                        onChange={(e) => setEditForm({ ...editForm, normalized_name: e.target.value })}
+                        placeholder="Nome normalizado"
+                      />
+                      <select
+                        className="search-input"
+                        style={{ background: "var(--bg-color)" }}
+                        value={editForm.category}
+                        onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                      >
+                        {CATEGORIES.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                        <button className="btn btn-success" style={{ flex: 1 }} onClick={() => handleSaveEdit(item.key)}>
+                          <Save size={18} /> Salvar
+                        </button>
+                        <button className="btn" style={{ flex: 1 }} onClick={() => setEditingKey(null)}>
+                          <X size={18} /> Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                          <span style={{ color: "#fff", fontWeight: 600 }}>{item.normalized_name || "Sem nome"}</span>
+                          <span style={{ fontSize: "0.65rem", background: "rgba(59, 130, 246, 0.1)", padding: "1px 6px", borderRadius: "4px", color: "var(--primary)" }}>
+                            {item.category || "Outros"}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "#64748b", fontStyle: "italic" }}>
+                          ID: {item.key}
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <button
+                          onClick={() => handleStartEdit(item)}
+                          style={{ background: "rgba(59, 130, 246, 0.1)", border: "none", borderRadius: "8px", width: "36px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)" }}
+                        >
+                          <Edit3 size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEntry(item.key)}
+                          style={{ background: "rgba(239, 68, 68, 0.1)", border: "none", borderRadius: "8px", width: "36px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444" }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          )}
+        </div>
+      </div>
+      <ConfirmDialog
+        isOpen={Boolean(confirmDialog)}
+        title={confirmDialog?.title || ""}
+        message={confirmDialog?.message || ""}
+        confirmText={confirmDialog?.confirmText}
+        cancelText={confirmDialog?.cancelText}
+        danger={confirmDialog?.danger}
+        busy={confirmBusy}
+        onCancel={closeConfirm}
+        onConfirm={runConfirm}
       />
-
-      <div className="items-list" style={{ gap: "1rem" }}>
-        {loading ? (
-          <div style={{ textAlign: "center", padding: "3rem" }}>
-            <div className="skeleton-line" style={{ width: "100%", height: "80px", marginBottom: "1rem" }} />
-            <div className="skeleton-line" style={{ width: "100%", height: "80px" }} />
-          </div>
-        ) : sortedDictionary.items.length === 0 ? (
-          <div className="glass-card" style={{ textAlign: "center", padding: "3rem" }}>
-            <p style={{ color: "#64748b" }}>Nenhum item encontrado no dicionário.</p>
-          </div>
-        ) : (
-          <AnimatePresence mode="popLayout">
-            {sortedDictionary.items.map((item) => (
-              <motion.div
-                key={item.key}
-                layout
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ 
-                  duration: 0.2,
-                  layout: { type: "spring", stiffness: 300, damping: 30 }
-                }}
-                className="glass-card"
-                style={{ marginBottom: 0, padding: "1rem" }}
-              >
-                {editingKey === item.key ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                    <div style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: "bold" }}>CHAVE: {item.key}</div>
-                    <input 
-                      type="text" 
-                      className="search-input" 
-                      style={{ background: "var(--bg-color)" }}
-                      value={editForm.normalized_name}
-                      onChange={(e) => setEditForm({ ...editForm, normalized_name: e.target.value })}
-                      placeholder="Nome normalizado"
-                    />
-                    <select 
-                      className="search-input" 
-                      style={{ background: "var(--bg-color)" }}
-                      value={editForm.category}
-                      onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-                    >
-                      {CATEGORIES.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                    <div style={{ display: "flex", gap: "0.5rem" }}>
-                      <button className="btn btn-success" style={{ flex: 1 }} onClick={() => handleSaveEdit(item.key)}>
-                        <Save size={18} /> Salvar
-                      </button>
-                      <button className="btn" style={{ flex: 1 }} onClick={() => setEditingKey(null)}>
-                        <X size={18} /> Cancelar
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                        <span style={{ color: "#fff", fontWeight: 600 }}>{item.normalized_name || "Sem nome"}</span>
-                        <span style={{ fontSize: "0.65rem", background: "rgba(59, 130, 246, 0.1)", padding: "1px 6px", borderRadius: "4px", color: "var(--primary)" }}>
-                          {item.category || "Outros"}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: "0.75rem", color: "#64748b", fontStyle: "italic" }}>
-                        ID: {item.key}
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      <button 
-                        onClick={() => handleStartEdit(item)}
-                        style={{ background: "rgba(59, 130, 246, 0.1)", border: "none", borderRadius: "8px", width: "36px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)" }}
-                      >
-                        <Edit3 size={16} />
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteEntry(item.key)}
-                        style={{ background: "rgba(239, 68, 68, 0.1)", border: "none", borderRadius: "8px", width: "36px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444" }}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        )}
-      </div>
-    </div>
-    <ConfirmDialog
-      isOpen={Boolean(confirmDialog)}
-      title={confirmDialog?.title || ""}
-      message={confirmDialog?.message || ""}
-      confirmText={confirmDialog?.confirmText}
-      cancelText={confirmDialog?.cancelText}
-      danger={confirmDialog?.danger}
-      busy={confirmBusy}
-      onCancel={closeConfirm}
-      onConfirm={runConfirm}
-    />
     </>
   );
 }

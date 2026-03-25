@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   Scan,
   Camera,
@@ -8,19 +8,25 @@ import {
   Save,
   Plus,
   X,
-   Link as LinkIcon,
-   ZoomIn,
-   ZoomOut,
-   Zap,
-   ZapOff,
-   Aperture,
- } from "lucide-react";
+  Link as LinkIcon,
+  ZoomIn,
+  ZoomOut,
+  Zap,
+  ZapOff,
+  Aperture,
+} from "lucide-react";
 import { toast } from "react-hot-toast";
 import { parseBRL, formatBRL } from "../utils/currency";
-import type { ReceiptItem } from "../types/domain";
+import type { Receipt, ReceiptItem } from "../types/domain";
+
+type SaveReceiptResponse =
+  | { duplicate: true; existingReceipt: Receipt }
+  | { success: true; receipt: Receipt }
+  | { success: false; error: unknown };
 import { useReceiptScanner } from "../hooks/useReceiptScanner";
 import { useReceiptsStore } from "../stores/useReceiptsStore";
 import { useUiStore } from "../stores/useUiStore";
+import { useSaveReceipt } from "../hooks/queries/useReceiptsQuery";
 
 // Skeleton para loading durante extração
 const ScannerSkeleton = () => (
@@ -66,8 +72,29 @@ const ScannerSkeleton = () => (
 );
 
 function ScannerTab() {
-  const saveReceipt = useReceiptsStore((state) => state.saveReceipt);
+  const saveReceiptMutation = useSaveReceipt();
+  const sessionUserId = useReceiptsStore((state) => state.sessionUserId);
   const tab = useUiStore((state) => state.tab);
+
+  // Wrapper para adaptar a interface da mutation do React Query
+  const saveReceipt = useCallback(
+    async (receipt: Receipt, forceReplace?: boolean): Promise<SaveReceiptResponse> => {
+      const result = await saveReceiptMutation.mutateAsync({
+        receipt,
+        sessionUserId,
+        forceReplace,
+      });
+      // Garantir que o tipo de retorno seja compatível com SaveReceiptResponse
+      if ('duplicate' in result && result.duplicate) {
+        return { duplicate: true, existingReceipt: result.existingReceipt } as SaveReceiptResponse;
+      }
+      if ('success' in result && result.success) {
+        return { success: true, receipt: result.receipt } as SaveReceiptResponse;
+      }
+      return { success: false, error: 'Unknown error' } as SaveReceiptResponse;
+    },
+    [saveReceiptMutation, sessionUserId],
+  );
   const {
     manualMode,
     setManualMode,
@@ -559,18 +586,18 @@ function ScannerTab() {
           position: "relative"
         }}
       >
-         <video
-           id="reader-video"
-           autoPlay
-           muted
-           playsInline
-           style={{
-             width: "100%",
-             height: "auto",
-             display: "block",
-             objectFit: "cover",
-             minHeight: "300px",
-           }}
+        <video
+          id="reader-video"
+          autoPlay
+          muted
+          playsInline
+          style={{
+            width: "100%",
+            height: "auto",
+            display: "block",
+            objectFit: "cover",
+            minHeight: "300px",
+          }}
         />
         <div style={{
           position: "absolute",
@@ -584,12 +611,12 @@ function ScannerTab() {
           boxShadow: "0 0 0 4000px rgba(15, 23, 42, 0.7)",
           pointerEvents: "none"
         }}>
-           <div style={{ position: "absolute", top: -35, width: "100%", textAlign: "center", color: "#fff", fontSize: "0.85rem", fontWeight: "bold" }}>
-             Alinhe o QR Code
-           </div>
-           <div style={{ position: "absolute", bottom: -35, width: "100%", textAlign: "center", color: "#94a3b8", fontSize: "0.75rem" }}>
-             Dica: Afaste um pouco e use o Zoom se for pequeno
-           </div>
+          <div style={{ position: "absolute", top: -35, width: "100%", textAlign: "center", color: "#fff", fontSize: "0.85rem", fontWeight: "bold" }}>
+            Alinhe o QR Code
+          </div>
+          <div style={{ position: "absolute", bottom: -35, width: "100%", textAlign: "center", color: "#94a3b8", fontSize: "0.75rem" }}>
+            Dica: Afaste um pouco e use o Zoom se for pequeno
+          </div>
         </div>
 
         <div style={{
