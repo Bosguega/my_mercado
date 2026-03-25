@@ -9,6 +9,7 @@ export interface ReceiptItem {
   normalized_key?: string;
   normalized_name?: string;
   category?: string;
+  canonical_product_id?: string;
   qty?: string | number;
   quantity?: string | number;
   unit?: string;
@@ -41,6 +42,20 @@ export type DictionaryMap = Record<
   {
     normalized_name?: string;
     category?: string;
+    canonical_product_id?: string;
     [key: string]: unknown;
   }
 >;
+
+export interface CanonicalProduct {
+  id: string;
+  slug: string;
+  name: string;
+  category?: string;
+  brand?: string;
+  user_id?: string;
+  merge_count?: number;
+  created_at?: string;
+  updated_at?: string;
+  [key: string]: unknown;
+}

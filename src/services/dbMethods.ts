@@ -2,7 +2,7 @@ import { supabase } from "./supabaseClient";
 import { formatToISO, formatToBR } from "../utils/date";
 import { parseBRL } from "../utils/currency";
 import { toUserScopedReceiptId } from "../utils/receiptId";
-import type { DictionaryEntry, DictionaryMap, Receipt, ReceiptItem } from "../types/domain";
+import type { CanonicalProduct, DictionaryEntry, DictionaryMap, Receipt, ReceiptItem } from "../types/domain";
 
 type DictionaryUpdateEntry = Pick<DictionaryEntry, "key" | "normalized_name" | "category">;
 
@@ -475,6 +475,183 @@ export async function updateDictionary(entries: DictionaryUpdateEntry[]): Promis
 
     error = legacyResponse.error;
   }
+
+  if (error) throw error;
+}
+
+// =========================
+// CANONICAL PRODUCTS - CRUD
+// =========================
+
+export async function getCanonicalProducts(): Promise<CanonicalProduct[]> {
+  const user = await getUserOrThrow();
+  const client = requireSupabase();
+
+  const { data, error } = await client
+    .from("canonical_products")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("name", { ascending: true });
+
+  if (error) throw error;
+  return (data || []) as CanonicalProduct[];
+}
+
+export async function getCanonicalProduct(id: string): Promise<CanonicalProduct | null> {
+  const user = await getUserOrThrow();
+  const client = requireSupabase();
+
+  const { data, error } = await client
+    .from("canonical_products")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") return null; // Not found
+    throw error;
+  }
+  return data as CanonicalProduct;
+}
+
+export async function createCanonicalProduct(
+  product: Pick<CanonicalProduct, "slug" | "name" | "category" | "brand">
+): Promise<CanonicalProduct> {
+  const user = await getUserOrThrow();
+  const client = requireSupabase();
+
+  const { data, error } = await client
+    .from("canonical_products")
+    .insert({
+      ...product,
+      user_id: user.id,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as CanonicalProduct;
+}
+
+export async function updateCanonicalProduct(
+  id: string,
+  updates: Partial<Pick<CanonicalProduct, "name" | "category" | "brand">>
+): Promise<void> {
+  const user = await getUserOrThrow();
+  const client = requireSupabase();
+
+  const { error } = await client
+    .from("canonical_products")
+    .update(updates)
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) throw error;
+}
+
+export async function deleteCanonicalProduct(id: string): Promise<void> {
+  const user = await getUserOrThrow();
+  const client = requireSupabase();
+
+  // Verificar se há itens associados
+  const { count } = await client
+    .from("items")
+    .select("*", { count: "exact", head: true })
+    .eq("canonical_product_id", id);
+
+  if (count && count > 0) {
+    throw new Error(`Não é possível deletar: existem ${count} itens associados a este produto.`);
+  }
+
+  const { error } = await client
+    .from("canonical_products")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) throw error;
+}
+
+export async function mergeCanonicalProducts(
+  primaryId: string,
+  secondaryId: string
+): Promise<void> {
+  const user = await getUserOrThrow();
+  const client = requireSupabase();
+
+  // Verificar se ambos existem
+  const primary = await getCanonicalProduct(primaryId);
+  const secondary = await getCanonicalProduct(secondaryId);
+
+  if (!primary || !secondary) {
+    throw new Error("Produto canônico não encontrado");
+  }
+
+  // Mover associações de items
+  const { error: itemsError } = await client
+    .from("items")
+    .update({ canonical_product_id: primaryId })
+    .eq("canonical_product_id", secondaryId);
+
+  if (itemsError) throw itemsError;
+
+  // Mover associações de product_dictionary
+  const { error: dictError } = await client
+    .from("product_dictionary")
+    .update({ canonical_product_id: primaryId })
+    .eq("canonical_product_id", secondaryId);
+
+  if (dictError) throw dictError;
+
+  // Atualizar merge_count do primário
+  const { error: updateError } = await client
+    .from("canonical_products")
+    .update({
+      merge_count: (primary.merge_count || 1) + (secondary.merge_count || 1),
+    })
+    .eq("id", primaryId)
+    .eq("user_id", user.id);
+
+  if (updateError) throw updateError;
+
+  // Deletar secundário
+  const { error: deleteError } = await client
+    .from("canonical_products")
+    .delete()
+    .eq("id", secondaryId)
+    .eq("user_id", user.id);
+
+  if (deleteError) throw deleteError;
+}
+
+export async function associateItemToCanonicalProduct(
+  itemId: string,
+  canonicalProductId: string | null
+): Promise<void> {
+  await getUserOrThrow();
+  const client = requireSupabase();
+
+  const { error } = await client
+    .from("items")
+    .update({ canonical_product_id: canonicalProductId })
+    .eq("id", itemId);
+
+  if (error) throw error;
+}
+
+export async function associateDictionaryToCanonicalProduct(
+  key: string,
+  canonicalProductId: string | null
+): Promise<void> {
+  const user = await getUserOrThrow();
+  const client = requireSupabase();
+
+  const { error } = await client
+    .from("product_dictionary")
+    .update({ canonical_product_id: canonicalProductId })
+    .eq("user_id", user.id)
+    .eq("key", key);
 
   if (error) throw error;
 }
