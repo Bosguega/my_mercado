@@ -149,6 +149,34 @@ Inclui aba ativa, filtros de histórico, ordenação e busca.
 - Web Worker: `src/workers/receiptParser.worker.ts`
 - Hook do worker: `src/hooks/useReceiptParserWorker.ts`
 
+### 6. Separação de Responsabilidades: Zustand vs React Query
+
+**⚠️ Atenção**: Há sobreposição potencial entre Zustand Stores e React Query. A separação abaixo deve ser respeitada:
+
+| Responsabilidade | Zustand Store | React Query |
+|---|---|---|
+| **Estado global** | ✅ `savedReceipts` | ❌ |
+| **Operações de escrita** | ✅ `saveReceipt`, `deleteReceipt` | ✅ `useSaveReceipt`, `useDeleteReceipt` |
+| **Cache de leitura** | ❌ | ✅ `useReceiptsQuery`, `useInfiniteReceiptsQuery` |
+| **Fallback local** | ✅ `localStorage` | ❌ |
+| **Sincronização** | ✅ `loadReceipts` | ✅ Auto via `invalidateQueries` |
+
+**Regras de uso**:
+1. **Zustand (`useReceiptsStore`)**: Para estado global compartilhado entre componentes
+2. **React Query (`useReceiptsQuery`)**: Para cache de leitura e queries com paginação
+3. **Evitar duplicação**: Não chamar `loadReceipts` e `useReceiptsQuery` ao mesmo tempo
+4. **Invalidação**: Após `saveReceipt` ou `deleteReceipt`, usar `queryClient.invalidateQueries`
+
+**Exemplo de uso correto**:
+```typescript
+// Para salvar (operação de escrita)
+const { saveReceipt } = useReceiptsStore();
+await saveReceipt(receipt);
+
+// Para ler com cache (operação de leitura)
+const { data } = useReceiptsQuery(page, pageSize, filters);
+```
+
 ---
 
 ## Treeview
