@@ -7,6 +7,7 @@ import { isSupabaseConfigured } from "./services/supabaseClient";
 import { useApiKey } from "./hooks/useApiKey";
 import { useSupabaseSession } from "./hooks/useSupabaseSession";
 import ApiKeyModal from "./components/ApiKeyModal";
+import { PerformancePanel } from "./components/PerformancePanel";
 import type { AppTab } from "./types/ui";
 import { useReceiptsStore } from "./stores/useReceiptsStore";
 import { useScannerStore } from "./stores/useScannerStore";
@@ -235,6 +236,9 @@ function App() {
         currentKey={apiKey ?? undefined}
         onSave={handleSaveApiKey}
       />
+
+      {/* Performance Panel - apenas em desenvolvimento */}
+      <PerformancePanel />
     </div>
   );
 }

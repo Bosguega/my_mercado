@@ -18,6 +18,7 @@ Persistência principal: Supabase (PostgreSQL + Auth + RLS), com fallback local.
 9. [Fluxo de Dados](#fluxo-de-dados)
 10. [Regras de Arquitetura](#regras-de-arquitetura)
 11. [Otimizações de Performance](#otimizações-de-performance)
+12. [Testes de Performance](#testes-de-performance)
 
 ---
 
@@ -372,3 +373,99 @@ Cache (React Query)
 - Typecheck: `npm run typecheck`
 - Build: `npm run build`
 - Análise de bundle: `npx vite-bundle-analyzer`
+
+---
+
+## Testes de Performance
+
+### Scripts Disponíveis
+
+```bash
+# Análise de bundle
+npm run analyze
+
+# Teste com Lighthouse
+npm run lighthouse
+
+# Teste completo (build + lighthouse)
+npm run test:perf
+
+# Script automatizado personalizado
+npm run test:perf:auto
+```
+
+### Hook usePerformanceMonitor
+
+Monitora Core Web Vitals em tempo real:
+
+| Métrica | Descrição | Threshold Bom | Threshold Ruim |
+|---|---|---|---|
+| **FCP** | First Contentful Paint | < 1.8s | > 3s |
+| **LCP** | Largest Contentful Paint | < 2.5s | > 4s |
+| **FID** | First Input Delay | < 100ms | > 300ms |
+| **CLS** | Cumulative Layout Shift | < 0.1 | > 0.25 |
+| **TTFB** | Time to First Byte | < 800ms | > 1800ms |
+
+Métricas customizadas:
+- Tempo de renderização
+- Uso de memória (heap)
+- Tamanho do heap JavaScript
+
+### PerformancePanel
+
+Componente de desenvolvimento que exibe:
+- Score geral (good/needs-improvement/poor)
+- Todas as métricas Core Web Vitals
+- Cores indicativas por métrica
+- Painel expansível/colapsável
+- Apenas em modo desenvolvimento (`import.meta.env.DEV`)
+
+### Budget de Performance
+
+```javascript
+{
+  maxBundleSize: 2000,    // KB - Tamanho total do bundle
+  maxChunkSize: 500,      // KB - Tamanho máximo por chunk
+  maxInitialLoad: 1000    // KB - Tamanho do initial load
+}
+```
+
+### Script de Teste Automatizado
+
+`scripts/testPerformance.js` executa:
+1. Verificação de tipos (typecheck)
+2. Build de produção
+3. Análise de tamanho do bundle
+4. Verificação de budget
+5. Geração de relatório JSON
+
+Relatório gerado: `performance-report.json`
+
+### Integração CI/CD
+
+```yaml
+# Exemplo GitHub Actions
+- name: Performance Tests
+  run: |
+    npm run test:perf:auto
+    # Verificar se relatório está dentro do budget
+```
+
+### Métricas de Sucesso
+
+| Fase | Objetivo | Status |
+|---|---|---|
+| Fase 1 | Reduzir complexidade | ✅ |
+| Fase 2 | Paginação e lazy loading | ✅ |
+| Fase 3 | Cache avançado | ✅ |
+| Fase 4 | Monitoramento e testes | ✅ |
+
+### Resultados Esperados
+
+- **Bundle inicial**: < 1MB
+- **FCP**: < 1.8s
+- **LCP**: < 2.5s
+- **FID**: < 100ms
+- **CLS**: < 0.1
+- **Cache hit rate**: > 60%
+- **UI responsiva**: 60fps durante parsing

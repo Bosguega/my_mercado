@@ -9,7 +9,11 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "analyze": "npx vite-bundle-analyzer dist/stats.html",
+    "lighthouse": "npx lighthouse http://localhost:5173 --output=json --output-path=./lighthouse-report.json",
+    "test:perf": "npm run build && npm run lighthouse",
+    "test:perf:auto": "node scripts/testPerformance.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.99.3",
