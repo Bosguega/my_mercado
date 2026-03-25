@@ -539,6 +539,10 @@ export function useReceiptScanner({
 
   useEffect(() => {
     if (tab !== 'scan') stopCamera();
+
+    return () => {
+      stopCamera();
+    };
   }, [stopCamera, tab]);
 
   return {

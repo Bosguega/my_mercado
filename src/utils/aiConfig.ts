@@ -1,28 +1,59 @@
 /**
  * AI Configuration Utils
- * Handles storage of the AI API key in localStorage.
+ * Handles storage of the AI API key in sessionStorage.
  */
 
 const STORAGE_KEY = "ai_key";
 const MODEL_KEY = "ai_model";
 
-/**
- * Recupere a API Key salva no localStorage.
- * @returns {string|null}
- */
-export function getApiKey() {
-  return localStorage.getItem(STORAGE_KEY);
+function getSessionStorage(): Storage | null {
+  if (typeof window === "undefined") return null;
+  return window.sessionStorage;
+}
+
+function getLocalStorage(): Storage | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage;
 }
 
 /**
- * Salva a API Key no localStorage.
+ * Recupera a API Key da sessao atual.
+ * Se existir chave legada no localStorage, migra para sessionStorage.
+ * @returns {string|null}
+ */
+export function getApiKey() {
+  const session = getSessionStorage();
+  if (!session) return null;
+
+  const inSession = session.getItem(STORAGE_KEY);
+  if (inSession) return inSession;
+
+  const local = getLocalStorage();
+  const legacy = local?.getItem(STORAGE_KEY) ?? null;
+  if (legacy) {
+    session.setItem(STORAGE_KEY, legacy);
+    local?.removeItem(STORAGE_KEY);
+    return legacy;
+  }
+
+  return null;
+}
+
+/**
+ * Salva a API Key no sessionStorage.
  * @param {string} key 
  */
 export function setApiKey(key: string | null | undefined) {
+  const session = getSessionStorage();
+  const local = getLocalStorage();
+  if (!session) return;
+
   if (key) {
-    localStorage.setItem(STORAGE_KEY, key.trim());
+    session.setItem(STORAGE_KEY, key.trim());
+    local?.removeItem(STORAGE_KEY);
   } else {
-    localStorage.removeItem(STORAGE_KEY);
+    session.removeItem(STORAGE_KEY);
+    local?.removeItem(STORAGE_KEY);
   }
 }
 

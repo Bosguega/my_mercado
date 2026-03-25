@@ -4,6 +4,8 @@ import { normalizeKey } from "../utils/normalize";
 import type { AiNormalizationResult } from "../types/ai";
 import type { DictionaryMap, ReceiptItem } from "../types/domain";
 
+const isDev = import.meta.env.DEV;
+
 // ==============================
 // Remover peso variavel
 // ==============================
@@ -62,7 +64,9 @@ export async function processItemsPipeline(rawItems: ReceiptItem[] = []): Promis
     const nameForKey = stripVariableInfo(item.name, item.unit, item.qty);
     const key = normalizeKey(nameForKey);
 
-    console.log(`[Pipeline] Input: "${item.name}" -> Key: "${key}" (from: "${nameForKey}")`);
+    if (isDev) {
+      console.log(`[Pipeline] Input: "${item.name}" -> Key: "${key}" (from: "${nameForKey}")`);
+    }
     return {
       ...item,
       normalized_key: key,
@@ -83,9 +87,11 @@ export async function processItemsPipeline(rawItems: ReceiptItem[] = []): Promis
       );
       if (fallbackEntry) {
         dictEntry = fallbackEntry;
-        console.log(
-          `[Pipeline] Fallback find for "${item.name}": matched by normalized_name "${dictEntry.normalized_name}"`,
-        );
+        if (isDev) {
+          console.log(
+            `[Pipeline] Fallback find for "${item.name}": matched by normalized_name "${dictEntry.normalized_name}"`,
+          );
+        }
       }
     }
 

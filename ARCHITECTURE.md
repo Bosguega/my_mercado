@@ -38,16 +38,16 @@ O usuário escaneia o QR Code de notas fiscais eletrônicas brasileiras (NFC-e),
 ```mermaid
 graph TD
     UI["Interface React (PWA)"]
-    App["App.jsx — Orquestrador"]
-    Hook["useReceipts.js — State Management"]
+    App["App.tsx — Orquestrador"]
+    Hook["useReceipts.ts — State Management"]
     Analytics["Analytics Engine (utils/analytics/)"]
-    Pipeline["Pipeline (productService.js)"]
-    Services["Conversão Sefaz (receiptParser.js)"]
+    Pipeline["Pipeline (productService.ts)"]
+    Services["Conversão Sefaz (receiptParser.ts)"]
     AI["IA — Google Gemini / OpenAI (BYOK)"]
     DictionaryTab["Aba Dicionário (Correção Manual)"]
     Dictionary["Tabela product_dictionary (Cache)"]
     Supabase["Supabase (Relacional: receipts, items)"]
-    LocalStorage["localStorage (API Key & Fallback)"]
+    LocalStorage["sessionStorage (API Key) + localStorage (Fallback de dados)"]
 
     UI --> App
     App --> Hook
@@ -78,6 +78,7 @@ O My Mercado utiliza uma stack moderna voltada para performance, resiliência e 
 
 ### **Frontend & Framework**
 - **React 18**: Biblioteca principal para construção da interface baseada em componentes.
+- **TypeScript 5.9**: Tipagem estática em toda a base (`.ts`/`.tsx`) para reduzir regressões na evolução do app.
 - **Vite 6**: Ferramenta de build e dev server de próxima geração, focada em velocidade e compatibilidade de plugins.
 - **Vite PWA Plugin**: Transforma o site em um Progressive Web App instalável com suporte offline básico.
 - **Framer Motion**: Motor de animações utilizado para reordenamento fluido de listas e transições de interface.
@@ -97,6 +98,7 @@ O My Mercado utiliza uma stack moderna voltada para performance, resiliência e 
 ### **Inteligência Artificial (BYOK)**
 - **Google Gemini / OpenAI API**: Utilizadas para normalizar nomes brutos de produtos e categorizá-los automaticamente.
 - **Abordagem BYOK (Bring Your Own Key)**: O usuário fornece sua própria chave, garantindo privacidade e descentralização de custos.
+- **Armazenamento de Chave em Sessão**: A API Key é mantida em `sessionStorage` (com migração automática de legado em `localStorage`), reduzindo persistência indevida em disco.
 - **Model Discovery**: Suporte a busca dinâmica de modelos disponíveis na conta do Google AI Studio diretamente pelo modal de configuração.
 
 ### **Câmera & Scraping**
@@ -105,7 +107,7 @@ O My Mercado utiliza uma stack moderna voltada para performance, resiliência e 
 - **DOMParser Nativo**: Extração de dados estruturados a partir do HTML "sujo" retornado pelos portais governamentais.
 
 ### **Interface & Visualização**
-- **Universal Components**: Centralização de componentes de UI como `UniversalSearchBar.jsx` para garantir consistência visual e lógica entre as abas.
+- **Universal Components**: Centralização de componentes de UI como `UniversalSearchBar.tsx` para garantir consistência visual e lógica entre as abas.
 - **Lucide React**: Biblioteca de ícones vetoriais modernos.
 - **Recharts**: Biblioteca de gráficos para visualização das tendências de preços dos produtos.
 - **React Hot Toast**: Sistema de notificações dinâmicas para feedback de ações (sucesso, erro, avisos).
@@ -127,8 +129,8 @@ Abaixo estão listadas as dependências principais e de desenvolvimento com suas
 | `@supabase/supabase-js` | `2.99.3` |
 | `@zxing/library` | `0.21.3` |
 | `framer-motion` | `12.38.0` |
-| `lucide-react` | `0.577.0" |
-| `prop-types` | `15.8.1" |
+| `lucide-react` | `0.577.0` |
+| `prop-types` | `15.8.1` |
 | `react` | `18.3.1` |
 | `react-dom` | `18.3.1` |
 | `react-hot-toast` | `2.6.0` |
@@ -137,18 +139,20 @@ Abaixo estão listadas as dependências principais e de desenvolvimento com suas
 ### **Dependências de Desenvolvimento (DevDependencies)**
 | Biblioteca | Versão |
 |---|---|
-| `@eslint/js` | `9.13.0" |
+| `@eslint/js` | `9.13.0` |
 | `@types/react` | `18.3.12` |
 | `@types/react-dom` | `18.3.1` |
-| `@vitejs/plugin-basic-ssl` | `1.2.0" |
-| `@vitejs/plugin-react` | `4.3.0" |
+| `@vitejs/plugin-basic-ssl` | `1.2.0` |
+| `@vitejs/plugin-react` | `4.3.0` |
 | `eslint` | `9.13.0` |
 | `eslint-plugin-react` | `7.37.2` |
 | `eslint-plugin-react-hooks` | `5.0.0` |
 | `eslint-plugin-react-refresh` | `0.4.14` |
 | `globals` | `15.11.0` |
-| `vite` | `6.0.0" |
-| `vite-plugin-pwa` | `0.21.0" |
+| `typescript` | `5.9.3` |
+| `typescript-eslint` | `8.57.2` |
+| `vite` | `6.0.0` |
+| `vite-plugin-pwa` | `0.21.0` |
 
 [↑ Voltar ao índice](#índice)
 
@@ -162,16 +166,16 @@ Abaixo estão listadas as dependências principais e de desenvolvimento com suas
 
 A entidade central do sistema. Uma nota é criada a partir da leitura do QR Code de uma NFC-e ou inserida manualmente pelo usuário.
 
-Arquivo principal: `src/App.jsx` — funções `saveReceipt`, `deleteReceipt` (via `useReceipts.js`)
+Arquivo principal: `src/App.tsx` — funções `saveReceipt`, `deleteReceipt` (via `useReceipts.ts`)
 
 Fluxo de escaneamento:
 
 ```
 Usuário aponta câmera para o QR Code (ou cola link)
 ↓
-receiptParser.js extrai os itens brutos via rotação de 3 CORS Proxies (resiliência)
+receiptParser.ts extrai os itens brutos via rotação de 3 CORS Proxies (resiliência)
 ↓
-productService.js (Pipeline): normaliza chaves via regex avançado (preserva 5kg, remove KG genérico)
+productService.ts (Pipeline): normaliza chaves via regex avançado (preserva 5kg, remove KG genérico)
 ↓
 Consulta ao Dicionário Global (Supabase) para evitar chamadas de IA desnecessárias
 ↓
@@ -179,20 +183,20 @@ Itens desconhecidos são enviados em lote para a IA (Gemini/OpenAI) com prompt r
 ↓
 Dicionário é atualizado (incluindo categorias como 'Petshop')
 ↓
-dbMethods.js persiste a nota e itens com segurança numérica (parseBRL)
+dbMethods.ts persiste a nota e itens com segurança numérica (parseBRL)
 ```
 
 ---
 
 ## 2. Scraping Frontend-Only (Sefaz)
 
-Navegadores bloqueiam requisições diretas a portais governamentais (Sefaz SP) por CORS. Como não rodamos mais um servidor Node.js, contornamos isso passando a requisição por um proxy de CORS gratuito. Para garantir resiliência, o sistema rotaciona entre 3 proxies diferentes (`corsproxy.io`, `allorigins`, `cors-anywhere`) caso um falhe ou bloqueie o IP. O navegador recebe o texto em HTML sujo e o converte nativamente via `DOMParser` no serviço `receiptParser.js`.
+Navegadores bloqueiam requisições diretas a portais governamentais (Sefaz SP) por CORS. Como não rodamos mais um servidor Node.js, contornamos isso passando a requisição por um proxy de CORS gratuito. Para garantir resiliência, o sistema rotaciona entre 3 proxies diferentes (`corsproxy.io`, `allorigins`, `cors-anywhere`) caso um falhe ou bloqueie o IP. O navegador recebe o texto em HTML sujo e o converte nativamente via `DOMParser` no serviço `receiptParser.ts`.
 
 ---
 
 ## 3. Persistência em Nuvem (BaaS)
 
-A estrutura antiga em SQLite foi completamente suprimida a favor do Supabase (BaaS em PostgreSQL). Todo o tratamento (`select`, `upsert`, `delete`) acontece no cliente usando o SDK do Supabase. O `localStorage` da aplicação continua sendo atualizado apenas como fallback emergencial ou para leitura rápida offline.
+A estrutura antiga em SQLite foi completamente suprimida a favor do Supabase (BaaS em PostgreSQL). Todo o tratamento (`select`, `upsert`, `delete`) acontece no cliente usando o SDK do Supabase. O `localStorage` da aplicação continua sendo usado apenas como fallback emergencial para dados de notas; a API Key de IA fica restrita à sessão (`sessionStorage`).
 
 ---
 
@@ -200,8 +204,8 @@ A estrutura antiga em SQLite foi completamente suprimida a favor do Supabase (Ba
 
 Todos os itens são armazenados individualmente na tabela `items`. Isso permite uma normalização poderosa via IA, onde um item "ARROZ TIO JOAO 5KG" é vinculado a uma chave única, permitindo rastrear o menor preço de "Arroz" independente da variação do nome na nota. O sistema remove unidades genéricas (KG, UN) mas preserva medidas quantitativas (5kg, 350ml) para diferenciar produtos.
 
-Arquivo principal: `src/components/SearchTab.jsx`, `src/components/DictionaryTab.jsx`
-Apoio: `src/utils/currency.js`, `src/utils/date.js`
+Arquivo principal: `src/components/SearchTab.tsx`, `src/components/DictionaryTab.tsx`
+Apoio: `src/utils/currency.ts`, `src/utils/date.ts`
 
 Fluxo:
 ```
@@ -228,35 +232,35 @@ my_mercado/
 ├── public/                     # Assets estáticos e ícones do PWA
 ├── src/                        # Frontend React (Vite)
 │   ├── components/
-│   │   ├── ApiKeyModal.jsx     # Configuração de chave própria (BYOK)
-│   │   ├── DictionaryTab.jsx   # Gerenciamento manual de normalização
-│   │   ├── ScannerTab.jsx      
-│   │   ├── HistoryTab.jsx      
-│   │   ├── SearchTab.jsx       
-│   │   └── UniversalSearchBar.jsx # Barra de busca e filtros unificada
+│   │   ├── ApiKeyModal.tsx     # Configuração de chave própria (BYOK)
+│   │   ├── DictionaryTab.tsx   # Gerenciamento manual de normalização
+│   │   ├── ScannerTab.tsx      
+│   │   ├── HistoryTab.tsx      
+│   │   ├── SearchTab.tsx       
+│   │   └── UniversalSearchBar.tsx # Barra de busca e filtros unificada
 │   │
 │   ├── hooks/
-│   │   ├── useApiKey.js        # Hook para gestão de estado da Key/IA
-│   │   └── useReceipts.js      # Centraliza lógica de Notas e Banco
+│   │   ├── useApiKey.ts        # Hook para gestão de estado da Key/IA
+│   │   └── useReceipts.ts      # Centraliza lógica de Notas e Banco
 │   │
 │   ├── services/
-│   │   ├── productService.js   # Pipeline de IA, Dicionário e Normalização
-│   │   ├── dbMethods.js        # Persistência Relacional (CRUD e Backup)
-│   │   ├── receiptParser.js    # Decodificação do HTML da Sefaz (com Proxy Rotation)
-│   │   └── auth.js             # Lógica Supabase Auth
+│   │   ├── productService.ts   # Pipeline de IA, Dicionário e Normalização
+│   │   ├── dbMethods.ts        # Persistência Relacional (CRUD e Backup)
+│   │   ├── receiptParser.ts    # Decodificação do HTML da Sefaz (com Proxy Rotation)
+│   │   └── auth.ts             # Lógica Supabase Auth
 │   │
 │   ├── utils/
 │   │   ├── analytics/          # Analytics Engine (Filtros, Agrupamentos, Cálculos)
-│   │   │   ├── groupBy.js
-│   │   │   ├── aggregate.js
-│   │   │   ├── filters.js
-│   │   │   ├── timeSeries.js
-│   │   │   └── index.js
-│   │   ├── aiConfig.js         # Persistência local da API Key
-│   │   ├── currency.js         # Parsing e formatação BRL
-│   │   └── date.js             # Padronização de datas ISO/BR
+│   │   │   ├── groupBy.ts
+│   │   │   ├── aggregate.ts
+│   │   │   ├── filters.ts
+│   │   │   ├── timeSeries.ts
+│   │   │   └── index.ts
+│   │   ├── aiConfig.ts         # Persistência da API Key em sessão (com migração de legado)
+│   │   ├── currency.ts         # Parsing e formatação BRL
+│   │   └── date.ts             # Padronização de datas ISO/BR
 │   │
-│   ├── App.jsx                 # Orquestrador global (Abas e Mobile Nav)
+│   ├── App.tsx                 # Orquestrador global (Abas e Mobile Nav)
 │   └── index.css               # Design System (Glassmorphism e Responsividade)
 ├── .env                        # Chaves e URLs do Supabase (VITE_SUPABASE_...)
 ├── index.html                  # Entry point HTML & PWA manifest link
@@ -273,20 +277,20 @@ my_mercado/
 
 ```mermaid
 graph TD
-    main["main.jsx"] --> App
-    App --> useReceipts["hooks/useReceipts.js"]
-    useReceipts --> dbMethods["services/dbMethods.js"]
-    useReceipts --> productService["services/productService.js"]
+    main["main.tsx"] --> App
+    App --> useReceipts["hooks/useReceipts.ts"]
+    useReceipts --> dbMethods["services/dbMethods.ts"]
+    useReceipts --> productService["services/productService.ts"]
     
     App --> ScannerTab
     App --> HistoryTab
     App --> SearchTab
     App --> DictionaryTab
     
-    dbMethods --> supabase["supabaseClient.js"]
+    dbMethods --> supabase["supabaseClient.ts"]
     productService --> AI["Gemini / OpenAI"]
 
-    receiptParser["services/receiptParser.js"] -- "Fetch via Proxy Rotation" --> proxies["CORS Proxy Pool"]
+    receiptParser["services/receiptParser.ts"] -- "Fetch via Proxy Rotation" --> proxies["CORS Proxy Pool"]
     proxies --> Sefaz["Sefaz SP"]
 ```
 
@@ -375,16 +379,16 @@ using (auth.uid() = user_id);
 
 | Quero alterar | Arquivo principal | Arquivo de apoio |
 |---|---|---|
-| Lógica de escaneamento da câmera | `src/components/ScannerTab.jsx` | `src/App.jsx` |
-| Gerenciamento de Notas (CRUD) | `src/hooks/useReceipts.js` | `src/services/dbMethods.js` |
-| Configuração de IA (BYOK) | `src/components/ApiKeyModal.jsx` | `src/utils/aiConfig.js` |
-| Processamento de Itens / IA | `src/services/productService.js` | `src/hooks/useApiKey.js` |
-| Dicionário e Normalização Manual | `src/components/DictionaryTab.jsx` | `src/services/productService.js` |
-| Scraping / Captura de dados da nota | `src/services/receiptParser.js` | — |
-| Comunicação com banco de dados | `src/services/dbMethods.js` | `src/services/supabaseClient.js` |
-| Processamento e Filtros de Dados | `src/utils/analytics/` | `src/components/UniversalSearchBar.jsx` |
-| Gráfico de tendência de preços | `src/components/SearchTab.jsx` | `src/utils/analytics/` |
-| Estilização e Layout Mobile | `src/index.css` | `src/App.jsx` |
+| Lógica de escaneamento da câmera | `src/components/ScannerTab.tsx` | `src/App.tsx` |
+| Gerenciamento de Notas (CRUD) | `src/hooks/useReceipts.ts` | `src/services/dbMethods.ts` |
+| Configuração de IA (BYOK) | `src/components/ApiKeyModal.tsx` | `src/utils/aiConfig.ts` |
+| Processamento de Itens / IA | `src/services/productService.ts` | `src/hooks/useApiKey.ts` |
+| Dicionário e Normalização Manual | `src/components/DictionaryTab.tsx` | `src/services/productService.ts` |
+| Scraping / Captura de dados da nota | `src/services/receiptParser.ts` | — |
+| Comunicação com banco de dados | `src/services/dbMethods.ts` | `src/services/supabaseClient.ts` |
+| Processamento e Filtros de Dados | `src/utils/analytics/` | `src/components/UniversalSearchBar.tsx` |
+| Gráfico de tendência de preços | `src/components/SearchTab.tsx` | `src/utils/analytics/` |
+| Estilização e Layout Mobile | `src/index.css` | `src/App.tsx` |
 
 [↑ Voltar ao índice](#índice)
 
@@ -396,11 +400,11 @@ using (auth.uid() = user_id);
 
 ## Escaneamento da NFC-e
 ```
-Câmera ou Link → itens extraídos via receiptParser.js (Pool de Proxies)
+Câmera ou Link → itens extraídos via receiptParser.ts (Pool de Proxies)
 ↓
-normalize.js: gera chaves únicas preservando volumes e variantes (ex: "COCA COLA 2L", "LEITE INTEGRAL")
+normalize.ts: gera chaves únicas preservando volumes e variantes (ex: "COCA COLA 2L", "LEITE INTEGRAL")
 ↓
-productService.js: separa itens de peso variável (Hortifruti/Carnes) para agrupar por nome base
+productService.ts: separa itens de peso variável (Hortifruti/Carnes) para agrupar por nome base
 ↓
 Consulta ao product_dictionary via Supabase para identificar itens conhecidos
 ↓
@@ -422,8 +426,8 @@ Nota é salva no banco relacional (receipts + items) com datas padronizadas
 # Regras de Arquitetura
 
 1. **Sem servidor Node.js backend local.** O app deve se manter leve como PWA. Toda interligação externa (Sefaz, Postgres) deve ser feita usando o ecossistema frontend (React, Fetch, APIs de Supabase).
-2. **`localStorage` atua apenas como cópia.** O histórico primordial vive no bucket do Supabase. O localStorage garante que a leitura não crashe se a pessoa abrir o PWA no celular sem internet.
-3. **Parseamento unicamente em `.js` puros (separação das Views).** Lógica pesada de `DOMParser` e IA fica isolada em serviços e hooks, não no `App.jsx`.
+2. **`localStorage` atua apenas como cópia de dados de notas.** O histórico primordial vive no bucket do Supabase. A API Key de IA usa `sessionStorage` para reduzir exposição.
+3. **Parseamento e regras de domínio em serviços/hooks tipados (`.ts`).** Lógica pesada de `DOMParser` e IA fica isolada fora das views, não no `App.tsx`.
 4. **Mobile-First Design.** O layout deve ser otimizado para touch, com navegação inferior e visual "glassmorphism" moderno.
 
 [↑ Voltar ao índice](#índice)
@@ -439,10 +443,13 @@ Nota é salva no banco relacional (receipts + items) com datas padronizadas
 | Analytics Engine | Lógica dentro de cada aba (Search/History) | Centralizar cálculos e filtros em um motor de funções puras (`src/utils/analytics/`) reduz duplicação, facilita manutenção e permite que a UI foque apenas na exibição. |
 | Downgrade Vite 6 | Manter Vite 8 | O Vite 8 é muito recente e causou conflitos de dependências peer com plugins essenciais como `vite-plugin-pwa` e `basic-ssl`. O downgrade garante estabilidade no build do GitHub Actions. |
 | Manual Chunks (Build) | Bundle único (SPA padrão) | Com o crescimento das bibliotecas (Recharts, Supabase), o bundle ultrapassou 500kB. A divisão manual melhora o tempo de carregamento inicial e a performance do PWA. |
-| Componentes Universais | Componentes locais por aba | O uso de `UniversalSearchBar.jsx` unifica a lógica de busca e ordenação, garantindo que o usuário tenha a mesma experiência em todas as abas do app. |
+| Componentes Universais | Componentes locais por aba | O uso de `UniversalSearchBar.tsx` unifica a lógica de busca e ordenação, garantindo que o usuário tenha a mesma experiência em todas as abas do app. |
 | Migração Relacional (Adeus JSONB) | Guardar itens dentro da nota como JSON | O modelo JSONB dificultava buscas cross-nota (ex: "Qual o preço médio da maçã em todas as notas?"). O modelo relacional de `items` torna a pesquisa instantânea e rica. |
 | BYOK (Bring Your Own Key) | API Key fixa no servidor / Proxy | Como o app não tem backend centralizado, a abordagem BYOK (o usuário fornece sua chave Gemini/OpenAI) garante privacidade, custo zero para o desenvolvedor e longevidade do app. |
+| API Key em Sessão | Persistir API Key indefinidamente em `localStorage` | A chave foi movida para `sessionStorage` (com migração automática de legado) para reduzir risco em cenários de XSS e exposição persistente. |
 | IA em Lote (Batching) | IA por item individual | Chamar a IA para cada item separadamente é lento e consome tokens de forma ineficiente. O pipeline agrupa itens desconhecidos em lotes de 10, reduzindo latência e custos. |
+| Logs de Pipeline apenas em DEV | Logs de debug em produção | Logs detalhados do pipeline foram condicionados a `import.meta.env.DEV`, reduzindo exposição de dados e ruído em produção. |
+| Cleanup de Câmera no Unmount | Parar câmera apenas ao trocar de aba | O hook de scanner agora garante `stopCamera()` no cleanup do `useEffect`, evitando stream preso e vazamento de recurso em desmontagem inesperada. |
 | Aba Dicionário | Confiar 100% na IA | IA pode errar categorias ou normalizações. A aba Dicionário permite ao usuário corrigir manualmente e limpar o cache, garantindo dados perfeitos. |
 | Normalização Granular | Remover volumes da chave | Chaves de normalização agora preservam volumes (ex: 1L, 2L, 350ml) para que o app diferencie preços de tamanhos diferentes, mas agrupam pesos variáveis (Hortifruti) para simplificar o dicionário. |
 | Rotação de Proxies | Proxy único fixo | Evita que o app pare de funcionar caso um proxy gratuito específico sofra queda ou bloqueio por parte da Sefaz. |
@@ -528,3 +535,4 @@ Servidores governamentais detestam requisições massivas. Embora utilizemos uma
 Quando abrimos a aplicação ela sincroniza com o Supabase. Caso o PWA seja manipulado longo tempo 100% offline, as alterações são mantidas em memória/localStorage, mas exigem conexão para persistência final no banco relacional.
 
 [↑ Voltar ao índice](#índice)
+
