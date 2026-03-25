@@ -1,9 +1,5 @@
-﻿import { useState, useEffect } from "react";
+﻿import { useState, useEffect, lazy, Suspense } from "react";
 import { Scan, History as HistoryIcon, Search, LogOut, Book } from "lucide-react";
-import SearchTab from "./components/SearchTab";
-import HistoryTab from "./components/HistoryTab";
-import ScannerTab from "./components/ScannerTab";
-import DictionaryTab from "./components/DictionaryTab";
 import Login from "./components/Login";
 import { Toaster, toast } from "react-hot-toast";
 import { logout } from "./services/auth";
@@ -16,6 +12,20 @@ import { useReceiptsStore } from "./stores/useReceiptsStore";
 import { useScannerStore } from "./stores/useScannerStore";
 import { useUiStore } from "./stores/useUiStore";
 import "./index.css";
+
+// Lazy loading das abas para melhor performance
+const ScannerTab = lazy(() => import("./components/ScannerTab"));
+const HistoryTab = lazy(() => import("./components/HistoryTab"));
+const SearchTab = lazy(() => import("./components/SearchTab"));
+const DictionaryTab = lazy(() => import("./components/DictionaryTab"));
+
+// Componente de loading para Suspense
+const TabSkeleton = () => (
+  <div className="glass-card" style={{ padding: "2rem", textAlign: "center" }}>
+    <div className="skeleton-line" style={{ width: "60%", height: "20px", margin: "0 auto 1rem" }} />
+    <div className="skeleton-line" style={{ width: "80%", height: "16px", margin: "0 auto" }} />
+  </div>
+);
 
 function App() {
   const { sessionUser, setSessionUser, authLoading } = useSupabaseSession();
@@ -154,10 +164,12 @@ function App() {
       </header>
 
       <main style={{ minHeight: "60vh" }}>
-        {tab === "scan" && <ScannerTab />}
-        {tab === "history" && <HistoryTab />}
-        {tab === "search" && <SearchTab />}
-        {tab === "dictionary" && <DictionaryTab />}
+        <Suspense fallback={<TabSkeleton />}>
+          {tab === "scan" && <ScannerTab />}
+          {tab === "history" && <HistoryTab />}
+          {tab === "search" && <SearchTab />}
+          {tab === "dictionary" && <DictionaryTab />}
+        </Suspense>
       </main>
 
       <Toaster

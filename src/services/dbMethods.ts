@@ -62,12 +62,26 @@ function isLegacyDictionarySchemaError(error: unknown): boolean {
   );
 }
 
-// GET
-export async function getAllReceiptsFromDB(): Promise<Receipt[]> {
+// GET - Paginado
+export async function getReceiptsPaginated(
+  page: number = 1,
+  pageSize: number = 20,
+  filters?: {
+    search?: string;
+    period?: string;
+    startDate?: string;
+    endDate?: string;
+    sortBy?: string;
+    sortOrder?: "asc" | "desc";
+  }
+): Promise<{ data: Receipt[]; hasMore: boolean; total: number }> {
   await getUserOrThrow();
   const client = requireSupabase();
 
-  const { data, error } = await client
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = client
     .from("receipts")
     .select(`
       id,
@@ -84,9 +98,43 @@ export async function getAllReceiptsFromDB(): Promise<Receipt[]> {
         unit,
         price
       )
-    `)
-    .order("created_at", { ascending: false })
-    .limit(2000);
+    `, { count: "exact" });
+
+  // Aplicar filtro de busca
+  if (filters?.search) {
+    query = query.ilike("establishment", `%${filters.search}%`);
+  }
+
+  // Aplicar filtro de período
+  if (filters?.period && filters.period !== "all") {
+    const now = new Date();
+    if (filters.period === "this-month") {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      query = query.gte("date", start.toISOString()).lte("date", end.toISOString());
+    } else if (filters.period === "last-3-months") {
+      const start = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+      query = query.gte("date", start.toISOString());
+    } else if (filters.period === "custom" && filters.startDate && filters.endDate) {
+      query = query.gte("date", filters.startDate).lte("date", filters.endDate);
+    }
+  }
+
+  // Aplicar ordenação
+  const sortBy = filters?.sortBy || "date";
+  const sortOrder = filters?.sortOrder || "desc";
+
+  if (sortBy === "date") {
+    query = query.order("date", { ascending: sortOrder === "asc" });
+  } else if (sortBy === "store") {
+    query = query.order("establishment", { ascending: sortOrder === "asc" });
+  } else {
+    query = query.order("created_at", { ascending: sortOrder === "asc" });
+  }
+
+  query = query.range(from, to);
+
+  const { data, error, count } = await query;
 
   if (error) {
     console.error("Erro ao buscar notas:", error);
@@ -94,7 +142,7 @@ export async function getAllReceiptsFromDB(): Promise<Receipt[]> {
   }
 
   const rows = (data || []) as DbReceiptRow[];
-  return rows.map((row) => ({
+  const receipts = rows.map((row) => ({
     id: row.id,
     establishment: row.establishment,
     date: formatToBR(row.date),
@@ -115,6 +163,18 @@ export async function getAllReceiptsFromDB(): Promise<Receipt[]> {
       };
     }),
   }));
+
+  return {
+    data: receipts,
+    hasMore: to < (count || 0),
+    total: count || 0,
+  };
+}
+
+// GET - Todas (mantido para compatibilidade)
+export async function getAllReceiptsFromDB(): Promise<Receipt[]> {
+  const result = await getReceiptsPaginated(1, 2000);
+  return result.data;
 }
 
 // RESTORE

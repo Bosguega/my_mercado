@@ -45,7 +45,7 @@ export default defineConfig(({ mode }) => {
   return {
     base,
     plugins: [
-      react(), 
+      react(),
       useBasicSsl ? basicSsl() : null,
       VitePWA({
         registerType: 'autoUpdate',
@@ -60,7 +60,7 @@ export default defineConfig(({ mode }) => {
           start_url: base,
           scope: base,
           icons: [
-             {
+            {
               src: 'pwa-192x192.png',
               sizes: '192x192',
               type: 'image/png',
@@ -94,6 +94,15 @@ export default defineConfig(({ mode }) => {
               }
               if (id.includes('lucide-react')) {
                 return 'vendor-ui';
+              }
+              if (id.includes('@tanstack/react-query')) {
+                return 'vendor-query';
+              }
+              if (id.includes('react-window')) {
+                return 'vendor-virtual';
+              }
+              if (id.includes('@zxing/library')) {
+                return 'vendor-scanner';
               }
             }
           },
