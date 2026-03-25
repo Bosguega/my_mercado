@@ -28,7 +28,8 @@ Persistência principal: Supabase (PostgreSQL + Auth + RLS), com fallback local.
 graph TD
     UI["Interface React (PWA)"]
     App["App.tsx - Shell/Navegação"]
-    Stores["Zustand Stores (ui, receipts, scanner)"]
+    Stores["Zustand Stores (ui, scanner)"]
+    Query["React Query (Dados + Cache)"]
     ScannerHook["useReceiptScanner.ts - Scanner Orchestration"]
     Analytics["Analytics Engine (utils/analytics/)"]
     Pipeline["Pipeline (productService.ts)"]
@@ -37,27 +38,28 @@ graph TD
     Dictionary["Tabela product_dictionary (Cache)"]
     Supabase["Supabase (receipts, items)"]
     LocalStorage["sessionStorage + localStorage"]
-    Query["React Query (Cache Avançado)"]
     Worker["Web Worker (Parser)"]
 
     UI --> App
     UI --> Stores
+    UI --> Query
     App --> Stores
+    App --> Query
     Stores --> ScannerHook
-    Stores --> Analytics
+    Query --> ScannerHook
+    Query --> Analytics
     ScannerHook --> Pipeline
     Pipeline --> Services
     Pipeline --> Dictionary
     Pipeline --> AI
     Pipeline -- "Persistência" --> Supabase
-    Stores --> LocalStorage
+    Query --> LocalStorage
     Analytics --> UI
-    App --> Query
     Services --> Worker
 ```
 
 Regra principal de dependência:
-**Interface -> Stores/Hook de Scanner -> Analytics -> Pipeline/Serviços -> Supabase/Proxies**
+**Interface -> Stores (UI) + React Query (Dados) -> Pipeline/Serviços -> Supabase/Proxies**
 
 ---
 
@@ -113,14 +115,22 @@ Regra principal de dependência:
 
 ### 1. Notas (Receipt)
 Estado e operações de notas estão centralizados em:
-- `src/stores/useReceiptsStore.ts`
+- `src/hooks/queries/useReceiptsQuery.ts` (React Query)
 
-Esse store concentra:
-- carregamento (`loadReceipts`)
-- salvamento (`saveReceipt`)
-- remoção (`deleteReceipt`)
-- fallback local (`@MyMercado:receipts`)
-- sincronização por usuário autenticado (`sessionUserId`)
+Os hooks do React Query concentram:
+- carregamento (`useAllReceiptsQuery`, `useReceiptsQuery`, `useInfiniteReceiptsQuery`)
+- salvamento (`useSaveReceipt` com detecção de duplicatas)
+- remoção (`useDeleteReceipt` com atualização otimista)
+- restauração (`useRestoreReceipts`)
+- fallback local integrado (localStorage)
+- sincronização automática via `invalidateQueries`
+
+O Zustand store (`useReceiptsStore.ts`) agora contém apenas:
+- `sessionUserId` - ID do usuário logado
+- `error` - Estado de erro
+- `setSessionUserId` - Setter para ID do usuário
+- `setError` - Setter para erro
+- `clearError` - Limpar erro
 
 ### 2. Scanner
 Orquestração:
@@ -151,31 +161,50 @@ Inclui aba ativa, filtros de histórico, ordenação e busca.
 
 ### 6. Separação de Responsabilidades: Zustand vs React Query
 
-**⚠️ Atenção**: Há sobreposição potencial entre Zustand Stores e React Query. A separação abaixo deve ser respeitada:
+**✅ Arquitetura Migrada**: React Query é agora a fonte única da verdade para dados remotos. Zustand é usado apenas para estado de UI.
 
 | Responsabilidade | Zustand Store | React Query |
 |---|---|---|
-| **Estado global** | ✅ `savedReceipts` | ❌ |
-| **Operações de escrita** | ✅ `saveReceipt`, `deleteReceipt` | ✅ `useSaveReceipt`, `useDeleteReceipt` |
-| **Cache de leitura** | ❌ | ✅ `useReceiptsQuery`, `useInfiniteReceiptsQuery` |
-| **Fallback local** | ✅ `localStorage` | ❌ |
-| **Sincronização** | ✅ `loadReceipts` | ✅ Auto via `invalidateQueries` |
+| **Dados de receipts** | ❌ | ✅ `useAllReceiptsQuery`, `useReceiptsQuery`, `useInfiniteReceiptsQuery` |
+| **Operações de escrita** | ❌ | ✅ `useSaveReceipt`, `useDeleteReceipt`, `useRestoreReceipts` |
+| **Cache de leitura** | ❌ | ✅ Cache automático com staleTime e invalidação |
+| **Fallback local** | ❌ | ✅ localStorage integrado no React Query |
+| **Sincronização** | ❌ | ✅ Auto via `invalidateQueries` e `refetch` |
+| **Estado de UI** | ✅ `sessionUserId`, `error` | ❌ |
+| **Filtros e abas** | ✅ `useUiStore` | ❌ |
+| **Scanner** | ✅ `useScannerStore` | ❌ |
 
 **Regras de uso**:
-1. **Zustand (`useReceiptsStore`)**: Para estado global compartilhado entre componentes
-2. **React Query (`useReceiptsQuery`)**: Para cache de leitura e queries com paginação
-3. **Evitar duplicação**: Não chamar `loadReceipts` e `useReceiptsQuery` ao mesmo tempo
-4. **Invalidação**: Após `saveReceipt` ou `deleteReceipt`, usar `queryClient.invalidateQueries`
+1. **React Query**: Fonte única para todos os dados de receipts (leitura e escrita)
+2. **Zustand**: Apenas para estado de UI que não vem do servidor
+3. **Cache Inteligente**: React Query gerencia stale time, refetch on focus, invalidação automática
+4. **Offline Support**: Fallback localStorage integrado no React Query
 
 **Exemplo de uso correto**:
 ```typescript
-// Para salvar (operação de escrita)
-const { saveReceipt } = useReceiptsStore();
-await saveReceipt(receipt);
+// Para ler dados (operação de leitura)
+const { data: receipts = [], isLoading } = useAllReceiptsQuery();
 
-// Para ler com cache (operação de leitura)
-const { data } = useReceiptsQuery(page, pageSize, filters);
+// Para salvar (operação de escrita)
+const saveReceiptMutation = useSaveReceipt();
+await saveReceiptMutation.mutateAsync({ receipt, sessionUserId });
+
+// Para deletar (operação de escrita)
+const deleteReceiptMutation = useDeleteReceipt();
+await deleteReceiptMutation.mutateAsync(receiptId);
+
+// Para estado de UI (não dados)
+const sessionUserId = useReceiptsStore((state) => state.sessionUserId);
+const tab = useUiStore((state) => state.tab);
 ```
+
+**Benefícios da Nova Arquitetura**:
+- **Single Source of Truth**: React Query gerencia todo o cache de dados
+- **Cache Inteligente**: Stale time, refetch on focus, invalidação automática
+- **Optimistic Updates**: UI mais responsiva com atualizações imediatas
+- **Menos Código**: Removeu ~100 linhas de lógica duplicada
+- **Melhor DX**: DevTools do React Query para debugging
+- **Offline Support**: Fallback localStorage integrado
 
 ---
 
@@ -264,27 +293,27 @@ graph TD
 
     App --> uiStore["stores/useUiStore.ts"]
     App --> receiptsStore["stores/useReceiptsStore.ts"]
+    App --> receiptsQuery["hooks/queries/useReceiptsQuery.ts"]
 
     ScannerTab --> scannerHook["hooks/useReceiptScanner.ts"]
     scannerHook --> scannerStore["stores/useScannerStore.ts"]
-    scannerHook --> receiptsStore
+    scannerHook --> receiptsQuery
     scannerHook --> worker["workers/receiptParser.worker.ts"]
 
-    HistoryTab --> receiptsStore
+    HistoryTab --> receiptsQuery
     HistoryTab --> infiniteHook["hooks/useInfiniteReceipts.ts"]
     HistoryTab --> ReceiptCard["components/ReceiptCard.tsx"]
 
-    SearchTab --> receiptsStore
-    DictionaryTab --> receiptsStore
+    SearchTab --> receiptsQuery
+    DictionaryTab --> receiptsQuery
 
-    receiptsStore --> dbMethods["services/dbMethods.ts"]
-    receiptsStore --> productService["services/productService.ts"]
+    receiptsQuery --> dbMethods["services/dbMethods.ts"]
+    receiptsQuery --> productService["services/productService.ts"]
 
     dbMethods --> supabase["services/supabaseClient.ts"]
     productService --> ai["Gemini / OpenAI"]
 
-    QueryProvider --> receiptsQuery["hooks/queries/useReceiptsQuery.ts"]
-    receiptsQuery --> dbMethods
+    QueryProvider --> receiptsQuery
 ```
 
 ---
@@ -326,7 +355,7 @@ create table public.product_dictionary (
 | Quero alterar | Arquivo principal | Arquivo de apoio |
 |---|---|---|
 | Escaneamento (câmera/upload/link/manual) | `src/hooks/useReceiptScanner.ts` | `src/stores/useScannerStore.ts` |
-| CRUD de notas e sincronização | `src/stores/useReceiptsStore.ts` | `src/services/dbMethods.ts` |
+| CRUD de notas e sincronização | `src/hooks/queries/useReceiptsQuery.ts` | `src/services/dbMethods.ts` |
 | Estado de abas/filtros | `src/stores/useUiStore.ts` | `src/components/*Tab.tsx` |
 | Dicionário manual | `src/components/DictionaryTab.tsx` | `src/services/dbMethods.ts` |
 | Tendência de preços | `src/components/SearchTab.tsx` | `src/utils/analytics/` |
@@ -343,18 +372,23 @@ create table public.product_dictionary (
 ```text
 Camera/Upload/Link -> useReceiptScanner -> receiptParser (ou Web Worker)
 -> productService (normaliza/categoriza)
--> useReceiptsStore.saveReceipt
+-> useSaveReceipt (React Query mutation)
 -> dbMethods -> Supabase (receipts + items)
 
 Histórico/Pesquisa/Dicionário
--> componentes leem stores (ui + receipts)
+-> componentes leem React Query (useAllReceiptsQuery)
 -> analytics utils para filtro/ordenação/agregação
 -> render da UI
 
 Cache (React Query)
--> useReceiptsQuery/useInfiniteReceiptsQuery
+-> useAllReceiptsQuery/useReceiptsQuery/useInfiniteReceiptsQuery
 -> dbMethods (com cache automático)
 -> UI otimizada
+
+Estado de UI (Zustand)
+-> useUiStore (abas, filtros)
+-> useScannerStore (estado do scanner)
+-> useReceiptsStore (sessionUserId, error)
 ```
 
 ---
@@ -362,15 +396,17 @@ Cache (React Query)
 ## Regras de Arquitetura
 
 1. Sem backend Node local; app continua frontend-first (PWA).
-2. Estado global compartilhado fica em stores Zustand.
-3. Componentes de tela não devem concentrar regra de negócio de persistência.
-4. Parse e lógica de domínio ficam em `services/` e hooks tipados.
-5. `localStorage` é fallback; fonte principal é Supabase.
-6. Mobile-first e UX consistente (confirmações, feedback por toast, navegação inferior).
-7. Componentes pequenos e focados (máximo ~200 linhas).
-8. Hooks customizados para lógica reutilizável.
-9. React Query para cache avançado e sincronização.
-10. Web Workers para processamento pesado não bloqueante.
+2. **React Query é a fonte única da verdade** para dados remotos (receipts, items).
+3. **Zustand é usado apenas para estado de UI** (sessionUserId, error, filtros, abas, scanner).
+4. Componentes de tela não devem concentrar regra de negócio de persistência.
+5. Parse e lógica de domínio ficam em `services/` e hooks tipados.
+6. `localStorage` é fallback integrado no React Query; fonte principal é Supabase.
+7. Mobile-first e UX consistente (confirmações, feedback por toast, navegação inferior).
+8. Componentes pequenos e focados (máximo ~200 linhas).
+9. Hooks customizados para lógica reutilizável.
+10. **Cache Inteligente**: React Query gerencia stale time, refetch on focus, invalidação automática.
+11. **Optimistic Updates**: UI mais responsiva com atualizações imediatas.
+12. Web Workers para processamento pesado não bloqueante.
 
 ---
 
