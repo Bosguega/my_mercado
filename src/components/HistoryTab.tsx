@@ -11,9 +11,11 @@ import { toast } from "react-hot-toast";
 import UniversalSearchBar from "./UniversalSearchBar";
 import ConfirmDialog from "./ConfirmDialog";
 import { restoreReceiptsToDB } from "../services/dbMethods";
-import { parseBRL } from "../utils/currency";
+import { parseBRL, formatBRL } from "../utils/currency";
 import { parseToDate } from "../utils/date";
+import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from "date-fns";
 import { calculateReceiptTotal, calculateTotalSpent } from "../utils/analytics";
+
 import { ReceiptCard } from "./ReceiptCard";
 import { useInfiniteReceipts } from "../hooks/useInfiniteReceipts";
 import type { HistoryFilters } from "../types/ui";
@@ -81,53 +83,28 @@ function HistoryTab() {
     // Filter by period
     if (historyFilters.period !== "all") {
       const now = new Date();
-      const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      thisMonthStart.setHours(0, 0, 0, 0);
-      const thisMonthEnd = new Date(
-        now.getFullYear(),
-        now.getMonth() + 1,
-        0,
-        23,
-        59,
-        59,
-      );
-      thisMonthEnd.setHours(23, 59, 59, 999);
-      const last3Months = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-      last3Months.setHours(0, 0, 0, 0);
+      const thisMonth = { start: startOfMonth(now), end: endOfMonth(now) };
+      const last3Months = startOfMonth(subMonths(now, 3));
 
       filtered = filtered.filter((receipt: Receipt) => {
         const receiptDate = parseToDate(receipt.date);
         if (!receiptDate) return false;
-        
-        receiptDate.setHours(0, 0, 0, 0);
-
-        let passes = false;
 
         if (historyFilters.period === "this-month") {
-          passes = receiptDate >= thisMonthStart && receiptDate <= thisMonthEnd;
+          return isWithinInterval(receiptDate, thisMonth);
         } else if (historyFilters.period === "last-3-months") {
-          passes = receiptDate >= last3Months;
+          return receiptDate >= last3Months;
         } else if (
           historyFilters.period === "custom" &&
           historyFilters.startDate &&
           historyFilters.endDate
         ) {
-          const [sYear, sMonth, sDay] = historyFilters.startDate
-            .split("-")
-            .map(Number);
-          const startDate = new Date(sYear, sMonth - 1, sDay, 0, 0, 0, 0);
-
-          const [eYear, eMonth, eDay] = historyFilters.endDate
-            .split("-")
-            .map(Number);
-          const endDate = new Date(eYear, eMonth - 1, eDay, 23, 59, 59, 999);
-
-          passes = receiptDate >= startDate && receiptDate <= endDate;
-        } else {
-          passes = true;
+          const start = new Date(historyFilters.startDate + "T00:00:00");
+          const end = new Date(historyFilters.endDate + "T23:59:59");
+          return isWithinInterval(receiptDate, { start, end });
         }
 
-        return passes;
+        return true;
       });
     }
 
@@ -428,10 +405,7 @@ function HistoryTab() {
                 Total gasto no período
               </p>
               <h3 style={{ color: "#fff", fontSize: "1.8rem", fontWeight: 800 }}>
-                R${" "}
-                {calculateTotalSpent(finalFilteredReceipts.items, parseBRL)
-                  .toFixed(2)
-                  .replace(".", ",")}
+                R$ {formatBRL(calculateTotalSpent(finalFilteredReceipts.items, parseBRL))}
               </h3>
             </div>
             <div style={{ textAlign: "right" }}>

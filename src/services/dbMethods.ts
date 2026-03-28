@@ -1,6 +1,8 @@
 import { supabase } from "./supabaseClient";
 import { formatToISO, formatToBR } from "../utils/date";
-import { parseBRL } from "../utils/currency";
+import { parseBRL, formatBRL, calc } from "../utils/currency";
+import { startOfMonth, endOfMonth, subMonths } from "date-fns";
+
 import { toUserScopedReceiptId } from "../utils/receiptId";
 import type { CanonicalProduct, DictionaryEntry, DictionaryMap, Receipt, ReceiptItem } from "../types/domain";
 
@@ -112,11 +114,11 @@ export async function getReceiptsPaginated(
   if (filters?.period && filters.period !== "all") {
     const now = new Date();
     if (filters.period === "this-month") {
-      const start = new Date(now.getFullYear(), now.getMonth(), 1);
-      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const start = startOfMonth(now);
+      const end = endOfMonth(now);
       query = query.gte("date", start.toISOString()).lte("date", end.toISOString());
     } else if (filters.period === "last-3-months") {
-      const start = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+      const start = startOfMonth(subMonths(now, 3));
       query = query.gte("date", start.toISOString());
     } else if (filters.period === "custom" && filters.startDate && filters.endDate) {
       query = query.gte("date", filters.startDate).lte("date", filters.endDate);
@@ -161,9 +163,9 @@ export async function getReceiptsPaginated(
         quantity,
         unit: item.unit ?? undefined,
         price,
-        qty: quantity.toString().replace(".", ","),
-        unitPrice: price.toFixed(2).replace(".", ","),
-        total: (price * quantity).toFixed(2).replace(".", ","),
+        qty: formatBRL(quantity),
+        unitPrice: formatBRL(price),
+        total: formatBRL(calc.mul(price, quantity)),
       };
     }),
   }));

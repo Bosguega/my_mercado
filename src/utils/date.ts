@@ -1,50 +1,55 @@
+import { parse, format, isValid, parseISO, isDate } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
 /**
  * Utilitários para tratamento de datas no app My Mercado.
- * Padroniza o uso de ISO 8601 para armazenamento e formatos brasileiros para exibição.
+ * Usa date-fns para manipulação e parsing robusto.
+ * Padroniza o uso de ISO 8601 para armazenamento.
  */
 
 /**
  * Converte uma string de data (vários formatos) para objeto Date.
- * @param {string|Date} dateVal 
- * @returns {Date|null}
+ * Prioriza formatos brasileiros: DD/MM/AAAA ou DD/MM/AAAA HH:mm:ss
  */
 export function parseToDate(dateVal: string | Date | null | undefined): Date | null {
   if (!dateVal) return null;
-  if (dateVal instanceof Date) return dateVal;
+  if (isDate(dateVal)) return dateVal as Date;
 
-  // Formato BR: DD/MM/AAAA HH:mm:ss
-  if (typeof dateVal === 'string' && dateVal.includes('/')) {
-    const parts = dateVal.trim().split(' ');
-    const [day, month, year] = parts[0].split('/');
-    const dayNum = Number(day);
-    const monthNum = Number(month);
-    const yearNum = Number(year);
-    
-    // Se não for um formato de data válido, retorna null em vez de "today"
-    if (isNaN(dayNum) || isNaN(monthNum) || isNaN(yearNum)) return null;
+  if (typeof dateVal === 'string') {
+    const trimmed = dateVal.trim();
+    if (!trimmed) return null;
 
-    const date = new Date(yearNum, monthNum - 1, dayNum);
-    
-    if (parts[1]) {
-      const timeParts = parts[1].split(':');
-      date.setHours(parseInt(timeParts[0], 10) || 0);
-      date.setMinutes(parseInt(timeParts[1], 10) || 0);
-      date.setSeconds(parseInt(timeParts[2], 10) || 0);
+    // Se vier com "/" é o formato brasileiro DD/MM/AAAA (com ou sem hora)
+    if (trimmed.includes('/')) {
+      // Caso 1: DD/MM/AAAA HH:mm:ss
+      if (trimmed.includes(':')) {
+        const parsed = parse(trimmed, 'dd/MM/yyyy HH:mm:ss', new Date());
+        if (isValid(parsed)) return parsed;
+        
+        // Caso 2: DD/MM/AAAA HH:mm
+        const parsedShort = parse(trimmed, 'dd/MM/yyyy HH:mm', new Date());
+        if (isValid(parsedShort)) return parsedShort;
+      }
+      
+      // Caso 3: apenas DD/MM/AAAA
+      const parsedOnlyDate = parse(trimmed, 'dd/MM/yyyy', new Date());
+      if (isValid(parsedOnlyDate)) return parsedOnlyDate;
     }
-    
-    return isNaN(date.getTime()) ? null : date;
+
+    // Tentar como ISO (ex: do banco de dados)
+    const parsedISO = parseISO(trimmed);
+    if (isValid(parsedISO)) return parsedISO;
+
+    // Fallback final: construtor nativo
+    const date = new Date(trimmed);
+    return isValid(date) ? date : null;
   }
 
-  // Fallback para o construtor nativo (ISO, etc)
-  const date = new Date(dateVal);
-  return isNaN(date.getTime()) ? null : date;
+  return null;
 }
 
 /**
  * Formata uma data para o padrão brasileiro (DD/MM/AAAA HH:mm:ss).
- * @param {string|Date} dateVal 
- * @param {boolean} includeTime 
- * @returns {string}
  */
 export function formatToBR(
   dateVal: string | Date | null | undefined,
@@ -53,43 +58,36 @@ export function formatToBR(
   const date = parseToDate(dateVal);
   if (!date) return "";
   
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
-  
-  let formatted = `${day}/${month}/${year}`;
-  
-  if (includeTime) {
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    formatted += ` ${hours}:${minutes}:${seconds}`;
-  }
-  
-  return formatted;
+  const pattern = includeTime ? 'dd/MM/yyyy HH:mm:ss' : 'dd/MM/yyyy';
+  return format(date, pattern, { locale: ptBR });
 }
 
 /**
  * Formata uma data para o padrão ISO (usado no banco de dados).
- * @param {string|Date} dateVal 
- * @returns {string|null}
  */
 export function formatToISO(dateVal: string | Date | null | undefined): string | null {
   const date = parseToDate(dateVal);
-  return date ? date.toISOString() : null;
+  return (date && isValid(date)) ? date.toISOString() : null;
 }
 
 /**
  * Retorna apenas a data formatada para input HTML (YYYY-MM-DD).
- * @param {string|Date} dateVal 
- * @returns {string}
  */
 export function formatToInputDate(dateVal: string | Date | null | undefined): string {
   const date = parseToDate(dateVal);
-  if (!date) return "";
+  if (!date || !isValid(date)) return "";
+  return format(date, 'yyyy-MM-dd');
+}
 
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+/**
+ * Retorna uma data relativa legível (ex: "hoje", "ontem", "há 2 dias").
+ */
+export function formatRelative(dateVal: string | Date | null | undefined): string {
+  const date = parseToDate(dateVal);
+  if (!date || !isValid(date)) return "";
+  
+  return new Intl.RelativeTimeFormat('pt-BR', { numeric: 'auto' }).format(
+    Math.ceil((date.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)),
+    'day'
+  );
 }
