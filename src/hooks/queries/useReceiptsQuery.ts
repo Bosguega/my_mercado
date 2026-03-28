@@ -19,7 +19,8 @@ export const receiptKeys = {
     all: ["receipts"] as const,
     lists: () => [...receiptKeys.all, "list"] as const,
     list: (filters: HistoryFilters, search?: string) => [...receiptKeys.lists(), filters, search] as const,
-    infinite: (filters: HistoryFilters, search?: string) => [...receiptKeys.all, "infinite", filters, search] as const,
+    infinites: () => [...receiptKeys.all, "infinite"] as const,
+    infinite: (filters: HistoryFilters, search?: string) => [...receiptKeys.infinites(), filters, search] as const,
     allReceipts: () => [...receiptKeys.all, "all"] as const,
     details: () => [...receiptKeys.all, "detail"] as const,
     detail: (id: string) => [...receiptKeys.details(), id] as const,
@@ -135,7 +136,7 @@ export function useSaveReceipt() {
 
                 // Invalidar queries paginadas
                 queryClient.invalidateQueries({ queryKey: receiptKeys.lists() });
-                queryClient.invalidateQueries({ queryKey: receiptKeys.infinite() });
+                queryClient.invalidateQueries({ queryKey: receiptKeys.infinites() });
             }
         },
         onError: (err) => {
