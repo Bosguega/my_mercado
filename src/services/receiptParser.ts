@@ -146,9 +146,23 @@ export async function parseNFCeSP(url: string): Promise<Receipt> {
       const text = li.textContent || "";
 
       if (text.includes("Emissao:") || text.includes("EmissÃ£o:")) {
-        const match = text.match(/Emiss[aã]o:\s*(\d{2}\/\d{2}\/\d{4}\s\d{2}:\d{2}:\d{2})/i);
+        // Tentar capturar data com hora: DD/MM/AAAA HH:mm:ss
+        const matchWithTime = text.match(/Emiss[aã]o:\s*(\d{2}\/\d{2}\/\d{4}\s\d{2}:\d{2}:\d{2})/i);
+        // Tentar capturar data sem hora: DD/MM/AAAA
+        const matchWithoutTime = text.match(/Emiss[aã]o:\s*(\d{2}\/\d{2}\/\d{4})/i);
 
-        date = match ? (match[1] || "").trim() : text.replace(/Emiss[aã]o:/i, "").trim();
+        if (matchWithTime) {
+          date = matchWithTime[1].trim();
+        } else if (matchWithoutTime) {
+          date = matchWithoutTime[1].trim();
+        } else {
+          // Fallback: tentar extrair qualquer coisa após "Emissão:"
+          const cleaned = text.replace(/Emiss[aã]o:/i, "").trim();
+          // Verificar se parece uma data válida
+          if (/^\d{2}\/\d{2}\/\d{4}/.test(cleaned)) {
+            date = cleaned;
+          }
+        }
       }
     });
 

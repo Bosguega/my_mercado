@@ -286,7 +286,11 @@ export async function saveReceiptToDB(
     }
   }
 
-  return receipt;
+  // Retornar receipt com data em formato BR para consistência com getReceiptsPaginated
+  return {
+    ...receipt,
+    date: formatToBR(receipt.date),
+  };
 }
 
 // DELETE
