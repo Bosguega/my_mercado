@@ -24,21 +24,7 @@ import {
 import type { CanonicalProduct, DictionaryEntry } from "../types/domain";
 import type { ConfirmDialogConfig } from "../types/ui";
 
-// Skeleton para loading
-const SkeletonProduct = () => (
-    <div
-        className="glass-card"
-        style={{ padding: "1.5rem", marginBottom: "1rem" }}
-    >
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1rem" }}>
-            <div>
-                <div className="skeleton-line" style={{ width: "180px", height: "20px", marginBottom: "8px" }} />
-                <div className="skeleton-line" style={{ width: "120px", height: "16px" }} />
-            </div>
-            <div className="skeleton-line" style={{ width: "80px", height: "32px", borderRadius: "8px" }} />
-        </div>
-    </div>
-);
+import { ProductSkeleton } from "./Skeleton";
 
 function CanonicalProductsTab() {
     const { data: products = [], isLoading: loading } = useCanonicalProductsQuery();
@@ -293,7 +279,7 @@ function CanonicalProductsTab() {
             {/* Lista de produtos */}
             <div className="items-list" style={{ gap: "1rem" }}>
                 {loading ? (
-                    [...Array(3)].map((_, i) => <SkeletonProduct key={i} />)
+                    [...Array(3)].map((_, i) => <ProductSkeleton key={i} />)
                 ) : filteredProducts.length === 0 ? (
                     <div className="glass-card" style={{ textAlign: "center", padding: "3rem" }}>
                         <Package size={48} color="var(--primary)" style={{ opacity: 0.3, marginBottom: "1rem" }} />

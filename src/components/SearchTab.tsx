@@ -20,34 +20,7 @@ import { useAllReceiptsQuery } from "../hooks/queries/useReceiptsQuery";
 import { useCanonicalProductsQuery } from "../hooks/queries/useCanonicalProductsQuery";
 import { Package } from "lucide-react";
 
-// Skeleton para itens da pesquisa
-const SkeletonSearch = () => (
-  <div
-    className="item-row"
-    style={{
-      background: "rgba(255,255,255,0.02)",
-      border: "1px solid rgba(255,255,255,0.05)",
-    }}
-  >
-    <div style={{ flex: 1 }}>
-      <div
-        className="skeleton-line"
-        style={{ width: "60%", height: "18px", marginBottom: "8px" }}
-      />
-      <div className="skeleton-line" style={{ width: "40%", height: "14px" }} />
-    </div>
-    <div style={{ textAlign: "right" }}>
-      <div
-        className="skeleton-line"
-        style={{ width: "80px", height: "20px", marginBottom: "4px" }}
-      />
-      <div
-        className="skeleton-line"
-        style={{ width: "40px", height: "12px", marginLeft: "auto" }}
-      />
-    </div>
-  </div>
-);
+import { Skeleton, SkeletonCard } from "./Skeleton";
 
 function SearchTab() {
   // React Query para dados de receipts
@@ -289,7 +262,18 @@ function SearchTab() {
 
       <div className="items-list">
         {showSkeleton ? (
-          [...Array(6)].map((_, i) => <SkeletonSearch key={i} />)
+          [...Array(6)].map((_, i) => (
+            <div key={i} className="item-row" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", display: "flex", padding: "1rem", marginBottom: "0.5rem", borderRadius: "1rem" }}>
+              <div style={{ flex: 1 }}>
+                <Skeleton width="60%" height="18px" style={{ marginBottom: "8px" }} />
+                <Skeleton width="40%" height="14px" />
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <Skeleton width="80px" height="20px" style={{ marginBottom: "4px" }} />
+                <Skeleton width="40px" height="12px" style={{ marginLeft: "auto" }} />
+              </div>
+            </div>
+          ))
         ) : filteredItems.length === 0 ? (
           <div
             style={{

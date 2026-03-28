@@ -17,6 +17,7 @@ import {
   clearDictionaryInDB,
   applyDictionaryEntryToSavedItems,
 } from "../services/dbMethods";
+import { Skeleton } from "./Skeleton";
 import { toast } from "react-hot-toast";
 import { filterBySearch, sortItems } from "../utils/analytics";
 import type { SortDirection, ConfirmDialogConfig } from "../types/ui";
@@ -343,8 +344,8 @@ function DictionaryTab() {
         <div className="items-list" style={{ gap: "1rem" }}>
           {loading ? (
             <div style={{ textAlign: "center", padding: "3rem" }}>
-              <div className="skeleton-line" style={{ width: "100%", height: "80px", marginBottom: "1rem" }} />
-              <div className="skeleton-line" style={{ width: "100%", height: "80px" }} />
+              <Skeleton width="100%" height="80px" style={{ marginBottom: "1rem" }} />
+              <Skeleton width="100%" height="80px" />
             </div>
           ) : sortedDictionary.items.length === 0 ? (
             <div className="glass-card" style={{ textAlign: "center", padding: "3rem" }}>

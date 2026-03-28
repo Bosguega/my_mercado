@@ -609,18 +609,26 @@ export async function mergeCanonicalProducts(
     throw new Error("Produto canônico não encontrado");
   }
 
-  // Mover associações de items
+  // Mover associações de items e atualizar nomes/categorias
   const { error: itemsError } = await client
     .from("items")
-    .update({ canonical_product_id: primaryId })
+    .update({ 
+      canonical_product_id: primaryId,
+      normalized_name: primary.name,
+      category: primary.category
+    })
     .eq("canonical_product_id", secondaryId);
 
   if (itemsError) throw itemsError;
 
-  // Mover associações de product_dictionary
+  // Mover associações de product_dictionary e atualizar nomes/categorias
   const { error: dictError } = await client
     .from("product_dictionary")
-    .update({ canonical_product_id: primaryId })
+    .update({ 
+      canonical_product_id: primaryId,
+      normalized_name: primary.name,
+      category: primary.category
+    })
     .eq("canonical_product_id", secondaryId);
 
   if (dictError) throw dictError;

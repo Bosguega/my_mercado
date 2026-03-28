@@ -28,50 +28,7 @@ import {
 // Moved to module scope: utiliza utilitário centralizado
 const parseDate = (d: string | Date) => parseToDate(d);
 
-// Skeleton Loading Component
-const SkeletonReceipt = () => (
-  <div
-    className="glass-card"
-    style={{ padding: "1.5rem", marginBottom: "1rem" }}
-  >
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        marginBottom: "1rem",
-      }}
-    >
-      <div>
-        <div
-          className="skeleton-line"
-          style={{ width: "180px", height: "20px", marginBottom: "8px" }}
-        />
-        <div
-          className="skeleton-line"
-          style={{ width: "120px", height: "16px" }}
-        />
-      </div>
-      <div
-        className="skeleton-line"
-        style={{ width: "80px", height: "32px", borderRadius: "8px" }}
-      />
-    </div>
-    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-      {[...Array(4)].map((_, i) => (
-        <div key={i} className="skeleton-item">
-          <div
-            className="skeleton-line"
-            style={{ width: "60%", height: "16px", marginBottom: "6px" }}
-          />
-          <div
-            className="skeleton-line"
-            style={{ width: "40%", height: "14px" }}
-          />
-        </div>
-      ))}
-    </div>
-  </div>
-);
+import { ReceiptSkeleton } from "./Skeleton";
 
 function HistoryTab() {
   // React Query para dados de receipts
@@ -482,7 +439,7 @@ function HistoryTab() {
       {showSkeleton ? (
         <div className="items-list" style={{ gap: "1.25rem" }}>
           {[...Array(3)].map((_, i) => (
-            <SkeletonReceipt key={i} />
+            <ReceiptSkeleton key={i} />
           ))}
         </div>
       ) : savedReceipts.length === 0 ? (
