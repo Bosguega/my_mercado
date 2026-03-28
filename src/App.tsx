@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from "react";
-import { Scan, History as HistoryIcon, Search, LogOut, Package } from "lucide-react";
+import { Scan, History as HistoryIcon, Search, LogOut, Package, Settings as SettingsIcon } from "lucide-react";
 import Login from "./components/Login";
 import { Toaster, toast } from "react-hot-toast";
 import { logout } from "./services/auth";
@@ -21,6 +21,7 @@ const HistoryTab = lazy(() => import("./components/HistoryTab"));
 const SearchTab = lazy(() => import("./components/SearchTab"));
 // const DictionaryTab = lazy(() => import("./components/DictionaryTab"));
 const CanonicalProductsTab = lazy(() => import("./components/CanonicalProductsTab"));
+const SettingsTab = lazy(() => import("./components/SettingsTab"));
 
 // Componente de loading para Suspense
 const TabSkeleton = () => (
@@ -123,46 +124,6 @@ function App() {
           <h1>My Mercado</h1>
           <p>Economize comparando preços.</p>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          <button
-            onClick={() => setShowApiKeyModal(true)}
-            style={{
-              background: "rgba(59, 130, 246, 0.1)",
-              border: "none",
-              color: "var(--primary)",
-              cursor: "pointer",
-              padding: "0.6rem",
-              borderRadius: "10px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-            title="Configurar IA"
-          >
-            <span style={{ fontSize: "1.2rem" }}>⚙️</span>
-          </button>
-          <button
-            onClick={async () => {
-              resetScannerState();
-              await logout();
-              toast.success("Sessão encerrada.");
-            }}
-            style={{
-              background: "rgba(239, 68, 68, 0.1)",
-              border: "none",
-              color: "#ef4444",
-              cursor: "pointer",
-              padding: "0.6rem",
-              borderRadius: "10px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-            title="Sair"
-          >
-            <LogOut size={20} />
-          </button>
-        </div>
       </header>
 
       <main style={{ minHeight: "60vh" }}>
@@ -171,6 +132,7 @@ function App() {
           {tab === "history" && <HistoryTab />}
           {tab === "search" && <SearchTab />}
           {tab === "products" && <CanonicalProductsTab />}
+          {tab === "settings" && <SettingsTab onOpenAiConfig={() => setShowApiKeyModal(true)} />}
         </Suspense>
       </main>
 
@@ -229,6 +191,14 @@ function App() {
         >
           <Package size={22} />
           <span style={{ marginTop: "2px" }}>Produtos</span>
+        </button>
+
+        <button
+          className={`nav-item ${tab === "settings" ? "active" : ""}`}
+          onClick={() => handleChangeTab("settings")}
+        >
+          <SettingsIcon size={22} />
+          <span style={{ marginTop: "2px" }}>Ajustes</span>
         </button>
       </nav>
 

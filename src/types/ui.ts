@@ -1,7 +1,7 @@
 import type { SessionUser } from "./domain";
 import type { ReceiptItem } from "./domain";
 
-export type AppTab = "scan" | "history" | "search" | "dictionary" | "products";
+export type AppTab = "scan" | "history" | "search" | "dictionary" | "products" | "settings";
 export type SortDirection = "asc" | "desc";
 export type SearchSortBy = "recent" | "price";
 

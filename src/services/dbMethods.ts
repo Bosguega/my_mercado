@@ -306,6 +306,14 @@ export async function deleteReceiptFromDB(id: string): Promise<boolean> {
   return true;
 }
 
+export async function clearReceiptsAndItemsFromDB(): Promise<boolean> {
+  const user = await getUserOrThrow();
+  const client = requireSupabase();
+  const { error } = await client.from("receipts").delete().eq("user_id", user.id);
+  if (error) throw error;
+  return true;
+}
+
 // DICIONARIO - CRUD
 export async function getFullDictionaryFromDB(): Promise<DictionaryEntry[]> {
   const user = await getUserOrThrow();
@@ -685,4 +693,12 @@ export async function associateDictionaryToCanonicalProduct(
     .eq("key", key);
 
   if (error) throw error;
+}
+
+export async function clearCanonicalProductsInDB(): Promise<boolean> {
+  const user = await getUserOrThrow();
+  const client = requireSupabase();
+  const { error } = await client.from("canonical_products").delete().eq("user_id", user.id);
+  if (error) throw error;
+  return true;
 }
