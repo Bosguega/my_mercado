@@ -5,7 +5,8 @@ import {
   Edit3,
   Save,
   X,
-  RotateCcw
+  RotateCcw,
+  Package
 } from "lucide-react";
 import UniversalSearchBar from "./UniversalSearchBar";
 import ConfirmDialog from "./ConfirmDialog";
@@ -21,6 +22,7 @@ import { filterBySearch, sortItems } from "../utils/analytics";
 import type { SortDirection, ConfirmDialogConfig } from "../types/ui";
 import type { DictionaryEntry, Receipt, ReceiptItem } from "../types/domain";
 import { useAllReceiptsQuery } from "../hooks/queries/useReceiptsQuery";
+import { useCanonicalProductsQuery } from "../hooks/queries/useCanonicalProductsQuery";
 
 const CATEGORIES = [
   "Açougue", "Hortifruti", "Laticínios", "Padaria",
@@ -30,6 +32,7 @@ const CATEGORIES = [
 function DictionaryTab() {
   // React Query para dados de receipts
   const { data: savedReceipts = [], refetch: refetchReceipts } = useAllReceiptsQuery();
+  const { data: products = [] } = useCanonicalProductsQuery();
   const [dictionary, setDictionary] = useState<DictionaryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -37,7 +40,7 @@ function DictionaryTab() {
   const [sortBy, setSortBy] = useState("recent");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [editingKey, setEditingKey] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ normalized_name: "", category: "" });
+  const [editForm, setEditForm] = useState({ normalized_name: "", category: "", canonical_product_id: "" });
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
 
@@ -106,7 +109,8 @@ function DictionaryTab() {
     setEditingKey(item.key);
     setEditForm({
       normalized_name: item.normalized_name || "",
-      category: item.category || "Outros"
+      category: item.category || "Outros",
+      canonical_product_id: item.canonical_product_id || ""
     });
   };
 
@@ -118,14 +122,21 @@ function DictionaryTab() {
 
       const nextNormalizedName = (editForm.normalized_name ?? "").trim();
       const nextCategory = (editForm.category ?? "Outros").trim();
+      const nextCanonicalId = editForm.canonical_product_id || null;
 
       const shouldOfferApplyToSaved =
         previousNormalizedName !== nextNormalizedName ||
-        previousCategory !== nextCategory;
+        previousCategory !== nextCategory ||
+        (previous?.canonical_product_id ?? null) !== nextCanonicalId;
 
-      await updateDictionaryEntryInDB(key, nextNormalizedName, nextCategory);
+      await updateDictionaryEntryInDB(key, nextNormalizedName, nextCategory, nextCanonicalId);
       setDictionary(prev => prev.map(item =>
-        item.key === key ? { ...item, normalized_name: nextNormalizedName, category: nextCategory } : item
+        item.key === key ? { 
+          ...item, 
+          normalized_name: nextNormalizedName, 
+          category: nextCategory,
+          canonical_product_id: nextCanonicalId ?? undefined
+        } : item
       ));
       setEditingKey(null);
       toast.success("Item atualizado!");
@@ -368,6 +379,17 @@ function DictionaryTab() {
                           <option key={cat} value={cat}>{cat}</option>
                         ))}
                       </select>
+                      <select
+                        className="search-input"
+                        style={{ background: "var(--bg-color)" }}
+                        value={editForm.canonical_product_id}
+                        onChange={(e) => setEditForm({ ...editForm, canonical_product_id: e.target.value })}
+                      >
+                        <option value="">Não vinculado a Produto Canônico</option>
+                        {products.map(p => (
+                          <option key={p.id} value={p.id}>{p.name} ({p.brand || "Sem marca"})</option>
+                        ))}
+                      </select>
                       <div style={{ display: "flex", gap: "0.5rem" }}>
                         <button className="btn btn-success" style={{ flex: 1 }} onClick={() => handleSaveEdit(item.key)}>
                           <Save size={18} /> Salvar
@@ -389,6 +411,19 @@ function DictionaryTab() {
                         <div style={{ fontSize: "0.75rem", color: "#64748b", fontStyle: "italic" }}>
                           ID: {item.key}
                         </div>
+                        {item.canonical_product_id && (
+                          <div style={{ 
+                            fontSize: "0.75rem", 
+                            color: "#fbbf24", 
+                            marginTop: "2px", 
+                            display: "flex", 
+                            alignItems: "center", 
+                            gap: "4px" 
+                          }}>
+                            <Package size={12} />
+                            Vínculo VIP: {products.find(p => p.id === item.canonical_product_id)?.name || "Produto Carregando..."}
+                          </div>
+                        )}
                       </div>
                       <div style={{ display: "flex", gap: "8px" }}>
                         <button

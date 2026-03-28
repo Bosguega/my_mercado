@@ -7,4 +7,5 @@ export interface AiNormalizationResult {
   key: string;
   normalized_name: string;
   category: string;
+  canonical_product_id?: string;
 }

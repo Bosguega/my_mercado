@@ -156,6 +156,7 @@ export async function processItemsPipeline(rawItems: ReceiptItem[] = []): Promis
       normalized_key: item.normalized_key,
       normalized_name: dictEntry?.normalized_name || item.name,
       category: dictEntry?.category || "Outros",
+      canonical_product_id: dictEntry?.canonical_product_id,
       quantity,
       unit: item.unit || "UN",
       price: unitPrice,

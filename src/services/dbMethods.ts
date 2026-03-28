@@ -4,7 +4,7 @@ import { parseBRL } from "../utils/currency";
 import { toUserScopedReceiptId } from "../utils/receiptId";
 import type { CanonicalProduct, DictionaryEntry, DictionaryMap, Receipt, ReceiptItem } from "../types/domain";
 
-type DictionaryUpdateEntry = Pick<DictionaryEntry, "key" | "normalized_name" | "category">;
+type DictionaryUpdateEntry = Pick<DictionaryEntry, "key" | "normalized_name" | "category" | "canonical_product_id">;
 
 interface DbItemRow {
   id?: string;
@@ -12,6 +12,7 @@ interface DbItemRow {
   normalized_key?: string | null;
   normalized_name?: string | null;
   category?: string | null;
+  canonical_product_id?: string | null;
   quantity?: number | null;
   unit?: string | null;
   price?: number | null;
@@ -29,6 +30,7 @@ interface DbDictionaryRow {
   key: string;
   normalized_name: string;
   category?: string | null;
+  canonical_product_id?: string | null;
 }
 
 function requireSupabase() {
@@ -94,6 +96,7 @@ export async function getReceiptsPaginated(
         normalized_key,
         normalized_name,
         category,
+        canonical_product_id,
         quantity,
         unit,
         price
@@ -154,6 +157,7 @@ export async function getReceiptsPaginated(
         normalized_key: item.normalized_key ?? undefined,
         normalized_name: item.normalized_name ?? undefined,
         category: item.category ?? undefined,
+        canonical_product_id: item.canonical_product_id ?? undefined,
         quantity,
         unit: item.unit ?? undefined,
         price,
@@ -213,6 +217,7 @@ export async function restoreReceiptsToDB(receipts: Receipt[]): Promise<boolean>
             normalized_key: item.normalized_key,
             normalized_name: item.normalized_name,
             category: item.category,
+            canonical_product_id: item.canonical_product_id,
             quantity: qty,
             unit: item.unit || "un",
             price,
@@ -267,6 +272,7 @@ export async function saveReceiptToDB(
           normalized_key: item.normalized_key,
           normalized_name: item.normalized_name,
           category: item.category,
+          canonical_product_id: item.canonical_product_id,
           quantity: qty,
           unit: item.unit || "un",
           price,
@@ -323,19 +329,27 @@ export async function updateDictionaryEntryInDB(
   key: string,
   normalizedName: string,
   category: string,
+  canonicalProductId?: string | null
 ): Promise<boolean> {
   const user = await getUserOrThrow();
   const client = requireSupabase();
   let { error } = await client
     .from("product_dictionary")
-    .update({ normalized_name: normalizedName, category })
+    .update({ 
+      normalized_name: normalizedName, 
+      category,
+      canonical_product_id: canonicalProductId
+    })
     .eq("user_id", user.id)
     .eq("key", key);
 
   if (error && isLegacyDictionarySchemaError(error)) {
     const legacyResponse = await client
       .from("product_dictionary")
-      .update({ normalized_name: normalizedName, category })
+      .update({ 
+        normalized_name: normalizedName, 
+        category 
+      })
       .eq("key", key);
 
     error = legacyResponse.error;
@@ -355,7 +369,7 @@ export async function applyDictionaryEntryToSavedItems(
 
   if (!key) return { updatedCount: 0 };
 
-  const patch: Partial<{ normalized_name: string; category: string }> = {};
+  const patch: Partial<{ normalized_name: string; category: string; canonical_product_id: string | null }> = {};
   if (normalizedName !== undefined) patch.normalized_name = normalizedName;
   if (category !== undefined) patch.category = category;
 
@@ -419,14 +433,14 @@ export async function getDictionary(keys: string[]): Promise<DictionaryMap> {
 
   let { data, error } = await client
     .from("product_dictionary")
-    .select("key, normalized_name, category")
+    .select("key, normalized_name, category, canonical_product_id")
     .eq("user_id", user.id)
     .in("key", keys);
 
   if (error && isLegacyDictionarySchemaError(error)) {
     const legacyResponse = await client
       .from("product_dictionary")
-      .select("key, normalized_name, category")
+      .select("key, normalized_name, category, canonical_product_id")
       .in("key", keys);
 
     data = legacyResponse.data;
@@ -440,6 +454,7 @@ export async function getDictionary(keys: string[]): Promise<DictionaryMap> {
     acc[row.key] = {
       normalized_name: row.normalized_name,
       category: row.category || undefined,
+      canonical_product_id: row.canonical_product_id || undefined,
     };
     return acc;
   }, {});
@@ -456,6 +471,7 @@ export async function updateDictionary(entries: DictionaryUpdateEntry[]): Promis
     key: e.key,
     normalized_name: e.normalized_name,
     category: e.category || "Outros",
+    canonical_product_id: e.canonical_product_id,
   }));
 
   let { error } = await client
@@ -467,6 +483,7 @@ export async function updateDictionary(entries: DictionaryUpdateEntry[]): Promis
       key: e.key,
       normalized_name: e.normalized_name,
       category: e.category || "Outros",
+      canonical_product_id: e.canonical_product_id,
     }));
 
     const legacyResponse = await client

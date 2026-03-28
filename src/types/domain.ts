@@ -32,6 +32,7 @@ export interface DictionaryEntry {
   key: string;
   normalized_name: string;
   category?: string;
+  canonical_product_id?: string;
   user_id?: string;
   created_at?: string;
   [key: string]: unknown;
