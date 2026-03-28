@@ -25,3 +25,26 @@ export function getReceiptIdCandidates(
   const scopedId = toUserScopedReceiptId(baseId, userId);
   return [...new Set([scopedId, baseId])];
 }
+
+export function generateManualReceiptId(establishment: string, dateStr: string): string {
+  const toStoreSlug = (value: string) => {
+    return (value || '')
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, '') || 'mercado';
+  };
+
+  const normalizeManualDate = (value: string) => {
+    const match = (value || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!match) return 'data';
+    const [, dd, mm, yyyy] = match;
+    return `${yyyy}${mm}${dd}`;
+  };
+
+  const randomSuffix = (globalThis.crypto?.randomUUID?.() ||
+    `${Date.now()}_${Math.random().toString(16).slice(2)}`).replace(/-/g, '').slice(0, 12);
+
+  return `manual_${normalizeManualDate(dateStr)}_${toStoreSlug(establishment)}_${randomSuffix}`;
+}

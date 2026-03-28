@@ -5,6 +5,7 @@ import {
   Upload,
   Save,
 } from "lucide-react";
+import { exportToCSV, backupToJSON } from "../utils/backupRegistry";
 import { toast } from "react-hot-toast";
 // react-window removido temporariamente - paginação infinita já otimiza performance
 import UniversalSearchBar from "./UniversalSearchBar";
@@ -173,98 +174,9 @@ function HistoryTab() {
     );
   };
 
-  // Export to CSV function
-  const handleExportCSV = () => {
-    if (finalFilteredReceipts.items.length === 0) {
-      toast.error("Não há dados para exportar");
-      return;
-    }
-
-    // CSV Header
-    const headers = [
-      "Data",
-      "Mercado",
-      "Produto",
-      "Quantidade",
-      "Unidade",
-      "Preço Unitário",
-      "Total",
-    ];
-
-    // CSV Rows - flatten receipts and items
-    const rows = finalFilteredReceipts.items.flatMap((receipt) =>
-      receipt.items.map((item: ReceiptItem) => [
-        receipt.date,
-        receipt.establishment,
-        item.name,
-        item.qty || "1",
-        item.unit || "un",
-        item.unitPrice || "0,00",
-        item.total || "0,00",
-      ]),
-    );
-
-    // Combine all CSV content
-    const csvContent = [
-      headers.join(";"), // Use semicolon for Brazilian Excel
-      ...rows.map((row) => row.map((cell: string | number) => `"${cell}"`).join(";")),
-    ].join("\n");
-
-    // Create blob and download
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-
-    // Generate filename with current date
-    const date = new Date().toISOString().split("T")[0];
-    link.download = `my_mercado_${date}.csv`;
-
-    // Trigger download
-    link.href = url;
-    link.click();
-
-    // Cleanup
-    URL.revokeObjectURL(url);
-
-    toast.success(`Planilha exportada com ${rows.length} itens!`);
-  };
-
-  // Backup to JSON function
-  const handleBackupJSON = () => {
-    if (savedReceipts.length === 0) {
-      toast.error("Não há dados para backup");
-      return;
-    }
-
-    // Create backup object with metadata
-    const backupData = {
-      version: "1.0",
-      exportDate: new Date().toISOString(),
-      totalReceipts: savedReceipts.length,
-      receipts: savedReceipts,
-    };
-
-    // Convert to JSON string
-    const jsonString = JSON.stringify(backupData, null, 2);
-
-    // Create blob and download
-    const blob = new Blob([jsonString], { type: "application/json" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-
-    // Generate filename with current date
-    const date = new Date().toISOString().split("T")[0];
-    link.download = `my_mercado_backup_${date}.json`;
-
-    // Trigger download
-    link.href = url;
-    link.click();
-
-    // Cleanup
-    URL.revokeObjectURL(url);
-
-    toast.success(`Backup criado com ${savedReceipts.length} notas!`);
-  };
+  // Export actions using centralized utility
+  const handleExportCSV = () => exportToCSV(finalFilteredReceipts.items);
+  const handleBackupJSON = () => backupToJSON(savedReceipts);
 
   // Restore from JSON function
   const handleRestoreJSON = (event: ChangeEvent<HTMLInputElement>) => {

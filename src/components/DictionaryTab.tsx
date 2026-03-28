@@ -1,13 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   Book,
-  Trash2,
-  Edit3,
   Save,
   X,
   RotateCcw,
-  Package
 } from "lucide-react";
+import { CATEGORIES } from "../constants/domain";
+import { DictionaryRow } from "./DictionaryRow";
 import UniversalSearchBar from "./UniversalSearchBar";
 import ConfirmDialog from "./ConfirmDialog";
 import {
@@ -25,10 +24,7 @@ import type { DictionaryEntry, Receipt, ReceiptItem } from "../types/domain";
 import { useAllReceiptsQuery } from "../hooks/queries/useReceiptsQuery";
 import { useCanonicalProductsQuery } from "../hooks/queries/useCanonicalProductsQuery";
 
-const CATEGORIES = [
-  "Açougue", "Hortifruti", "Laticínios", "Padaria",
-  "Limpeza", "Higiene", "Bebidas", "Mercearia", "Petshop", "Outros"
-];
+
 
 function DictionaryTab() {
   // React Query para dados de receipts
@@ -354,93 +350,57 @@ function DictionaryTab() {
           ) : (
             <>
               {sortedDictionary.items.map((item) => (
-                <div
-                  key={item.key}
-                  className="glass-card animated-item"
-                  style={{ marginBottom: 0, padding: "1rem" }}
-                >
+                <div key={item.key}>
                   {editingKey === item.key ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                      <div style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: "bold" }}>CHAVE: {item.key}</div>
-                      <input
-                        type="text"
-                        className="search-input"
-                        style={{ background: "var(--bg-color)" }}
-                        value={editForm.normalized_name}
-                        onChange={(e) => setEditForm({ ...editForm, normalized_name: e.target.value })}
-                        placeholder="Nome normalizado"
-                      />
-                      <select
-                        className="search-input"
-                        style={{ background: "var(--bg-color)" }}
-                        value={editForm.category}
-                        onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-                      >
-                        {CATEGORIES.map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
-                      </select>
-                      <select
-                        className="search-input"
-                        style={{ background: "var(--bg-color)" }}
-                        value={editForm.canonical_product_id}
-                        onChange={(e) => setEditForm({ ...editForm, canonical_product_id: e.target.value })}
-                      >
-                        <option value="">Não vinculado a Produto Canônico</option>
-                        {products.map(p => (
-                          <option key={p.id} value={p.id}>{p.name} ({p.brand || "Sem marca"})</option>
-                        ))}
-                      </select>
-                      <div style={{ display: "flex", gap: "0.5rem" }}>
-                        <button className="btn btn-success" style={{ flex: 1 }} onClick={() => handleSaveEdit(item.key)}>
-                          <Save size={18} /> Salvar
-                        </button>
-                        <button className="btn" style={{ flex: 1 }} onClick={() => setEditingKey(null)}>
-                          <X size={18} /> Cancelar
-                        </button>
+                    <div className="glass-card animated-item" style={{ marginBottom: 0, padding: "1rem" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                        <div style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: "bold" }}>CHAVE: {item.key}</div>
+                        <input
+                          type="text"
+                          className="search-input"
+                          style={{ background: "var(--bg-color)" }}
+                          value={editForm.normalized_name}
+                          onChange={(e) => setEditForm({ ...editForm, normalized_name: e.target.value })}
+                          placeholder="Nome normalizado"
+                        />
+                        <select
+                          className="search-input"
+                          style={{ background: "var(--bg-color)" }}
+                          value={editForm.category}
+                          onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                        >
+                          {CATEGORIES.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                        <select
+                          className="search-input"
+                          style={{ background: "var(--bg-color)" }}
+                          value={editForm.canonical_product_id}
+                          onChange={(e) => setEditForm({ ...editForm, canonical_product_id: e.target.value })}
+                        >
+                          <option value="">Não vinculado a Produto Canônico</option>
+                          {products.map(p => (
+                            <option key={p.id} value={p.id}>{p.name} ({p.brand || "Sem marca"})</option>
+                          ))}
+                        </select>
+                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                          <button className="btn btn-success" style={{ flex: 1 }} onClick={() => handleSaveEdit(item.key)}>
+                            <Save size={18} /> Salvar
+                          </button>
+                          <button className="btn" style={{ flex: 1 }} onClick={() => setEditingKey(null)}>
+                            <X size={18} /> Cancelar
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : (
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                          <span style={{ color: "#fff", fontWeight: 600 }}>{item.normalized_name || "Sem nome"}</span>
-                          <span style={{ fontSize: "0.65rem", background: "rgba(59, 130, 246, 0.1)", padding: "1px 6px", borderRadius: "4px", color: "var(--primary)" }}>
-                            {item.category || "Outros"}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: "0.75rem", color: "#64748b", fontStyle: "italic" }}>
-                          ID: {item.key}
-                        </div>
-                        {item.canonical_product_id && (
-                          <div style={{ 
-                            fontSize: "0.75rem", 
-                            color: "#fbbf24", 
-                            marginTop: "2px", 
-                            display: "flex", 
-                            alignItems: "center", 
-                            gap: "4px" 
-                          }}>
-                            <Package size={12} />
-                            Vínculo VIP: {products.find(p => p.id === item.canonical_product_id)?.name || "Produto Carregando..."}
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ display: "flex", gap: "8px" }}>
-                        <button
-                          onClick={() => handleStartEdit(item)}
-                          style={{ background: "rgba(59, 130, 246, 0.1)", border: "none", borderRadius: "8px", width: "36px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)" }}
-                        >
-                          <Edit3 size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteEntry(item.key)}
-                          style={{ background: "rgba(239, 68, 68, 0.1)", border: "none", borderRadius: "8px", width: "36px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444" }}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </div>
+                    <DictionaryRow
+                      item={item}
+                      onEdit={handleStartEdit}
+                      onDelete={handleDeleteEntry}
+                      products={products}
+                    />
                   )}
                 </div>
               ))}

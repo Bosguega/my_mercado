@@ -16,7 +16,9 @@ import {
   Aperture,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { CATEGORIES } from "../constants/domain";
 import { parseBRL, formatBRL } from "../utils/currency";
+import { generateManualReceiptId } from "../utils/receiptId";
 import type { Receipt, ReceiptItem } from "../types/domain";
 
 type SaveReceiptResponse =
