@@ -9,6 +9,7 @@ import {
 } from "../../services/dbMethods";
 import { processItemsPipeline } from "../../services/productService";
 import { getReceiptIdCandidates, toUserScopedReceiptId } from "../../utils/receiptId";
+import { canonicalProductKeys } from "./useCanonicalProductsQuery";
 import type { Receipt } from "../../types/domain";
 import type { HistoryFilters } from "../../types/ui";
 
@@ -137,6 +138,8 @@ export function useSaveReceipt() {
                 // Invalidar queries paginadas
                 queryClient.invalidateQueries({ queryKey: receiptKeys.lists() });
                 queryClient.invalidateQueries({ queryKey: receiptKeys.infinites() });
+                // Invalidar cache de produtos canônicos (caso tenham sido auto-criados)
+                queryClient.invalidateQueries({ queryKey: canonicalProductKeys.all });
             }
         },
         onError: (err) => {

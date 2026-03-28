@@ -6,35 +6,38 @@
 /**
  * Converte uma string de data (vários formatos) para objeto Date.
  * @param {string|Date} dateVal 
- * @returns {Date}
+ * @returns {Date|null}
  */
-export function parseToDate(dateVal: string | Date | null | undefined) {
-  if (!dateVal) return new Date();
+export function parseToDate(dateVal: string | Date | null | undefined): Date | null {
+  if (!dateVal) return null;
   if (dateVal instanceof Date) return dateVal;
 
   // Formato BR: DD/MM/AAAA HH:mm:ss
   if (typeof dateVal === 'string' && dateVal.includes('/')) {
-    const parts = dateVal.split(' ');
+    const parts = dateVal.trim().split(' ');
     const [day, month, year] = parts[0].split('/');
     const dayNum = Number(day);
     const monthNum = Number(month);
     const yearNum = Number(year);
     
+    // Se não for um formato de data válido, retorna null em vez de "today"
+    if (isNaN(dayNum) || isNaN(monthNum) || isNaN(yearNum)) return null;
+
     const date = new Date(yearNum, monthNum - 1, dayNum);
     
     if (parts[1]) {
-      const [hours, minutes, seconds] = parts[1].split(':');
-      date.setHours(parseInt(hours, 10) || 0);
-      date.setMinutes(parseInt(minutes, 10) || 0);
-      date.setSeconds(parseInt(seconds, 10) || 0);
+      const timeParts = parts[1].split(':');
+      date.setHours(parseInt(timeParts[0], 10) || 0);
+      date.setMinutes(parseInt(timeParts[1], 10) || 0);
+      date.setSeconds(parseInt(timeParts[2], 10) || 0);
     }
     
-    return date;
+    return isNaN(date.getTime()) ? null : date;
   }
 
   // Fallback para o construtor nativo (ISO, etc)
   const date = new Date(dateVal);
-  return isNaN(date.getTime()) ? new Date() : date;
+  return isNaN(date.getTime()) ? null : date;
 }
 
 /**
@@ -48,6 +51,7 @@ export function formatToBR(
   includeTime = true,
 ): string {
   const date = parseToDate(dateVal);
+  if (!date) return "";
   
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -68,11 +72,11 @@ export function formatToBR(
 /**
  * Formata uma data para o padrão ISO (usado no banco de dados).
  * @param {string|Date} dateVal 
- * @returns {string}
+ * @returns {string|null}
  */
-export function formatToISO(dateVal: string | Date | null | undefined): string {
+export function formatToISO(dateVal: string | Date | null | undefined): string | null {
   const date = parseToDate(dateVal);
-  return date.toISOString();
+  return date ? date.toISOString() : null;
 }
 
 /**
@@ -82,6 +86,8 @@ export function formatToISO(dateVal: string | Date | null | undefined): string {
  */
 export function formatToInputDate(dateVal: string | Date | null | undefined): string {
   const date = parseToDate(dateVal);
+  if (!date) return "";
+
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');

@@ -139,6 +139,8 @@ function HistoryTab() {
 
       filtered = filtered.filter((receipt: Receipt) => {
         const receiptDate = parseToDate(receipt.date);
+        if (!receiptDate) return false;
+        
         receiptDate.setHours(0, 0, 0, 0);
 
         let passes = false;
@@ -176,9 +178,11 @@ function HistoryTab() {
       if (historyFilters.sortBy === "date") {
         const dateA = parseDate(a.date);
         const dateB = parseDate(b.date);
+        const timeA = dateA ? dateA.getTime() : -Infinity;
+        const timeB = dateB ? dateB.getTime() : -Infinity;
         return historyFilters.sortOrder === "asc"
-          ? dateA.getTime() - dateB.getTime()
-          : dateB.getTime() - dateA.getTime();
+          ? timeA - timeB
+          : timeB - timeA;
       }
 
       if (historyFilters.sortBy === "value") {

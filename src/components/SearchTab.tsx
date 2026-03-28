@@ -11,12 +11,14 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { parseBRL } from "../utils/currency";
-import { parseToDate } from "../utils/date";
+import { parseToDate, formatToBR } from "../utils/date";
 import { groupBy, filterBySearch, sortItems } from "../utils/analytics";
 import type { PurchasedItem, SearchSortBy } from "../types/ui";
 import type { Receipt, ReceiptItem } from "../types/domain";
 import { useUiStore } from "../stores/useUiStore";
 import { useAllReceiptsQuery } from "../hooks/queries/useReceiptsQuery";
+import { useCanonicalProductsQuery } from "../hooks/queries/useCanonicalProductsQuery";
+import { Package } from "lucide-react";
 
 // Skeleton para itens da pesquisa
 const SkeletonSearch = () => (
@@ -50,6 +52,7 @@ const SkeletonSearch = () => (
 function SearchTab() {
   // React Query para dados de receipts
   const { data: savedReceipts = [], isLoading: loading } = useAllReceiptsQuery();
+  const { data: canonicalProducts = [] } = useCanonicalProductsQuery();
   const searchQuery = useUiStore((state) => state.searchQuery);
   const setSearchQuery = useUiStore((state) => state.setSearchQuery);
   const sortOrder = useUiStore((state) => state.sortOrder);
@@ -61,32 +64,39 @@ function SearchTab() {
 
   // Memoize flattening of all items
   const allPurchasedItems = useMemo(() => {
-    const items: PurchasedItem[] = [];
+    const items: (PurchasedItem & { canonical_name?: string })[] = [];
     savedReceipts.forEach((receipt: Receipt) => {
       if (receipt && Array.isArray(receipt.items)) {
         receipt.items.forEach((item: ReceiptItem) => {
+          const vip = item.canonical_product_id 
+            ? canonicalProducts.find(p => p.id === item.canonical_product_id)
+            : null;
+
           items.push({
             ...item,
             purchasedAt: receipt.date,
             store: receipt.establishment,
+            canonical_name: vip?.name || undefined
           });
         });
       }
     });
     return items;
-  }, [savedReceipts]);
+  }, [savedReceipts, canonicalProducts]);
 
   // Memoize filtered and sorted items
   const { filteredItems, totalCount } = useMemo(() => {
     const baseItems = searchQuery.trim() === ""
       ? allPurchasedItems.slice(0, 50)
-      : filterBySearch(allPurchasedItems, searchQuery, ["name", "normalized_name", "category"]);
+      : filterBySearch(allPurchasedItems, searchQuery, ["name", "normalized_name", "category", "canonical_name"]);
 
     const customSorters = {
       price: (a: PurchasedItem, b: PurchasedItem) => parseBRL(a.price) - parseBRL(b.price),
       recent: (a: PurchasedItem, b: PurchasedItem) => {
-        const timeA = parseToDate(a.purchasedAt || "").getTime();
-        const timeB = parseToDate(b.purchasedAt || "").getTime();
+        const dateA = parseToDate(a.purchasedAt || "");
+        const dateB = parseToDate(b.purchasedAt || "");
+        const timeA = dateA ? dateA.getTime() : 0;
+        const timeB = dateB ? dateB.getTime() : 0;
         return timeA - timeB;
       }
     };
@@ -99,10 +109,16 @@ function SearchTab() {
     };
   }, [allPurchasedItems, searchQuery, sortOrder, sortDirection]);
 
-  // Group items by normalized name for the chart - memoized
+  // Group items by canonical ID or name for the chart - memoized
   const groupedItems = useMemo(() => {
-    return groupBy(filteredItems, (i) => i.normalized_name || i.name);
-  }, [filteredItems]);
+    return groupBy(filteredItems, (i) => {
+      if (i.canonical_product_id) {
+        const vip = canonicalProducts.find(cp => cp.id === i.canonical_product_id);
+        return vip ? `💎 ${vip.name}` : (i.normalized_name || i.name);
+      }
+      return i.normalized_name || i.name;
+    });
+  }, [filteredItems, canonicalProducts]);
 
   // Memoize chart data calculation
   const chartData = useMemo(() => {
@@ -112,21 +128,32 @@ function SearchTab() {
     Object.keys(groupedItems).forEach((key) => {
       groupedItems[key].forEach((historyItem: PurchasedItem) => {
         if (historyItem.purchasedAt) {
-          allDates.add(historyItem.purchasedAt.substring(0, 10));
+          // Normalizar para YYYY-MM-DD para o conjunto de datas do gráfico
+          const d = parseToDate(historyItem.purchasedAt);
+          if (d) {
+            allDates.add(d.toISOString().substring(0, 10));
+          }
         }
       });
     });
 
     const sortedDates = Array.from(allDates).sort((a, b) => {
-      const getTime = (dateStr: string) => parseToDate(dateStr).getTime();
-      return getTime(a) - getTime(b);
+      const dateA = parseToDate(a);
+      const dateB = parseToDate(b);
+      const timeA = dateA ? dateA.getTime() : 0;
+      const timeB = dateB ? dateB.getTime() : 0;
+      return timeA - timeB;
     });
 
     return sortedDates.map((dateStr) => {
       const dataPoint: Record<string, string | number> = { date: dateStr };
       Object.keys(groupedItems).forEach((itemName) => {
         const match = groupedItems[itemName].find(
-          (h) => h.purchasedAt && h.purchasedAt.startsWith(dateStr),
+          (h) => {
+            if (!h.purchasedAt) return false;
+            const d = parseToDate(h.purchasedAt);
+            return d && d.toISOString().startsWith(dateStr);
+          },
         );
         if (match) {
           dataPoint[itemName] = parseBRL(match.price || match.unitPrice);
@@ -282,7 +309,24 @@ function SearchTab() {
               >
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <div className="item-name">{item.normalized_name || item.name}</div>
+                    <div className="item-name">{item.canonical_name || item.normalized_name || item.name}</div>
+                    {item.canonical_product_id && (
+                      <span
+                        style={{
+                          fontSize: "0.65rem",
+                          background: "rgba(245, 158, 11, 0.1)",
+                          padding: "1px 6px",
+                          borderRadius: "4px",
+                          color: "#f59e0b",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          fontWeight: 700
+                        }}
+                      >
+                        <Package size={12} /> VIP
+                      </span>
+                    )}
                     {item.category && (
                       <span
                         style={{
@@ -326,7 +370,7 @@ function SearchTab() {
                       {item.store}
                     </span>
                     <span style={{ fontSize: "0.75rem", color: "#475569" }}>
-                      {item.purchasedAt?.split(" ")[0]}
+                      {formatToBR(item.purchasedAt, false)}
                     </span>
                   </div>
                 </div>

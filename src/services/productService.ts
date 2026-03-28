@@ -1,4 +1,4 @@
-import { getDictionary, updateDictionary } from "./dbMethods";
+import { getDictionary, updateDictionary, getCanonicalProducts, createCanonicalProduct } from "./dbMethods";
 import { callAI } from "../utils/aiClient";
 import { normalizeKey } from "../utils/normalize";
 import type { AiNormalizationResult } from "../types/ai";
@@ -60,6 +60,9 @@ type ItemWithKey = ReceiptItem & { normalized_key: string };
 export async function processItemsPipeline(rawItems: ReceiptItem[] = []): Promise<ReceiptItem[]> {
   if (!rawItems.length) return [];
 
+  // Carregar produtos VIP existentes para o Auto-Match
+  const canonicalProducts = await getCanonicalProducts();
+
   const itemsWithKey: ItemWithKey[] = rawItems.map((item) => {
     const nameForKey = stripVariableInfo(item.name, item.unit, item.qty);
     const key = normalizeKey(nameForKey);
@@ -115,6 +118,8 @@ export async function processItemsPipeline(rawItems: ReceiptItem[] = []): Promis
         key: r.key,
         normalized_name: cleanAIName(r.normalized_name),
         category: r.category || "Outros",
+        brand: r.brand,
+        slug: r.slug,
       }));
 
       aiResults = [...aiResults, ...cleaned];
@@ -131,7 +136,38 @@ export async function processItemsPipeline(rawItems: ReceiptItem[] = []): Promis
     }
   }
 
+  // MODO PREGUIÇOSO ATIVADO: Auto-criar Produtos VIP
   if (aiResults.length) {
+    for (const r of aiResults) {
+      if (!r.canonical_product_id) {
+        // 1. Tentar match por slug ou nome exato
+        const match = canonicalProducts.find(
+          (cp) =>
+            (r.slug && cp.slug === r.slug) ||
+            (r.normalized_name && cp.name.toLowerCase() === r.normalized_name.toLowerCase()),
+        );
+
+        if (match) {
+          r.canonical_product_id = match.id;
+        } else if (r.slug && r.normalized_name) {
+          // 2. Senão existir, criar automaticamente
+          try {
+            if (isDev) console.log(`[LazyMode] Criando Produto VIP: ${r.normalized_name}`);
+            const newCp = await createCanonicalProduct({
+              slug: r.slug,
+              name: r.normalized_name,
+              category: r.category,
+              brand: r.brand || "Outros",
+            });
+            r.canonical_product_id = newCp.id;
+            // Adicionar à lista local para não criar duplicados na mesma nota
+            canonicalProducts.push(newCp);
+          } catch (err) {
+            console.error("Erro ao criar produto VIP automático:", err);
+          }
+        }
+      }
+    }
     await updateDictionary(aiResults);
   }
 

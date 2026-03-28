@@ -1,18 +1,19 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
     Package,
     Plus,
     Edit3,
     Trash2,
     Merge,
-    Link,
     Search,
     X,
     Save,
+    Tag,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import UniversalSearchBar from "./UniversalSearchBar";
 import ConfirmDialog from "./ConfirmDialog";
+import { getFullDictionaryFromDB } from "../services/dbMethods";
 import {
     useCanonicalProductsQuery,
     useCreateCanonicalProduct,
@@ -20,7 +21,7 @@ import {
     useDeleteCanonicalProduct,
     useMergeCanonicalProducts,
 } from "../hooks/queries/useCanonicalProductsQuery";
-import type { CanonicalProduct } from "../types/domain";
+import type { CanonicalProduct, DictionaryEntry } from "../types/domain";
 import type { ConfirmDialogConfig } from "../types/ui";
 
 // Skeleton para loading
@@ -54,6 +55,14 @@ function CanonicalProductsTab() {
     const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
     const [confirmBusy, setConfirmBusy] = useState(false);
     const [mergeMode, setMergeMode] = useState<{ primaryId: string; primaryName: string } | null>(null);
+    const [dictionary, setDictionary] = useState<DictionaryEntry[]>([]);
+
+    useEffect(() => {
+        getFullDictionaryFromDB().then(setDictionary).catch(err => {
+            console.error("Erro ao carregar dicionário para aba VIP:", err);
+        });
+    }, [products]); // Re-carregar se produtos mudarem
+
 
     const closeConfirm = () => {
         confirmDialog?.onCancel?.();
@@ -376,7 +385,7 @@ function CanonicalProductsTab() {
                                                     </span>
                                                 )}
                                             </div>
-                                            <div style={{ fontSize: "0.75rem", color: "#64748b", fontStyle: "italic" }}>
+                                            <div style={{ fontSize: "0.75rem", color: "#64748b", fontStyle: "italic", marginBottom: "4px" }}>
                                                 Slug: {product.slug}
                                                 {product.merge_count && product.merge_count > 1 && (
                                                     <span style={{ marginLeft: "8px", color: "#f59e0b" }}>
@@ -384,6 +393,40 @@ function CanonicalProductsTab() {
                                                     </span>
                                                 )}
                                             </div>
+
+                                            {/* Exibir Nomes reconhecidos (Apelidos do Dicionário) */}
+                                            {(() => {
+                                                const aliases = dictionary.filter(d => d.canonical_product_id === product.id);
+                                                if (!aliases.length) return null;
+                                                return (
+                                                    <div style={{ 
+                                                        display: "flex", 
+                                                        flexWrap: "wrap", 
+                                                        gap: "4px", 
+                                                        marginTop: "8px",
+                                                        padding: "4px 8px",
+                                                        background: "rgba(255,255,255,0.03)",
+                                                        borderRadius: "8px",
+                                                        border: "1px solid rgba(255,255,255,0.05)"
+                                                    }}>
+                                                        <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "flex", alignItems: "center", gap: "4px", marginRight: "4px" }}>
+                                                            <Tag size={10} /> Reconhecido como:
+                                                        </span>
+                                                        {aliases.slice(0, 10).map(a => (
+                                                            <span key={a.key} style={{ 
+                                                                fontSize: "0.7rem", 
+                                                                color: "#e2e8f0", 
+                                                                background: "rgba(255,255,255,0.05)", 
+                                                                padding: "1px 6px", 
+                                                                borderRadius: "4px" 
+                                                            }}>
+                                                                {a.normalized_name}
+                                                            </span>
+                                                        ))}
+                                                        {aliases.length > 10 && <span style={{ fontSize: "0.7rem", color: "#64748b" }}>+{aliases.length - 10} mais...</span>}
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
                                         <div style={{ display: "flex", gap: "8px" }}>
                                             {mergeMode && mergeMode.primaryId !== product.id ? (

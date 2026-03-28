@@ -1,5 +1,5 @@
-﻿import { useState, useEffect, lazy, Suspense } from "react";
-import { Scan, History as HistoryIcon, Search, LogOut, Book, Package } from "lucide-react";
+import { useState, useEffect, lazy, Suspense } from "react";
+import { Scan, History as HistoryIcon, Search, LogOut, Package } from "lucide-react";
 import Login from "./components/Login";
 import { Toaster, toast } from "react-hot-toast";
 import { logout } from "./services/auth";
@@ -19,7 +19,7 @@ import "./index.css";
 const ScannerTab = lazy(() => import("./components/ScannerTab"));
 const HistoryTab = lazy(() => import("./components/HistoryTab"));
 const SearchTab = lazy(() => import("./components/SearchTab"));
-const DictionaryTab = lazy(() => import("./components/DictionaryTab"));
+// const DictionaryTab = lazy(() => import("./components/DictionaryTab"));
 const CanonicalProductsTab = lazy(() => import("./components/CanonicalProductsTab"));
 
 // Componente de loading para Suspense
@@ -170,7 +170,6 @@ function App() {
           {tab === "scan" && <ScannerTab />}
           {tab === "history" && <HistoryTab />}
           {tab === "search" && <SearchTab />}
-          {tab === "dictionary" && <DictionaryTab />}
           {tab === "products" && <CanonicalProductsTab />}
         </Suspense>
       </main>
@@ -223,13 +222,7 @@ function App() {
           <Search size={22} />
           <span style={{ marginTop: "2px" }}>Preços</span>
         </button>
-        <button
-          className={`nav-item ${tab === "dictionary" ? "active" : ""}`}
-          onClick={() => handleChangeTab("dictionary")}
-        >
-          <Book size={22} />
-          <span style={{ marginTop: "2px" }}>Dicionário</span>
-        </button>
+
         <button
           className={`nav-item ${tab === "products" ? "active" : ""}`}
           onClick={() => handleChangeTab("products")}
