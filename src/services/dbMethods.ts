@@ -116,10 +116,17 @@ export async function getReceiptsPaginated(
     if (filters.period === "this-month") {
       const start = startOfMonth(now);
       const end = endOfMonth(now);
-      query = query.gte("date", start.toISOString()).lte("date", end.toISOString());
+      const startDate = formatToISO(start);
+      const endDate = formatToISO(end);
+      if (startDate && endDate) {
+        query = query.gte("date", startDate).lte("date", endDate);
+      }
     } else if (filters.period === "last-3-months") {
       const start = startOfMonth(subMonths(now, 3));
-      query = query.gte("date", start.toISOString());
+      const startDate = formatToISO(start);
+      if (startDate) {
+        query = query.gte("date", startDate);
+      }
     } else if (filters.period === "custom" && filters.startDate && filters.endDate) {
       query = query.gte("date", filters.startDate).lte("date", filters.endDate);
     }

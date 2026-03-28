@@ -111,9 +111,14 @@ export function useSaveReceipt() {
             const fullReceipt = { ...receipt, id: receiptId, items: processedItems };
 
             // Salvar no banco
-            await saveReceiptToDB(fullReceipt, processedItems);
+            const persistedReceipt = await saveReceiptToDB(fullReceipt, processedItems);
 
-            return { success: true, receipt: fullReceipt, existingId: existing?.id };
+            const receiptForUi: Receipt = {
+                ...fullReceipt,
+                date: persistedReceipt?.date || fullReceipt.date,
+            };
+
+            return { success: true, receipt: receiptForUi, existingId: existing?.id };
         },
         onSuccess: (result) => {
             if ('duplicate' in result && result.duplicate) {

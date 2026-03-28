@@ -1,5 +1,6 @@
 import { ShoppingCart, Plus } from "lucide-react";
 import { parseBRL, formatBRL } from "../../utils/currency";
+import { formatToBR } from "../../utils/date";
 import type { Receipt, ReceiptItem } from "../../types/domain";
 
 interface ReceiptResultProps {
@@ -8,6 +9,8 @@ interface ReceiptResultProps {
 }
 
 export function ReceiptResult({ receipt, onNewScan }: ReceiptResultProps) {
+    const displayDate = formatToBR(receipt.date) || receipt.date;
+
     return (
         <div className="glass-card">
             <div style={{ textAlign: "center", marginBottom: "2rem" }}>
@@ -36,7 +39,7 @@ export function ReceiptResult({ receipt, onNewScan }: ReceiptResultProps) {
                     {receipt.establishment}
                 </p>
                 <p style={{ color: "#94a3b8", fontSize: "0.85rem" }}>
-                    {receipt.date}
+                    {displayDate}
                 </p>
             </div>
 

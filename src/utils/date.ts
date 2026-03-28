@@ -1,93 +1,102 @@
-import { parse, format, isValid, parseISO, isDate } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, isValid, parseISO, isDate } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
-/**
- * Utilitários para tratamento de datas no app My Mercado.
- * Usa date-fns para manipulação e parsing robusto.
- * Padroniza o uso de ISO 8601 para armazenamento.
- */
+const BR_DATE_TIME_RE =
+  /^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?$/;
 
-/**
- * Converte uma string de data (vários formatos) para objeto Date.
- * Prioriza formatos brasileiros: DD/MM/AAAA ou DD/MM/AAAA HH:mm:ss
- */
-export function parseToDate(dateVal: string | Date | null | undefined): Date | null {
-  if (!dateVal) return null;
-  if (isDate(dateVal)) return dateVal as Date;
+const SQL_DATE_TIME_RE =
+  /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/;
 
-  if (typeof dateVal === 'string') {
-    const trimmed = dateVal.trim();
-    if (!trimmed) return null;
+const ISO_WITH_TZ_RE = /(?:Z|[+-]\d{2}:?\d{2})$/;
 
-    // Se vier com "/" é o formato brasileiro DD/MM/AAAA (com ou sem hora)
-    if (trimmed.includes('/')) {
-      // Caso 1: DD/MM/AAAA HH:mm:ss
-      if (trimmed.includes(':')) {
-        const parsed = parse(trimmed, 'dd/MM/yyyy HH:mm:ss', new Date());
-        if (isValid(parsed)) return parsed;
-        
-        // Caso 2: DD/MM/AAAA HH:mm
-        const parsedShort = parse(trimmed, 'dd/MM/yyyy HH:mm', new Date());
-        if (isValid(parsedShort)) return parsedShort;
-      }
-      
-      // Caso 3: apenas DD/MM/AAAA
-      const parsedOnlyDate = parse(trimmed, 'dd/MM/yyyy', new Date());
-      if (isValid(parsedOnlyDate)) return parsedOnlyDate;
-    }
-
-    // Tentar como ISO (ex: do banco de dados)
-    const parsedISO = parseISO(trimmed);
-    if (isValid(parsedISO)) return parsedISO;
-
-    // Fallback final: construtor nativo
-    const date = new Date(trimmed);
-    return isValid(date) ? date : null;
-  }
-
-  return null;
+function toDateFromParts(
+  year: string,
+  month: string,
+  day: string,
+  hour?: string,
+  minute?: string,
+  second?: string,
+): Date {
+  return new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour || "0"),
+    Number(minute || "0"),
+    Number(second || "0"),
+    0,
+  );
 }
 
-/**
- * Formata uma data para o padrão brasileiro (DD/MM/AAAA HH:mm:ss).
- */
+// Converte formatos conhecidos para Date.
+export function parseToDate(dateVal: string | Date | null | undefined): Date | null {
+  if (!dateVal) return null;
+  if (isDate(dateVal)) {
+    return isValid(dateVal as Date) ? (dateVal as Date) : null;
+  }
+
+  if (typeof dateVal !== "string") return null;
+
+  const trimmed = dateVal.trim();
+  if (!trimmed) return null;
+
+  const brMatch = trimmed.match(BR_DATE_TIME_RE);
+  if (brMatch) {
+    const [, dd, mm, yyyy, hh, min, ss] = brMatch;
+    return toDateFromParts(yyyy, mm, dd, hh, min, ss);
+  }
+
+  const sqlMatch = trimmed.match(SQL_DATE_TIME_RE);
+  if (sqlMatch) {
+    const [, yyyy, mm, dd, hh, min, ss] = sqlMatch;
+    return toDateFromParts(yyyy, mm, dd, hh, min, ss);
+  }
+
+  // ISO com timezone explicito: manter conversao correta.
+  if (trimmed.includes("T") && ISO_WITH_TZ_RE.test(trimmed)) {
+    const parsed = parseISO(trimmed);
+    if (isValid(parsed)) return parsed;
+  }
+
+  const parsedISO = parseISO(trimmed);
+  if (isValid(parsedISO)) return parsedISO;
+
+  const nativeDate = new Date(trimmed);
+  return isValid(nativeDate) ? nativeDate : null;
+}
+
+// Formata para DD/MM/AAAA HH:mm:ss.
 export function formatToBR(
   dateVal: string | Date | null | undefined,
   includeTime = true,
 ): string {
   const date = parseToDate(dateVal);
   if (!date) return "";
-  
-  const pattern = includeTime ? 'dd/MM/yyyy HH:mm:ss' : 'dd/MM/yyyy';
+
+  const pattern = includeTime ? "dd/MM/yyyy HH:mm:ss" : "dd/MM/yyyy";
   return format(date, pattern, { locale: ptBR });
 }
 
-/**
- * Formata uma data para o padrão ISO (usado no banco de dados).
- */
+// Formato para coluna timestamp sem timezone (evita conversao para UTC).
 export function formatToISO(dateVal: string | Date | null | undefined): string | null {
   const date = parseToDate(dateVal);
-  return (date && isValid(date)) ? date.toISOString() : null;
+  return date && isValid(date) ? format(date, "yyyy-MM-dd HH:mm:ss") : null;
 }
 
-/**
- * Retorna apenas a data formatada para input HTML (YYYY-MM-DD).
- */
+// Formato para input type="date".
 export function formatToInputDate(dateVal: string | Date | null | undefined): string {
   const date = parseToDate(dateVal);
   if (!date || !isValid(date)) return "";
-  return format(date, 'yyyy-MM-dd');
+  return format(date, "yyyy-MM-dd");
 }
 
-/**
- * Retorna uma data relativa legível (ex: "hoje", "ontem", "há 2 dias").
- */
+// Formato relativo (hoje, ontem, etc.).
 export function formatRelative(dateVal: string | Date | null | undefined): string {
   const date = parseToDate(dateVal);
   if (!date || !isValid(date)) return "";
-  
-  return new Intl.RelativeTimeFormat('pt-BR', { numeric: 'auto' }).format(
+
+  return new Intl.RelativeTimeFormat("pt-BR", { numeric: "auto" }).format(
     Math.ceil((date.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)),
-    'day'
+    "day",
   );
 }

@@ -2,6 +2,7 @@ import React, { useMemo, useCallback } from "react";
 import { Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { parseBRL } from "../utils/currency";
 import { calculateReceiptTotal } from "../utils/analytics";
+import { formatToBR } from "../utils/date";
 import type { Receipt, ReceiptItem } from "../types/domain";
 
 interface ReceiptCardProps {
@@ -21,6 +22,7 @@ export const ReceiptCard = React.memo(function ReceiptCard({
     const total = useMemo(() => {
         return calculateReceiptTotal(receipt, parseBRL);
     }, [receipt]);
+    const displayDate = useMemo(() => formatToBR(receipt.date) || receipt.date, [receipt.date]);
 
     // Memoizar o callback de toggle
     const handleToggle = useCallback(() => {
@@ -80,7 +82,7 @@ export const ReceiptCard = React.memo(function ReceiptCard({
                             }}
                         >
                             <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>
-                                {receipt.date}
+                                {displayDate}
                             </span>
                             <span
                                 style={{

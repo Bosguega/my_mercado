@@ -17,6 +17,48 @@ function parseNumber(value: string | null | undefined, fallback = "0"): string {
   return value.replace(/[^\d,.-]/g, "").trim();
 }
 
+function normalizeSpaces(value: string | null | undefined): string {
+  if (!value) return "";
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function toBRDateTime(datePart: string, timePart?: string): string {
+  const baseTime = timePart ? timePart.trim() : "";
+  const normalizedTime =
+    baseTime.length === 5 ? `${baseTime}:00` : baseTime || "00:00:00";
+  return `${datePart.trim()} ${normalizedTime}`;
+}
+
+function extractEmissionDate(value: string | null | undefined): string | null {
+  const text = normalizeSpaces(value);
+  if (!text) return null;
+
+  // "Emissao: DD/MM/AAAA HH:mm:ss" (including mojibake variants where "Emiss" is still intact)
+  const aroundEmission = text.match(
+    /emiss[\s\S]{0,60}?(\d{2}\/\d{2}\/\d{4})(?:\s+(\d{2}:\d{2}(?::\d{2})?))?/i,
+  );
+  if (aroundEmission?.[1]) {
+    return toBRDateTime(aroundEmission[1], aroundEmission[2]);
+  }
+
+  const genericDate = text.match(
+    /(\d{2}\/\d{2}\/\d{4})(?:\s+(\d{2}:\d{2}(?::\d{2})?))?/,
+  );
+  if (genericDate?.[1]) {
+    return toBRDateTime(genericDate[1], genericDate[2]);
+  }
+
+  return null;
+}
+
+function getFallbackDateAtMidnight(): string {
+  const now = new Date();
+  const dd = String(now.getDate()).padStart(2, "0");
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const yyyy = String(now.getFullYear());
+  return `${dd}/${mm}/${yyyy} 00:00:00`;
+}
+
 function validateNfceSpUrl(rawUrl: string): string {
   let parsed: URL;
   try {
@@ -133,38 +175,32 @@ export async function parseNFCeSP(url: string): Promise<Receipt> {
     const doc = parser.parseFromString(html, "text/html");
 
     let establishment = "Estabelecimento Desconhecido";
-    let date = new Date().toISOString();
+    let date = "";
     const items: ReceiptItem[] = [];
 
     const companyDiv = doc.querySelector(".txtTopo");
     if (companyDiv) {
-      establishment = (companyDiv.textContent || "").trim();
+      establishment = normalizeSpaces(companyDiv.textContent || "") || establishment;
     }
 
-    const lis = doc.querySelectorAll("li");
-    lis.forEach((li) => {
-      const text = li.textContent || "";
+    const infoCandidates = [
+      ...Array.from(doc.querySelectorAll("li"), (li) => li.textContent || ""),
+      ...Array.from(doc.querySelectorAll(".txtCenter, #infos, .txtChave"), (el) => el.textContent || ""),
+      doc.body?.textContent || "",
+    ];
 
-      if (text.includes("Emissao:") || text.includes("EmissÃ£o:")) {
-        // Tentar capturar data com hora: DD/MM/AAAA HH:mm:ss
-        const matchWithTime = text.match(/Emiss[aã]o:\s*(\d{2}\/\d{2}\/\d{4}\s\d{2}:\d{2}:\d{2})/i);
-        // Tentar capturar data sem hora: DD/MM/AAAA
-        const matchWithoutTime = text.match(/Emiss[aã]o:\s*(\d{2}\/\d{2}\/\d{4})/i);
-
-        if (matchWithTime) {
-          date = matchWithTime[1].trim();
-        } else if (matchWithoutTime) {
-          date = matchWithoutTime[1].trim();
-        } else {
-          // Fallback: tentar extrair qualquer coisa após "Emissão:"
-          const cleaned = text.replace(/Emiss[aã]o:/i, "").trim();
-          // Verificar se parece uma data válida
-          if (/^\d{2}\/\d{2}\/\d{4}/.test(cleaned)) {
-            date = cleaned;
-          }
-        }
+    for (const candidate of infoCandidates) {
+      const extractedDate = extractEmissionDate(candidate);
+      if (extractedDate) {
+        date = extractedDate;
+        break;
       }
-    });
+    }
+
+    if (!date) {
+      date = getFallbackDateAtMidnight();
+      console.warn("Nao foi possivel extrair data/hora da emissao. Usando fallback com meia-noite.");
+    }
 
     const rows = doc.querySelectorAll("table#tabResult tr");
 
