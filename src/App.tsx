@@ -1,5 +1,12 @@
 import { useState, useEffect, lazy, Suspense } from "react";
-import { Scan, History as HistoryIcon, Search, LogOut, Package, Settings as SettingsIcon } from "lucide-react";
+import {
+  Scan,
+  History as HistoryIcon,
+  ListChecks,
+  Search,
+  Package,
+  Settings as SettingsIcon,
+} from "lucide-react";
 import Login from "./components/Login";
 import { Toaster, toast } from "react-hot-toast";
 import { logout } from "./services/auth";
@@ -15,13 +22,43 @@ import { useUiStore } from "./stores/useUiStore";
 import { useAllReceiptsQuery } from "./hooks/queries/useReceiptsQuery";
 import "./index.css";
 
+const LAZY_RELOAD_KEY = "@MyMercado:lazy-reload-once";
+
+function lazyWithRetry<T extends { default: React.ComponentType<any> }>(
+  importer: () => Promise<T>,
+) {
+  return lazy(async () => {
+    try {
+      const module = await importer();
+      try {
+        sessionStorage.removeItem(LAZY_RELOAD_KEY);
+      } catch {
+        // noop
+      }
+      return module;
+    } catch (error) {
+      try {
+        const alreadyReloaded = sessionStorage.getItem(LAZY_RELOAD_KEY) === "1";
+        if (!alreadyReloaded) {
+          sessionStorage.setItem(LAZY_RELOAD_KEY, "1");
+          window.location.reload();
+        }
+      } catch {
+        // noop
+      }
+      throw error;
+    }
+  });
+}
+
 // Lazy loading das abas para melhor performance
-const ScannerTab = lazy(() => import("./components/ScannerTab"));
-const HistoryTab = lazy(() => import("./components/HistoryTab"));
-const SearchTab = lazy(() => import("./components/SearchTab"));
+const ScannerTab = lazyWithRetry(() => import("./components/ScannerTab"));
+const ShoppingListTab = lazyWithRetry(() => import("./components/ShoppingListTab"));
+const HistoryTab = lazyWithRetry(() => import("./components/HistoryTab"));
+const SearchTab = lazyWithRetry(() => import("./components/SearchTab"));
 // const DictionaryTab = lazy(() => import("./components/DictionaryTab"));
-const CanonicalProductsTab = lazy(() => import("./components/CanonicalProductsTab"));
-const SettingsTab = lazy(() => import("./components/SettingsTab"));
+const CanonicalProductsTab = lazyWithRetry(() => import("./components/CanonicalProductsTab"));
+const SettingsTab = lazyWithRetry(() => import("./components/SettingsTab"));
 
 // Componente de loading para Suspense
 const TabSkeleton = () => (
@@ -129,6 +166,7 @@ function App() {
       <main style={{ minHeight: "60vh" }}>
         <Suspense fallback={<TabSkeleton />}>
           {tab === "scan" && <ScannerTab />}
+          {tab === "shopping" && <ShoppingListTab />}
           {tab === "history" && <HistoryTab />}
           {tab === "search" && <SearchTab />}
           {tab === "products" && <CanonicalProductsTab />}
@@ -169,6 +207,13 @@ function App() {
         >
           <Scan size={22} />
           <span style={{ marginTop: "2px" }}>Escanear</span>
+        </button>
+        <button
+          className={`nav-item ${tab === "shopping" ? "active" : ""}`}
+          onClick={() => handleChangeTab("shopping")}
+        >
+          <ListChecks size={22} />
+          <span style={{ marginTop: "2px" }}>Lista</span>
         </button>
         <button
           className={`nav-item ${tab === "history" ? "active" : ""}`}

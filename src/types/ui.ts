@@ -1,9 +1,19 @@
 import type { SessionUser } from "./domain";
 import type { ReceiptItem } from "./domain";
 
-export type AppTab = "scan" | "history" | "search" | "dictionary" | "products" | "settings";
+export type AppTab = "scan" | "shopping" | "history" | "search" | "dictionary" | "products" | "settings";
 export type SortDirection = "asc" | "desc";
 export type SearchSortBy = "recent" | "price";
+
+export interface ShoppingListItem {
+  id: string;
+  name: string;
+  normalized_key: string;
+  quantity?: string;
+  checked: boolean;
+  created_at: string;
+  checked_at?: string;
+}
 
 export interface HistoryFilters {
   period: "all" | "this-month" | "last-3-months" | "custom";
