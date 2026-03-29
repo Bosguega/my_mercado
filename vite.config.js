@@ -20,17 +20,20 @@ export default defineConfig(({ mode }) => {
 
   const baseOverride = normalizeBase(env.VITE_BASE_URL);
   const githubRepo = process.env.GITHUB_REPOSITORY?.split('/')[1];
+
   const isGitHubPagesBuild =
     process.env.GITHUB_ACTIONS === 'true' &&
     Boolean(githubRepo) &&
     !githubRepo.endsWith('.github.io');
+
   const base = baseOverride ?? (isGitHubPagesBuild ? `/${githubRepo}/` : '/');
 
   const useBasicSsl = env.VITE_BASIC_SSL === 'true';
   const sslCertPath = env.VITE_SSL_CERT_PATH;
   const sslKeyPath = env.VITE_SSL_KEY_PATH;
 
-  let https;
+  let https = false;
+
   if (sslCertPath && sslKeyPath) {
     https = {
       cert: fs.readFileSync(path.resolve(sslCertPath)),
@@ -38,102 +41,104 @@ export default defineConfig(({ mode }) => {
     };
   } else if (useBasicSsl) {
     https = true;
-  } else {
-    https = false;
   }
 
   return {
     base,
+
     plugins: [
       react(),
       useBasicSsl ? basicSsl() : null,
-VitePWA({
-  registerType: 'autoUpdate',
 
-  // 👉 evita comportamento agressivo de cache
-  workbox: {
-    cleanupOutdatedCaches: true,
-    clientsClaim: true,
-    skipWaiting: true,
+      VitePWA({
+        registerType: 'autoUpdate',
 
-    globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        workbox: {
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true,
 
-    runtimeCaching: [
-      // ✅ APIs (Supabase e qualquer outra) → NUNCA cacheia
-      {
-        urlPattern: /^https:\/\/.*\.supabase\.co\/.*/,
-        handler: 'NetworkOnly'
-      },
+          globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
 
-      // ✅ Navegação (HTML) → sempre tenta rede primeiro
-      {
-        urlPattern: ({ request }) => request.mode === 'navigate',
-        handler: 'NetworkFirst',
-        options: {
-          cacheName: 'pages',
+          runtimeCaching: [
+            // ✅ Navegação (HTML)
+            {
+              urlPattern: ({ request }) => request.mode === 'navigate',
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'pages',
+              }
+            },
+
+            // ✅ JS e CSS
+            {
+              urlPattern: ({ request }) =>
+                request.destination === 'script' ||
+                request.destination === 'style',
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'assets',
+              }
+            },
+
+            // ✅ Imagens
+            {
+              urlPattern: ({ request }) =>
+                request.destination === 'image',
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'images',
+              }
+            }
+          ]
+        },
+
+        manifest: {
+          name: 'My Mercado',
+          short_name: 'Mercado',
+          description: 'Acompanhe preços e economize com inteligência artificial.',
+          theme_color: '#ffffff',
+          background_color: '#ffffff',
+          display: 'standalone',
+          start_url: base,
+          scope: base,
+          icons: [
+            {
+              src: 'pwa-192x192.png',
+              sizes: '192x192',
+              type: 'image/png',
+            },
+            {
+              src: 'pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'any maskable',
+            }
+          ]
         }
-      },
+      })
 
-      // ✅ Assets estáticos (JS, CSS) → cache seguro
-      {
-        urlPattern: ({ request }) =>
-          request.destination === 'script' ||
-          request.destination === 'style',
-        handler: 'StaleWhileRevalidate',
-        options: {
-          cacheName: 'assets',
-        }
-      },
-
-      // ✅ Imagens → cache ok
-      {
-        urlPattern: ({ request }) =>
-          request.destination === 'image',
-        handler: 'StaleWhileRevalidate',
-        options: {
-          cacheName: 'images',
-        }
-      }
-    ]
-  },
-
-  manifest: {
-    name: 'My Mercado',
-    short_name: 'Mercado',
-    description: 'Acompanhe preços e economize com inteligência artificial.',
-    theme_color: '#ffffff',
-    background_color: '#ffffff',
-    display: 'standalone',
-    start_url: base,
-    scope: base,
-    icons: [
-      {
-        src: 'pwa-192x192.png',
-        sizes: '192x192',
-        type: 'image/png',
-      },
-      {
-        src: 'pwa-512x512.png',
-        sizes: '512x512',
-        type: 'image/png',
-        purpose: 'any maskable',
-      }
-    ]
-  }
-})
     ].filter(Boolean),
+
     define: {
       global: 'globalThis',
     },
+
     optimizeDeps: {
       exclude: ['@supabase/supabase-js']
     },
+
     build: {
       rollupOptions: {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
-              if (id.includes('react') || id.includes('react-dom') || id.includes('scheduler') || id.includes('prop-types')) {
+              if (
+                id.includes('react') ||
+                id.includes('react-dom') ||
+                id.includes('scheduler') ||
+                id.includes('prop-types')
+              ) {
                 return 'vendor-framework';
               }
               if (id.includes('@supabase')) {
@@ -163,6 +168,7 @@ VitePWA({
       },
       chunkSizeWarningLimit: 800,
     },
+
     server: {
       host: true,
       https,
@@ -178,6 +184,7 @@ VitePWA({
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       },
     },
+
     preview: {
       port: 4173,
       host: true,
