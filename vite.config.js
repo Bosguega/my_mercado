@@ -47,34 +47,87 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       useBasicSsl ? basicSsl() : null,
-      VitePWA({
-        registerType: 'autoUpdate',
-        includeAssets: ['apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
-        manifest: {
-          name: 'My Mercado',
-          short_name: 'Mercado',
-          description: 'Acompanhe preços e economize com inteligência artificial.',
-          theme_color: '#ffffff',
-          background_color: '#ffffff',
-          display: 'standalone',
-          start_url: base,
-          scope: base,
-          icons: [
-            {
-              src: 'pwa-192x192.png',
-              sizes: '192x192',
-              type: 'image/png',
-            },
-            {
-              src: 'pwa-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any maskable',
-            }
-          ]
+VitePWA({
+  registerType: 'autoUpdate',
+
+  // 👉 evita comportamento agressivo de cache
+  workbox: {
+    cleanupOutdatedCaches: true,
+    clientsClaim: true,
+    skipWaiting: true,
+
+    globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+
+    runtimeCaching: [
+      // ✅ APIs (Supabase e qualquer outra) → NUNCA cacheia
+      {
+        urlPattern: /^https:\/\/.*\.supabase\.co\/.*/,
+        handler: 'NetworkOnly'
+      },
+
+      // ✅ Navegação (HTML) → sempre tenta rede primeiro
+      {
+        urlPattern: ({ request }) => request.mode === 'navigate',
+        handler: 'NetworkFirst',
+        options: {
+          cacheName: 'pages',
         }
-      })
+      },
+
+      // ✅ Assets estáticos (JS, CSS) → cache seguro
+      {
+        urlPattern: ({ request }) =>
+          request.destination === 'script' ||
+          request.destination === 'style',
+        handler: 'StaleWhileRevalidate',
+        options: {
+          cacheName: 'assets',
+        }
+      },
+
+      // ✅ Imagens → cache ok
+      {
+        urlPattern: ({ request }) =>
+          request.destination === 'image',
+        handler: 'StaleWhileRevalidate',
+        options: {
+          cacheName: 'images',
+        }
+      }
+    ]
+  },
+
+  manifest: {
+    name: 'My Mercado',
+    short_name: 'Mercado',
+    description: 'Acompanhe preços e economize com inteligência artificial.',
+    theme_color: '#ffffff',
+    background_color: '#ffffff',
+    display: 'standalone',
+    start_url: base,
+    scope: base,
+    icons: [
+      {
+        src: 'pwa-192x192.png',
+        sizes: '192x192',
+        type: 'image/png',
+      },
+      {
+        src: 'pwa-512x512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any maskable',
+      }
+    ]
+  }
+})
     ].filter(Boolean),
+    define: {
+      global: 'globalThis',
+    },
+    optimizeDeps: {
+      exclude: ['@supabase/supabase-js']
+    },
     build: {
       rollupOptions: {
         output: {
@@ -118,6 +171,20 @@ export default defineConfig(({ mode }) => {
           target: 'http://localhost:3001',
           changeOrigin: true,
         },
+      },
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      },
+    },
+    preview: {
+      port: 4173,
+      host: true,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       },
     },
   };

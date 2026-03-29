@@ -15,6 +15,7 @@ import { useApiKey } from "./hooks/useApiKey";
 import { useSupabaseSession } from "./hooks/useSupabaseSession";
 import ApiKeyModal from "./components/ApiKeyModal";
 import { PerformancePanel } from "./components/PerformancePanel";
+import { logPWADebugInfo } from "./utils/pwaDebug";
 import type { AppTab } from "./types/ui";
 import { useReceiptsStore } from "./stores/useReceiptsStore";
 import { useScannerStore } from "./stores/useScannerStore";
@@ -103,6 +104,11 @@ function App() {
   useEffect(() => {
     if (!hasKey) {
       setShowApiKeyModal(true);
+    }
+    
+    // Debug PWA em desenvolvimento
+    if (import.meta.env.DEV) {
+      logPWADebugInfo();
     }
   }, [hasKey]);
 
