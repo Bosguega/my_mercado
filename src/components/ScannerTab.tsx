@@ -16,9 +16,9 @@ import {
   Aperture,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { CATEGORIES } from "../constants/domain";
-import { parseBRL, formatBRL, calc } from "../utils/currency";
-import { generateManualReceiptId } from "../utils/receiptId";
+// import { CATEGORIES } from "../constants/domain";
+import { parseBRL, formatBRL /*, calc */ } from "../utils/currency";
+// import { generateManualReceiptId } from "../utils/receiptId";
 import type { Receipt, ReceiptItem } from "../types/domain";
 
 type SaveReceiptResponse =
@@ -168,7 +168,7 @@ function ScannerTab() {
   const isLoading = loading;
   const hasResult = !!currentReceipt;
   const hasDuplicate = !!duplicateReceipt;
-  const isIdle = !isLoading && !isScanning && !hasResult && !isManual && !hasDuplicate;
+  const _isIdle = !isLoading && !isScanning && !hasResult && !isManual && !hasDuplicate;
 
   // --- ETAPA 6: Estado Único de Tela (Derivado) ---
   const activeScreen = isManual ? "manual" :

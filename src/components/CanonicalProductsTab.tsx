@@ -5,7 +5,7 @@ import {
     Edit3,
     Trash2,
     Merge,
-    Search,
+    // Search,
     X,
     Save,
     Tag,
@@ -255,7 +255,7 @@ function CanonicalProductsTab() {
                                 Modo Merge Ativo
                             </h3>
                             <p style={{ color: "#94a3b8", fontSize: "0.85rem" }}>
-                                Selecione um produto para mesclar com "{mergeMode.primaryName}"
+                                Selecione um produto para mesclar com &quot;{mergeMode.primaryName}&quot;
                             </p>
                         </div>
                         <button

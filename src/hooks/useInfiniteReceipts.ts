@@ -51,14 +51,7 @@ export function useInfiniteReceipts({
         filters?.sortOrder,
     ]);
 
-    // Carregar primeira página quando filtros mudam
-    useEffect(() => {
-        if (page === 1) {
-            loadInitialData();
-        }
-    }, [page]);
-
-    const loadInitialData = async () => {
+    const loadInitialData = useCallback(async () => {
         if (loadingRef.current) return;
 
         loadingRef.current = true;
@@ -86,7 +79,14 @@ export function useInfiniteReceipts({
             setLoading(false);
             loadingRef.current = false;
         }
-    };
+    }, [pageSize, filters, search]);
+
+    // Carregar primeira página quando filtros mudam
+    useEffect(() => {
+        if (page === 1) {
+            loadInitialData();
+        }
+    }, [page, loadInitialData]);
 
     const loadMore = useCallback(async () => {
         if (loadingRef.current || !hasMore) return;
@@ -116,7 +116,7 @@ export function useInfiniteReceipts({
             setLoadingMore(false);
             loadingRef.current = false;
         }
-    }, [page, pageSize, filters, hasMore]);
+    }, [page, pageSize, filters, hasMore, search]);
 
     const refresh = useCallback(async () => {
         setReceipts([]);
@@ -148,7 +148,7 @@ export function useInfiniteReceipts({
             setLoading(false);
             loadingRef.current = false;
         }
-    }, [pageSize, filters]);
+    }, [pageSize, filters, search]);
 
     return {
         receipts,

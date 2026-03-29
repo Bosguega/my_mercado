@@ -132,7 +132,7 @@ async function callOpenAI(
 // PARSE HELPER
 // ==============================
 
-function isAiNormalizationResult(value: unknown): value is AiNormalizationResult {
+function _isAiNormalizationResult(value: unknown): value is AiNormalizationResult {
   if (!value || typeof value !== "object") return false;
 
   const candidate = value as Record<string, unknown>;

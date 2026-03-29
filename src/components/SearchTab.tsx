@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { parseBRL } from "../utils/currency";
-import { parseToDate, formatToBR } from "../utils/date";
+import { parseToDate /*, formatToBR */ } from "../utils/date";
 import { groupBy, filterBySearch, sortItems } from "../utils/analytics";
 import type { PurchasedItem, SearchSortBy } from "../types/ui";
 import type { Receipt, ReceiptItem } from "../types/domain";
@@ -20,7 +20,7 @@ import { useAllReceiptsQuery } from "../hooks/queries/useReceiptsQuery";
 import { useCanonicalProductsQuery } from "../hooks/queries/useCanonicalProductsQuery";
 import { SearchItemRow } from "./SearchItemRow";
 
-import { Skeleton, SkeletonCard } from "./Skeleton";
+import { Skeleton /*, SkeletonCard */ } from "./Skeleton";
 
 function SearchTab() {
   // React Query para dados de receipts

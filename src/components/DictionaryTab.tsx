@@ -20,7 +20,7 @@ import { Skeleton } from "./Skeleton";
 import { toast } from "react-hot-toast";
 import { filterBySearch, sortItems } from "../utils/analytics";
 import type { SortDirection, ConfirmDialogConfig } from "../types/ui";
-import type { DictionaryEntry, Receipt, ReceiptItem } from "../types/domain";
+import type { DictionaryEntry /*, Receipt, ReceiptItem */ } from "../types/domain";
 import { useAllReceiptsQuery } from "../hooks/queries/useReceiptsQuery";
 import { useCanonicalProductsQuery } from "../hooks/queries/useCanonicalProductsQuery";
 
@@ -28,7 +28,7 @@ import { useCanonicalProductsQuery } from "../hooks/queries/useCanonicalProducts
 
 function DictionaryTab() {
   // React Query para dados de receipts
-  const { data: savedReceipts = [], refetch: refetchReceipts } = useAllReceiptsQuery();
+  const { data: _savedReceipts = [], refetch: refetchReceipts } = useAllReceiptsQuery();
   const { data: products = [] } = useCanonicalProductsQuery();
   const [dictionary, setDictionary] = useState<DictionaryEntry[]>([]);
   const [loading, setLoading] = useState(true);

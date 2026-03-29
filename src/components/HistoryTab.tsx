@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef, type ChangeEvent } from "react";
+import { useState, /* useCallback, */ /* useEffect, */ useMemo, /* useRef, */ type ChangeEvent } from "react";
 import {
   History,
   Download,
@@ -10,17 +10,17 @@ import { toast } from "react-hot-toast";
 // react-window removido temporariamente - paginação infinita já otimiza performance
 import UniversalSearchBar from "./UniversalSearchBar";
 import ConfirmDialog from "./ConfirmDialog";
-import { restoreReceiptsToDB } from "../services/dbMethods";
+// import { restoreReceiptsToDB } from "../services/dbMethods";
 import { parseBRL, formatBRL } from "../utils/currency";
 import { parseToDate } from "../utils/date";
 import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from "date-fns";
 import { calculateReceiptTotal, calculateTotalSpent } from "../utils/analytics";
 
 import { ReceiptCard } from "./ReceiptCard";
-import { useInfiniteReceipts } from "../hooks/useInfiniteReceipts";
+// import { useInfiniteReceipts } from "../hooks/useInfiniteReceipts";
 import type { HistoryFilters } from "../types/ui";
 import type { ConfirmDialogConfig } from "../types/ui";
-import type { Receipt, ReceiptItem } from "../types/domain";
+import type { Receipt /*, ReceiptItem */ } from "../types/domain";
 import { useUiStore } from "../stores/useUiStore";
 import {
   useAllReceiptsQuery,

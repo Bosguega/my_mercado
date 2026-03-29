@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Activity, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Activity, /* X, */ ChevronDown, ChevronUp } from "lucide-react";
 import { usePerformanceMonitor } from "../hooks/usePerformanceMonitor";
 
 export function PerformancePanel() {

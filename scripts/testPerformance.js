@@ -29,7 +29,7 @@ function runCommand(command, description) {
         execSync(command, { stdio: "inherit" });
         log(`✅ ${description} concluído!`, "green");
         return true;
-    } catch (error) {
+    } catch {
         log(`❌ Erro em ${description}`, "red");
         return false;
     }

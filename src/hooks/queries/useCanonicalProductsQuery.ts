@@ -124,7 +124,7 @@ export function useMergeCanonicalProducts() {
     return useMutation({
         mutationFn: ({ primaryId, secondaryId }: { primaryId: string; secondaryId: string }) =>
             mergeCanonicalProducts(primaryId, secondaryId),
-        onSuccess: (_, { primaryId, secondaryId }) => {
+        onSuccess: (_, { primaryId: _primaryId, secondaryId }) => {
             // Remover secundário do cache
             queryClient.setQueryData(canonicalProductKeys.list(), (old: CanonicalProduct[] | undefined) => {
                 if (!old) return old;

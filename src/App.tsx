@@ -4,12 +4,12 @@ import {
   History as HistoryIcon,
   ListChecks,
   Search,
-  Package,
+  // Package,
   Settings as SettingsIcon,
 } from "lucide-react";
 import Login from "./components/Login";
 import { Toaster, toast } from "react-hot-toast";
-import { logout } from "./services/auth";
+// import { logout } from "./services/auth";
 import { isSupabaseConfigured } from "./services/supabaseClient";
 import { useApiKey } from "./hooks/useApiKey";
 import { useSupabaseSession } from "./hooks/useSupabaseSession";
@@ -57,7 +57,7 @@ const ShoppingListTab = lazyWithRetry(() => import("./components/ShoppingListTab
 const HistoryTab = lazyWithRetry(() => import("./components/HistoryTab"));
 const SearchTab = lazyWithRetry(() => import("./components/SearchTab"));
 // const DictionaryTab = lazy(() => import("./components/DictionaryTab"));
-const CanonicalProductsTab = lazyWithRetry(() => import("./components/CanonicalProductsTab"));
+// const CanonicalProductsTab = lazy(() => import("./components/CanonicalProductsTab"));
 const SettingsTab = lazyWithRetry(() => import("./components/SettingsTab"));
 
 // Componente de loading para Suspense
@@ -169,7 +169,6 @@ function App() {
           {tab === "shopping" && <ShoppingListTab />}
           {tab === "history" && <HistoryTab />}
           {tab === "search" && <SearchTab />}
-          {tab === "products" && <CanonicalProductsTab />}
           {tab === "settings" && <SettingsTab onOpenAiConfig={() => setShowApiKeyModal(true)} />}
         </Suspense>
       </main>
@@ -228,14 +227,6 @@ function App() {
         >
           <Search size={22} />
           <span style={{ marginTop: "2px" }}>Preços</span>
-        </button>
-
-        <button
-          className={`nav-item ${tab === "products" ? "active" : ""}`}
-          onClick={() => handleChangeTab("products")}
-        >
-          <Package size={22} />
-          <span style={{ marginTop: "2px" }}>Produtos</span>
         </button>
 
         <button
