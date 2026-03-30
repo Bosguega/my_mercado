@@ -2,8 +2,15 @@ import { supabase } from "./supabaseClient";
 import { formatToISO, formatToBR } from "../utils/date";
 import { parseBRL, formatBRL, calc } from "../utils/currency";
 import { startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { toast } from "react-hot-toast";
 
 import { toUserScopedReceiptId } from "../utils/receiptId";
+import {
+  createReceiptsStorage,
+  createDictionaryStorage,
+  isIndexedDBAvailable,
+  getStorageStatus,
+} from "../utils/storage";
 import type { CanonicalProduct, DictionaryEntry, DictionaryMap, Receipt, ReceiptItem } from "../types/domain";
 
 type DictionaryUpdateEntry = Pick<DictionaryEntry, "key" | "normalized_name" | "category" | "canonical_product_id">;
@@ -708,4 +715,169 @@ export async function clearCanonicalProductsInDB(): Promise<boolean> {
   const { error } = await client.from("canonical_products").delete().eq("user_id", user.id);
   if (error) throw error;
   return true;
+}
+
+// ==============================
+// FALLBACK LOCAL COM STORAGE UNIFICADO
+// ==============================
+
+/**
+ * Wrapper com fallback automático para getAllReceiptsFromDB
+ * Tenta Supabase, fallback para IndexedDB/localStorage
+ */
+export async function getAllReceiptsFromDBWithFallback(): Promise<Receipt[]> {
+  try {
+    // Tenta Supabase primeiro
+    return await getAllReceiptsFromDB();
+  } catch (error) {
+    console.warn("Supabase falhou, usando fallback local:", error);
+    
+    try {
+      const receiptsStorage = createReceiptsStorage();
+      const receipts = await receiptsStorage.getAll<Receipt>();
+      
+      if (receipts.length > 0) {
+        console.log(`[Fallback] ${receipts.length} receipts carregados do storage local`);
+      }
+      
+      return receipts;
+    } catch (fallbackError) {
+      console.error("Fallback também falhou:", fallbackError);
+      return [];
+    }
+  }
+}
+
+/**
+ * Wrapper com fallback automático para saveReceiptToDB
+ * Salva no Supabase e faz backup no storage local
+ */
+export async function saveReceiptToDBWithFallback(
+  receiptData: Receipt,
+  items: ReceiptItem[],
+): Promise<{ id: string; date: string } | null> {
+  let supabaseResult: { id: string; date: string } | null = null;
+  let supabaseError: unknown = null;
+
+  // Tenta salvar no Supabase
+  try {
+    supabaseResult = await saveReceiptToDB(receiptData, items);
+  } catch (error) {
+    supabaseError = error;
+    console.warn("Supabase falhou ao salvar, usando fallback local:", error);
+  }
+
+  // Sempre salva no storage local como backup
+  try {
+    const receiptsStorage = createReceiptsStorage();
+    await receiptsStorage.set(receiptData.id, { ...receiptData, items });
+    
+    if (supabaseError) {
+      toast.success("Nota salva localmente (offline)");
+    }
+  } catch (fallbackError) {
+    console.error("Fallback local falhou:", fallbackError);
+    
+    if (supabaseError) {
+      throw new Error("Falha ao salvar no Supabase e no fallback local");
+    }
+  }
+
+  return supabaseResult;
+}
+
+/**
+ * Wrapper com fallback para getDictionary
+ */
+export async function getDictionaryWithFallback(keys: string[]): Promise<DictionaryMap> {
+  try {
+    // Tenta Supabase primeiro
+    return await getDictionary(keys);
+  } catch (error) {
+    console.warn("Supabase falhou, usando fallback local:", error);
+    
+    try {
+      const dictStorage = createDictionaryStorage();
+      const allEntries = await dictStorage.getAll<DictionaryEntry>();
+      
+      // Filtra apenas as chaves solicitadas
+      const result: DictionaryMap = {};
+      allEntries.forEach((entry) => {
+        if (keys.includes(entry.key)) {
+          result[entry.key] = {
+            normalized_name: entry.normalized_name,
+            category: entry.category,
+            canonical_product_id: entry.canonical_product_id,
+          };
+        }
+      });
+      
+      return result;
+    } catch (fallbackError) {
+      console.error("Fallback também falhou:", fallbackError);
+      return {};
+    }
+  }
+}
+
+/**
+ * Sincroniza storage local com Supabase quando online
+ * Deve ser chamado quando o usuário recuperar conexão
+ */
+export async function syncLocalStorageWithSupabase(): Promise<{
+  synced: number;
+  errors: number;
+}> {
+  let synced = 0;
+  let errors = 0;
+
+  try {
+    const receiptsStorage = createReceiptsStorage();
+    const localReceipts = await receiptsStorage.getAll<Receipt>();
+
+    for (const receipt of localReceipts) {
+      try {
+        // Verifica se já existe no Supabase
+        const items = (receipt as any).items || [];
+        await saveReceiptToDB(receipt, items);
+        synced++;
+      } catch (error) {
+        console.error(`Erro ao sincronizar receipt ${receipt.id}:`, error);
+        errors++;
+      }
+    }
+
+    if (synced > 0) {
+      console.log(`Sincronização concluída: ${synced} itens, ${errors} erros`);
+    }
+  } catch (error) {
+    console.error("Erro ao sincronizar storage local:", error);
+    errors++;
+  }
+
+  return { synced, errors };
+}
+
+/**
+ * Verifica status do storage e conexão
+ */
+export async function getConnectionStatus(): Promise<{
+  supabase: boolean;
+  indexedDB: boolean;
+  localStorage: boolean;
+  storageUsed: "indexeddb" | "localStorage" | "none";
+  totalLocalItems: number;
+}> {
+  const { isSupabaseConfigured } = await import("./supabaseClient");
+
+  const indexedDB = isIndexedDBAvailable();
+  const storageStatus = await getStorageStatus();
+
+  return {
+    supabase: isSupabaseConfigured,
+    indexedDB,
+    localStorage: typeof window !== "undefined" && !!window.localStorage,
+    storageUsed: storageStatus.storageUsed,
+    totalLocalItems: storageStatus.totalItems,
+  };
 }

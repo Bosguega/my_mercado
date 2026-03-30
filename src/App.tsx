@@ -13,6 +13,7 @@ import { useApiKey } from "./hooks/useApiKey";
 import { useSupabaseSession } from "./hooks/useSupabaseSession";
 import ApiKeyModal from "./components/ApiKeyModal";
 import { PerformancePanel } from "./components/PerformancePanel";
+import { PWAUpdateNotification } from "./components/PWAUpdateNotification";
 import { logPWADebugInfo } from "./utils/pwaDebug";
 import { debugDatabaseConnection } from "./utils/dbDebug";
 import type { AppTab } from "./types/ui";
@@ -209,6 +210,9 @@ function App() {
           },
         }}
       />
+
+      {/* PWA Update Notification */}
+      <PWAUpdateNotification />
 
       <nav className="bottom-nav" role="navigation" aria-label="Navegação principal">
         <button

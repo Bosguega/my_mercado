@@ -16,6 +16,7 @@ import {
   Aperture,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { validateManualItem, validateNfcUrl } from "../utils/validation";
 // import { CATEGORIES } from "../constants/domain";
 import { parseBRL, formatBRL /*, calc */ } from "../utils/currency";
 // import { generateManualReceiptId } from "../utils/receiptId";
@@ -184,30 +185,21 @@ function ScannerTab() {
     }, 0);
   }, []);
 
-  const calculateItemTotal = useCallback((price: string, qty: string) => {
-    const priceNum = parseBRL(price);
-    const qtyNum = parseBRL(qty) || 1;
-    return priceNum * qtyNum;
-  }, []);
-
   const handleAddManualItem = () => {
     const { name, unitPrice, qty } = manualItem;
 
-    // 1. Validação
-    if (!name?.trim() || !unitPrice) {
-      toast.error("Preencha nome e preço do item");
-      return;
-    }
+    // 1. Validação com zod
+    const validation = validateManualItem({ name, qty, unitPrice });
 
-    const priceNum = parseBRL(unitPrice);
-    if (isNaN(priceNum) || priceNum < 0) {
-      toast.error("Preço inválido! Use apenas números");
+    if (!validation.success) {
+      toast.error(validation.error);
       return;
     }
 
     // 2. Transformação
-    const qtyNum = parseBRL(qty) || 1;
-    const totalNum = calculateItemTotal(unitPrice, qty);
+    const qtyNum = parseFloat(String(validation.data.qty)) || 1;
+    const priceNum = parseFloat(String(validation.data.unitPrice));
+    const totalNum = qtyNum * priceNum;
 
     const newItem = {
       name: name.trim(),
@@ -458,23 +450,16 @@ function InitialScannerScreen({
 
   const onLinkSubmit = () => {
     const rawUrl = pastedUrl.trim();
-    if (!rawUrl) {
-      toast.error("Cole um link válido");
+    
+    // Validação com zod
+    const validation = validateNfcUrl(rawUrl);
+    
+    if (!validation.success) {
+      toast.error(validation.error);
       return;
     }
 
-    try {
-      const parsed = new URL(rawUrl);
-      if (!["http:", "https:"].includes(parsed.protocol)) {
-        toast.error("Link inválido para NFC-e");
-        return;
-      }
-    } catch {
-      toast.error("Link inválido");
-      return;
-    }
-
-    handleUrlSubmit(rawUrl);
+    handleUrlSubmit(validation.data);
     setPastedUrl("");
     setPasteMode(false);
   };

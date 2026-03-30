@@ -3,7 +3,8 @@ import { BrowserMultiFormatReader, DecodeHintType } from '@zxing/library';
 import { toast } from 'react-hot-toast';
 import { parseNFCeSP } from '../services/receiptParser';
 import { useScannerStore } from '../stores/useScannerStore';
-import type { Receipt, ReceiptItem } from '../types/domain';
+import { validateManualReceiptForm } from '../utils/validation';
+import type { Receipt } from '../types/domain';
 import type { AppTab, ScannerManualData } from '../types/ui';
 
 type SaveReceiptResponse =
@@ -452,33 +453,23 @@ export function useReceiptScanner({
   });
 
   const handleSaveManualReceipt = useCallback(async () => {
-    if (manualData.items.length === 0) {
-      toast.error('Adicione pelo menos um item');
-      return;
-    }
-    if (!manualData.establishment?.trim()) {
-      toast.error('Informe o nome do mercado');
-      return;
-    }
-
-    const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
-    if (!dateRegex.test(manualData.date)) {
-      toast.error('Data inválida! Use DD/MM/AAAA');
-      return;
-    }
-
-    const hasInvalidItems = manualData.items.some((item: ReceiptItem) => {
-      const price = parseFloat((item.unitPrice || '').toString().replace(',', '.'));
-      const qty = parseFloat((item.qty || '').toString().replace(',', '.'));
-      return isNaN(price) || isNaN(qty) || price < 0 || qty < 0;
+    // 1. Validação com zod
+    const validation = validateManualReceiptForm({
+      establishment: manualData.establishment,
+      date: manualData.date,
+      items: manualData.items.map((item) => ({
+        name: item.name,
+        qty: String(item.qty || 1),
+        unitPrice: String(item.unitPrice || 0),
+      })),
     });
 
-    if (hasInvalidItems) {
-      toast.error(
-        'Existem itens com valores inválidos. Verifique os preços e quantidades.',
-      );
+    if (!validation.success) {
+      validation.errors.forEach((error) => toast.error(error));
       return;
     }
+
+    const { establishment, date, items } = validation.data;
 
     const toStoreSlug = (value: string) => {
       const base = (value || '')
@@ -502,13 +493,18 @@ export function useReceiptScanner({
     const randomSuffix =
       (globalThis.crypto?.randomUUID?.() ||
         `${Date.now()}_${Math.random().toString(16).slice(2)}`).replace(/-/g, '');
-    const manualId = `manual_${normalizeManualDate(manualData.date)}_${toStoreSlug(
-      manualData.establishment,
+    const manualId = `manual_${normalizeManualDate(date)}_${toStoreSlug(
+      establishment,
     )}_${randomSuffix.slice(0, 12)}`;
     const finalData = {
       ...manualData,
       id: manualId,
-      establishment: manualData.establishment.trim() || 'Compra Manual',
+      establishment: establishment.trim() || 'Compra Manual',
+      items: items.map((item, idx) => ({
+        ...manualData.items[idx],
+        qty: item.qty,
+        unitPrice: String(item.unitPrice),
+      })),
     };
 
     setLoading(true);

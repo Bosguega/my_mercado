@@ -1,226 +1,269 @@
 /**
- * Utilitário centralizado para validação de formulários
- * Padroniza validações e mensagens de erro
+ * Validações de Formulário com Zod
+ * 
+ * Validações type-safe para formulários do app.
+ * @see https://zod.dev/
  */
 
-import { notify } from "./notifications";
+import { z } from "zod";
 
-export const validators = {
-    // =========================
-    // Validações Básicas
-    // =========================
+// ==============================
+// SCHEMAS
+// ==============================
 
-    /**
-     * Valida campo obrigatório
-     * @param value - Valor a ser validado
-     * @param fieldName - Nome do campo para mensagem
-     * @returns true se válido
-     */
-    required: (value: string | undefined | null, fieldName: string): boolean => {
-        if (!value?.trim()) {
-            notify.errorValidation(fieldName);
-            return false;
-        }
-        return true;
+/**
+ * Schema para item individual de receita
+ */
+export const receiptItemSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Nome do produto é obrigatório")
+    .max(200, "Nome muito longo (máx 200 caracteres)"),
+  qty: z
+    .string()
+    .optional()
+    .default("1")
+    .transform((val) => {
+      const num = parseFloat(val.replace(",", "."));
+      return isNaN(num) || num < 0 ? 0 : num;
+    }),
+  unitPrice: z
+    .string()
+    .min(1, "Preço é obrigatório")
+    .regex(/^\d+[.,]?\d*$/, "Preço inválido! Use apenas números")
+    .transform((val) => {
+      const num = parseFloat(val.replace(",", "."));
+      return isNaN(num) || num < 0 ? 0 : num;
+    }),
+  unit: z.string().optional().default("UN"),
+});
+
+/**
+ * Schema para receita completa
+ */
+export const receiptSchema = z.object({
+  id: z.string().optional(),
+  establishment: z
+    .string()
+    .min(1, "Nome do mercado é obrigatório")
+    .max(100, "Nome muito longo (máx 100 caracteres)")
+    .transform((val) => val.trim()),
+  date: z
+    .string()
+    .regex(/^\d{2}\/\d{2}\/\d{4}$/, "Data inválida! Use DD/MM/AAAA")
+    .transform((val) => {
+      const [dd, mm, yyyy] = val.split("/");
+      const date = new Date(`${yyyy}-${mm}-${dd}`);
+      return date;
+    }),
+  items: z
+    .array(receiptItemSchema)
+    .min(1, "Adicione pelo menos um item")
+    .max(500, "Muitos itens (máx 500)"),
+});
+
+/**
+ * Schema para entrada manual de item
+ */
+export const manualItemSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Nome é obrigatório")
+    .max(200, "Nome muito longo"),
+  qty: z
+    .string()
+    .optional()
+    .default("1")
+    .refine((val) => /^\d*[.,]?\d*$/.test(val), "Quantidade inválida"),
+  unitPrice: z
+    .string()
+    .min(1, "Preço é obrigatório")
+    .refine((val) => /^\d+[.,]?\d*$/.test(val), "Preço inválido! Use apenas números"),
+});
+
+/**
+ * Schema para formulário de receita manual
+ */
+export const manualReceiptFormSchema = z.object({
+  establishment: z
+    .string()
+    .min(1, "Nome do mercado é obrigatório")
+    .max(100, "Nome muito longo")
+    .transform((val) => val.trim()),
+  date: z
+    .string()
+    .regex(/^\d{2}\/\d{2}\/\d{4}$/, "Data inválida! Use DD/MM/AAAA"),
+  items: z
+    .array(manualItemSchema)
+    .min(1, "Adicione pelo menos um item"),
+});
+
+/**
+ * Schema para entrada de URL de NFC-e
+ */
+export const nfcUrlSchema = z
+  .string()
+  .min(1, "URL é obrigatória")
+  .url("URL inválida! Deve começar com http:// ou https://")
+  .refine(
+    (url) => {
+      try {
+        const parsed = new URL(url);
+        return ["http:", "https:"].includes(parsed.protocol);
+      } catch {
+        return false;
+      }
     },
+    { message: "Protocolo inválido! Use http:// ou https://" }
+  );
 
-    /**
-     * Valida comprimento mínimo
-     * @param value - Valor a ser validado
-     * @param minLength - Comprimento mínimo
-     * @param fieldName - Nome do campo
-     * @returns true se válido
-     */
-    minLength: (value: string, minLength: number, fieldName: string): boolean => {
-        if (value.length < minLength) {
-            notify.error(`${fieldName} deve ter pelo menos ${minLength} caracteres.`);
-            return false;
-        }
-        return true;
+/**
+ * Schema para configuração de API Key
+ */
+export const apiKeySchema = z
+  .string()
+  .min(1, "API Key é obrigatória")
+  .refine(
+    (key) => {
+      const trimmed = key.trim();
+      return (
+        trimmed.startsWith("AIza") || // Google
+        trimmed.startsWith("sk-") || // OpenAI
+        trimmed.startsWith("sk_") // OpenAI alternativo
+      );
     },
+    {
+      message:
+        "API Key inválida! Deve começar com 'AIza' (Google) ou 'sk-' (OpenAI)",
+    }
+  );
 
-    /**
-     * Valida comprimento máximo
-     * @param value - Valor a ser validado
-     * @param maxLength - Comprimento máximo
-     * @param fieldName - Nome do campo
-     * @returns true se válido
-     */
-    maxLength: (value: string, maxLength: number, fieldName: string): boolean => {
-        if (value.length > maxLength) {
-            notify.error(`${fieldName} deve ter no máximo ${maxLength} caracteres.`);
-            return false;
-        }
-        return true;
-    },
+// ==============================
+// TYPES INFERRED
+// ==============================
 
-    // =========================
-    // Validações de Formato
-    // =========================
+export type ReceiptItemInput = z.infer<typeof receiptItemSchema>;
+export type ReceiptInput = z.infer<typeof receiptSchema>;
+export type ManualItemInput = z.infer<typeof manualItemSchema>;
+export type ManualReceiptFormInput = z.infer<typeof manualReceiptFormSchema>;
+export type NfcUrlInput = z.infer<typeof nfcUrlSchema>;
+export type ApiKeyInput = z.infer<typeof apiKeySchema>;
 
-    /**
-     * Valida formato de email
-     * @param email - Email a ser validado
-     * @returns true se válido
-     */
-    email: (email: string): boolean => {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            notify.error("Email inválido.");
-            return false;
-        }
-        return true;
-    },
+// ==============================
+// VALIDATION HELPERS
+// ==============================
 
-    /**
-     * Valida formato de data (DD/MM/AAAA)
-     * @param date - Data a ser validada
-     * @returns true se válido
-     */
-    dateFormat: (date: string): boolean => {
-        const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
-        if (!dateRegex.test(date)) {
-            notify.error("Data inválida! Use DD/MM/AAAA");
-            return false;
-        }
-        return true;
-    },
+/**
+ * Valida um item de receita
+ */
+export function validateReceiptItem(
+  data: unknown
+): { success: true; data: ReceiptItemInput } | { success: false; error: string } {
+  const result = receiptItemSchema.safeParse(data);
 
-    /**
-     * Valida formato de URL
-     * @param url - URL a ser validada
-     * @returns true se válido
-     */
-    url: (url: string): boolean => {
-        try {
-            new URL(url);
-            return true;
-        } catch {
-            notify.error("URL inválida.");
-            return false;
-        }
-    },
+  if (!result.success) {
+    const firstError = result.error.issues[0]?.message || "Erro de validação";
+    return { success: false, error: firstError };
+  }
 
-    // =========================
-    // Validações Numéricas
-    // =========================
+  return { success: true, data: result.data };
+}
 
-    /**
-     * Valida se é um número válido
-     * @param value - Valor a ser validado
-     * @param fieldName - Nome do campo
-     * @returns true se válido
-     */
-    number: (value: string, fieldName: string): boolean => {
-        const num = parseFloat(value.replace(",", "."));
-        if (isNaN(num)) {
-            notify.error(`${fieldName} deve ser um número válido.`);
-            return false;
-        }
-        return true;
-    },
+/**
+ * Valida formulário de receita manual
+ */
+export function validateManualReceiptForm(
+  data: unknown
+): {
+  success: true;
+  data: ManualReceiptFormInput;
+} | { success: false; errors: string[] } {
+  const result = manualReceiptFormSchema.safeParse(data);
 
-    /**
-     * Valida se é um preço válido (positivo)
-     * @param value - Valor a ser validado
-     * @returns true se válido
-     */
-    price: (value: string): boolean => {
-        const num = parseFloat(value.replace(",", "."));
-        if (isNaN(num) || num < 0) {
-            notify.error("Preço inválido! Use apenas números positivos.");
-            return false;
-        }
-        return true;
-    },
+  if (!result.success) {
+    const errors = result.error.issues.map((e) => e.message);
+    return { success: false, errors };
+  }
 
-    /**
-     * Valida se é uma quantidade válida (positiva)
-     * @param value - Valor a ser validado
-     * @returns true se válido
-     */
-    quantity: (value: string): boolean => {
-        const num = parseFloat(value.replace(",", "."));
-        if (isNaN(num) || num <= 0) {
-            notify.error("Quantidade inválida! Use apenas números positivos.");
-            return false;
-        }
-        return true;
-    },
+  return { success: true, data: result.data };
+}
 
-    // =========================
-    // Validações Compostas
-    // =========================
+/**
+ * Valida URL de NFC-e
+ */
+export function validateNfcUrl(
+  url: string
+): { success: true; data: string } | { success: false; error: string } {
+  const result = nfcUrlSchema.safeParse(url);
 
-    /**
-     * Valida item de formulário manual
-     * @param item - Item a ser validado
-     * @returns true se válido
-     */
-    manualItem: (item: { name?: string; unitPrice?: string }): boolean => {
-        if (!validators.required(item.name, "Nome do item")) return false;
-        if (!validators.required(item.unitPrice, "Preço do item")) return false;
-        if (!validators.price(item.unitPrice!)) return false;
-        return true;
-    },
+  if (!result.success) {
+    const firstError = result.error.issues[0]?.message || "URL inválida";
+    return { success: false, error: firstError };
+  }
 
-    /**
-     * Valida dados de produto canônico
-     * @param product - Produto a ser validado
-     * @returns true se válido
-     */
-    canonicalProduct: (product: { slug?: string; name?: string }): boolean => {
-        if (!validators.required(product.slug, "Slug")) return false;
-        if (!validators.required(product.name, "Nome")) return false;
-        if (!validators.minLength(product.slug!, 2, "Slug")) return false;
-        if (!validators.minLength(product.name!, 2, "Nome")) return false;
-        return true;
-    },
+  return { success: true, data: result.data };
+}
 
-    /**
-     * Valida dados de login
-     * @param credentials - Credenciais a serem validadas
-     * @returns true se válido
-     */
-    loginCredentials: (credentials: { email?: string; password?: string }): boolean => {
-        if (!validators.required(credentials.email, "Email")) return false;
-        if (!validators.email(credentials.email!)) return false;
-        if (!validators.required(credentials.password, "Senha")) return false;
-        if (!validators.minLength(credentials.password!, 6, "Senha")) return false;
-        return true;
-    },
+/**
+ * Valida API Key
+ */
+export function validateApiKey(
+  key: string
+): { success: true; data: string } | { success: false; error: string } {
+  const result = apiKeySchema.safeParse(key);
 
-    // =========================
-    // Validações de Arquivo
-    // =========================
+  if (!result.success) {
+    const firstError = result.error.issues[0]?.message || "API Key inválida";
+    return { success: false, error: firstError };
+  }
 
-    /**
-     * Valida extensão de arquivo
-     * @param fileName - Nome do arquivo
-     * @param allowedExtensions - Extensões permitidas
-     * @returns true se válido
-     */
-    fileExtension: (fileName: string, allowedExtensions: string[]): boolean => {
-        const extension = fileName.split(".").pop()?.toLowerCase();
-        if (!extension || !allowedExtensions.includes(extension)) {
-            notify.error(`Arquivo inválido! Selecione um arquivo ${allowedExtensions.join(", ")}.`);
-            return false;
-        }
-        return true;
-    },
+  return { success: true, data: result.data };
+}
 
-    /**
-     * Valida tamanho de arquivo
-     * @param fileSize - Tamanho do arquivo em bytes
-     * @param maxSizeInMB - Tamanho máximo em MB
-     * @returns true se válido
-     */
-    fileSize: (fileSize: number, maxSizeInMB: number): boolean => {
-        const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
-        if (fileSize > maxSizeInBytes) {
-            notify.error(`Arquivo muito grande! Tamanho máximo: ${maxSizeInMB}MB.`);
-            return false;
-        }
-        return true;
-    },
-};
+/**
+ * Valida item individual avulso
+ */
+export function validateManualItem(
+  data: unknown
+): { success: true; data: ManualItemInput } | { success: false; error: string } {
+  const result = manualItemSchema.safeParse(data);
+
+  if (!result.success) {
+    const firstError = result.error.issues[0]?.message || "Erro de validação";
+    return { success: false, error: firstError };
+  }
+
+  return { success: true, data: result.data };
+}
+
+// ==============================
+// UTILS
+// ==============================
+
+/**
+ * Extrai erros de validação formatados
+ */
+export function getValidationErrors(error: z.ZodError): Record<string, string> {
+  const errors: Record<string, string> = {};
+
+  error.issues.forEach((err) => {
+    const path = err.path.join(".");
+    if (path && !errors[path]) {
+      errors[path] = err.message;
+    }
+  });
+
+  return errors;
+}
+
+/**
+ * Parse seguro com fallback para valores padrão
+ */
+export function safeParse<T>(
+  schema: z.ZodSchema<T>,
+  data: unknown,
+  fallback: T
+): T {
+  const result = schema.safeParse(data);
+  return result.success ? result.data : fallback;
+}
