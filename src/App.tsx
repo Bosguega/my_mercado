@@ -4,18 +4,17 @@ import {
   History as HistoryIcon,
   ListChecks,
   Search,
-  // Package,
   Settings as SettingsIcon,
 } from "lucide-react";
 import Login from "./components/Login";
 import { Toaster, toast } from "react-hot-toast";
-// import { logout } from "./services/auth";
 import { isSupabaseConfigured } from "./services/supabaseClient";
 import { useApiKey } from "./hooks/useApiKey";
 import { useSupabaseSession } from "./hooks/useSupabaseSession";
 import ApiKeyModal from "./components/ApiKeyModal";
 import { PerformancePanel } from "./components/PerformancePanel";
 import { logPWADebugInfo } from "./utils/pwaDebug";
+import { debugDatabaseConnection } from "./utils/dbDebug";
 import type { AppTab } from "./types/ui";
 import { useReceiptsStore } from "./stores/useReceiptsStore";
 import { useScannerStore } from "./stores/useScannerStore";
@@ -93,6 +92,12 @@ function App() {
     if (receiptsError) {
       setError(receiptsError);
       toast.error("Erro ao sincronizar dados com o servidor. Exibindo dados locais.");
+      
+      // Debug automático quando há erro
+      if (import.meta.env.DEV) {
+        console.log('🔍 Executando debug de database devido a erro...');
+        debugDatabaseConnection();
+      }
     } else {
       setError(null);
     }
@@ -205,41 +210,50 @@ function App() {
         }}
       />
 
-      <nav className="bottom-nav">
+      <nav className="bottom-nav" role="navigation" aria-label="Navegação principal">
         <button
           className={`nav-item ${tab === "scan" ? "active" : ""}`}
           onClick={() => handleChangeTab("scan")}
+          aria-label="Escanear nota fiscal"
+          aria-current={tab === "scan" ? "page" : undefined}
         >
-          <Scan size={22} />
+          <Scan size={22} aria-hidden />
           <span style={{ marginTop: "2px" }}>Escanear</span>
         </button>
         <button
           className={`nav-item ${tab === "shopping" ? "active" : ""}`}
           onClick={() => handleChangeTab("shopping")}
+          aria-label="Lista de compras"
+          aria-current={tab === "shopping" ? "page" : undefined}
         >
-          <ListChecks size={22} />
+          <ListChecks size={22} aria-hidden />
           <span style={{ marginTop: "2px" }}>Lista</span>
         </button>
         <button
           className={`nav-item ${tab === "history" ? "active" : ""}`}
           onClick={() => handleChangeTab("history")}
+          aria-label="Histórico de compras"
+          aria-current={tab === "history" ? "page" : undefined}
         >
-          <HistoryIcon size={22} />
+          <HistoryIcon size={22} aria-hidden />
           <span style={{ marginTop: "2px" }}>Histórico</span>
         </button>
         <button
           className={`nav-item ${tab === "search" ? "active" : ""}`}
           onClick={() => handleChangeTab("search")}
+          aria-label="Buscar preços"
+          aria-current={tab === "search" ? "page" : undefined}
         >
-          <Search size={22} />
+          <Search size={22} aria-hidden />
           <span style={{ marginTop: "2px" }}>Preços</span>
         </button>
-
         <button
           className={`nav-item ${tab === "settings" ? "active" : ""}`}
           onClick={() => handleChangeTab("settings")}
+          aria-label="Configurações"
+          aria-current={tab === "settings" ? "page" : undefined}
         >
-          <SettingsIcon size={22} />
+          <SettingsIcon size={22} aria-hidden />
           <span style={{ marginTop: "2px" }}>Ajustes</span>
         </button>
       </nav>

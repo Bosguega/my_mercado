@@ -13,7 +13,10 @@
     "analyze": "npx vite-bundle-analyzer dist/stats.html",
     "lighthouse": "npx lighthouse http://localhost:5173 --output=json --output-path=./lighthouse-report.json",
     "test:perf": "npm run build && npm run lighthouse",
-    "test:perf:auto": "node scripts/testPerformance.js"
+    "test:perf:auto": "node scripts/testPerformance.js",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.99.3",
@@ -35,14 +38,17 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-basic-ssl": "^1.2.0",
     "@vitejs/plugin-react": "^4.3.0",
+    "@vitest/ui": "^3.2.4",
     "eslint": "^9.13.0",
     "eslint-plugin-react": "^7.37.2",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.14",
     "globals": "^15.11.0",
+    "jsdom": "^29.0.1",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.57.2",
     "vite": "^6.0.0",
-    "vite-plugin-pwa": "^0.21.0"
+    "vite-plugin-pwa": "^0.21.0",
+    "vitest": "^3.2.4"
   }
 }

@@ -184,8 +184,16 @@ function parseJsonFromText(text: string): AiNormalizationResult[] {
 // MAIN EXPORTS
 // ==============================
 
+const MAX_RETRIES = 2;
+const RETRY_DELAY = 1000; // 1 second
+
+async function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
- * Calls the configured AI provider to normalize a list of items.
+ * Calls the AI provider to normalize a list of items.
+ * Includes automatic retry with exponential backoff.
  */
 export async function callAI(
   items: AiNormalizationInput[],
@@ -199,17 +207,44 @@ export async function callAI(
 
   const provider = detectProvider(apiKey);
 
-  if (provider === "Google AI Studio") {
-    return callGemini(items, apiKey, model);
+  // Retry logic with exponential backoff
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      if (attempt > 0) {
+        console.warn(`[AI] Tentativa ${attempt + 1}/${MAX_RETRIES + 1}...`);
+        await delay(RETRY_DELAY * attempt); // Exponential backoff
+      }
+
+      if (provider === "Google AI Studio") {
+        return await callGemini(items, apiKey, model);
+      }
+
+      if (provider === "OpenAI") {
+        return await callOpenAI(items, apiKey, model);
+      }
+
+      throw new Error(
+        "Provedor desconhecido para a chave fornecida. Prefixos suportados: AIza... (Google) ou sk-... (OpenAI).",
+      );
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      console.warn(`[AI] Erro na tentativa ${attempt + 1}:`, lastError.message);
+      
+      // Don't retry on client errors (4xx)
+      if (lastError.message.includes("400") || lastError.message.includes("401")) {
+        break;
+      }
+    }
   }
 
-  if (provider === "OpenAI") {
-    return callOpenAI(items, apiKey, model);
-  }
-
-  throw new Error(
-    "Provedor desconhecido para a chave fornecida. Prefixos suportados: AIza... (Google) ou sk-... (OpenAI).",
-  );
+  // All retries failed - return fallback
+  console.error("[AI] Todas as tentativas falharam, usando fallback");
+  return items.map((item) => ({
+    key: item.key,
+    normalized_name: item.raw,
+    category: "Outros",
+  }));
 }
 
 /**
