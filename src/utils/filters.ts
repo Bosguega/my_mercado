@@ -7,7 +7,7 @@
 import { parseToDate } from "./date";
 import { parseBRL } from "./currency";
 import type { Receipt } from "../types/domain";
-import type { HistoryFilters } from "../types/ui";
+import type { HistoryFilters, SearchFilters } from "../types/ui";
 import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from "date-fns";
 
 /**
@@ -50,15 +50,60 @@ export function filterByPeriod(
     if (period === "custom" && startDate && endDate) {
       const start = parseToDate(startDate);
       const end = parseToDate(endDate);
-      
+
       // Valida datas e garante que start <= end
       if (!start || !end || start > end) return false;
-      
+
       // Ajusta end para incluir o dia final completo
       const intervalEnd = new Date(end);
       intervalEnd.setHours(23, 59, 59, 999);
-      
+
       return isWithinInterval(receiptDate, { start, end: intervalEnd });
+    }
+    return false;
+  });
+}
+
+/**
+ * Filtra items por período (baseado em purchasedAt)
+ */
+export function filterItemsByPeriod<T extends { purchasedAt?: string }>(
+  items: T[],
+  period: SearchFilters["period"],
+  startDate?: string,
+  endDate?: string
+): T[] {
+  if (period === "all") return items;
+
+  const now = new Date();
+  const thisMonth = { start: startOfMonth(now), end: endOfMonth(now) };
+  // Últimos 3 meses completos (mês atual + 2 meses anteriores)
+  const last3MonthsStart = startOfMonth(subMonths(now, 2));
+
+  return items.filter((item) => {
+    if (!item.purchasedAt) return false;
+
+    const itemDate = parseToDate(item.purchasedAt);
+    if (!itemDate) return false;
+
+    if (period === "this-month") {
+      return isWithinInterval(itemDate, thisMonth);
+    }
+    if (period === "last-3-months") {
+      return itemDate >= last3MonthsStart;
+    }
+    if (period === "custom" && startDate && endDate) {
+      const start = parseToDate(startDate);
+      const end = parseToDate(endDate);
+
+      // Valida datas e garante que start <= end
+      if (!start || !end || start > end) return false;
+
+      // Ajusta end para incluir o dia final completo
+      const intervalEnd = new Date(end);
+      intervalEnd.setHours(23, 59, 59, 999);
+
+      return isWithinInterval(itemDate, { start, end: intervalEnd });
     }
     return false;
   });

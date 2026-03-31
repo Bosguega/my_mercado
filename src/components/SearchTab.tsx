@@ -11,27 +11,42 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { parseBRL } from "../utils/currency";
-import { parseToDate /*, formatToBR */ } from "../utils/date";
+import { parseToDate } from "../utils/date";
 import { groupBy, filterBySearch, sortItems } from "../utils/analytics";
-import type { PurchasedItem, SearchSortBy } from "../types/ui";
+import { filterItemsByPeriod } from "../utils/filters";
+import type { PurchasedItem, SearchSortBy, SearchFilters } from "../types/ui";
 import type { Receipt, ReceiptItem } from "../types/domain";
 import { useUiStore } from "../stores/useUiStore";
 import { useAllReceiptsQuery } from "../hooks/queries/useReceiptsQuery";
 import { useCanonicalProductsQuery } from "../hooks/queries/useCanonicalProductsQuery";
 import { SearchItemRow } from "./SearchItemRow";
 
-import { Skeleton /*, SkeletonCard */ } from "./Skeleton";
+import { Skeleton } from "./Skeleton";
+
+const PERIOD_OPTIONS = [
+  { value: "all", label: "Todo período" },
+  { value: "this-month", label: "Este mês" },
+  { value: "last-3-months", label: "Últimos 3 meses" },
+  { value: "custom", label: "Personalizado" },
+];
 
 function SearchTab() {
   // React Query para dados de receipts
   const { data: savedReceipts = [], isLoading: loading } = useAllReceiptsQuery();
   const { data: canonicalProducts = [] } = useCanonicalProductsQuery();
+
+  // Estados da UI
   const searchQuery = useUiStore((state) => state.searchQuery);
   const setSearchQuery = useUiStore((state) => state.setSearchQuery);
   const sortOrder = useUiStore((state) => state.sortOrder);
   const setSortOrder = useUiStore((state) => state.setSortOrder);
   const sortDirection = useUiStore((state) => state.searchSortDirection);
   const setSortDirection = useUiStore((state) => state.setSearchSortDirection);
+
+  // Filtros de período
+  const searchFilters = useUiStore((state) => state.searchFilters);
+  const setSearchFilters = useUiStore((state) => state.setSearchFilters);
+
   const [showChart, setShowChart] = useState(false);
   const showSkeleton = loading && savedReceipts.length === 0;
 
@@ -59,9 +74,18 @@ function SearchTab() {
 
   // Memoize filtered and sorted items
   const { filteredItems, totalCount } = useMemo(() => {
-    const baseItems = searchQuery.trim() === ""
-      ? allPurchasedItems.slice(0, 50)
-      : filterBySearch(allPurchasedItems, searchQuery, ["name", "normalized_name", "category", "canonical_name"]);
+    // 1. Filtra por período primeiro
+    let baseItems = filterItemsByPeriod(
+      allPurchasedItems,
+      searchFilters.period,
+      searchFilters.startDate,
+      searchFilters.endDate
+    );
+
+    // 2. Filtra por busca
+    baseItems = searchQuery.trim() === ""
+      ? baseItems.slice(0, 50)
+      : filterBySearch(baseItems, searchQuery, ["name", "normalized_name", "category", "canonical_name"]);
 
     const customSorters = {
       price: (a: PurchasedItem, b: PurchasedItem) => parseBRL(a.price) - parseBRL(b.price),
@@ -80,7 +104,7 @@ function SearchTab() {
       filteredItems: sorted.slice(0, 100),
       totalCount: sorted.length
     };
-  }, [allPurchasedItems, searchQuery, sortOrder, sortDirection]);
+  }, [allPurchasedItems, searchQuery, sortOrder, sortDirection, searchFilters]);
 
   // Group items by canonical ID or name for the chart - memoized
   const groupedItems = useMemo(() => {
@@ -234,31 +258,150 @@ function SearchTab() {
           { value: "price", label: "Preço" }
         ]}
         extraActions={
-          searchQuery && filteredItems.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-              <span style={{ fontSize: "0.75rem", color: "#64748b" }}>
-                {totalCount > 100 ? "Exibindo 100+" : `${totalCount} itens`}
-              </span>
-              <button
-                onClick={() => setShowChart(true)}
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
+            {/* Seletor de Período */}
+            <div
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+            >
+              <span
                 style={{
-                  background: "none",
-                  border: "none",
-                  color: "var(--success)",
                   fontSize: "0.8rem",
-                  fontWeight: 600,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                  cursor: "pointer"
+                  color: "#64748b",
+                  fontWeight: 500,
                 }}
               >
-                <LineChartIcon size={16} /> Gráfico
-              </button>
+                PERÍODO:
+              </span>
+              <select
+                value={searchFilters.period}
+                onChange={(e) =>
+                  setSearchFilters({
+                    ...searchFilters,
+                    period: e.target.value as SearchFilters["period"],
+                  })
+                }
+                style={{
+                  background: "rgba(59, 130, 246, 0.1)",
+                  border: "none",
+                  borderRadius: "6px",
+                  color: "var(--primary)",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  padding: "0.25rem 0.5rem",
+                  cursor: "pointer",
+                  outline: "none",
+                }}
+              >
+                {PERIOD_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
             </div>
-          )
+
+            {/* Contador e Botão de Gráfico */}
+            {searchQuery && filteredItems.length > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                <span style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                  {totalCount > 100 ? "Exibindo 100+" : `${totalCount} itens`}
+                </span>
+                <button
+                  onClick={() => setShowChart(true)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "var(--success)",
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    cursor: "pointer"
+                  }}
+                >
+                  <LineChartIcon size={16} /> Gráfico
+                </button>
+              </div>
+            )}
+          </div>
         }
       />
+
+      {/* Date Pickers para Período Personalizado */}
+      {searchFilters.period === "custom" && (
+        <div
+          className="glass-card"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "0.75rem",
+            marginBottom: "1rem",
+            padding: "1rem",
+          }}
+        >
+          <div>
+            <label
+              style={{
+                display: "block",
+                fontSize: "0.7rem",
+                color: "#64748b",
+                marginBottom: "0.5rem",
+                fontWeight: 600,
+                textTransform: "uppercase",
+              }}
+            >
+              Início
+            </label>
+            <input
+              type="date"
+              className="search-input"
+              value={searchFilters.startDate || ""}
+              onChange={(e) =>
+                setSearchFilters({
+                  ...searchFilters,
+                  startDate: e.target.value,
+                })
+              }
+              style={{
+                background: "rgba(255,255,255,0.05)",
+                fontSize: "0.85rem",
+                height: "40px",
+              }}
+            />
+          </div>
+          <div>
+            <label
+              style={{
+                display: "block",
+                fontSize: "0.7rem",
+                color: "#64748b",
+                marginBottom: "0.5rem",
+                fontWeight: 600,
+                textTransform: "uppercase",
+              }}
+            >
+              Fim
+            </label>
+            <input
+              type="date"
+              className="search-input"
+              value={searchFilters.endDate || ""}
+              onChange={(e) =>
+                setSearchFilters({
+                  ...searchFilters,
+                  endDate: e.target.value,
+                })
+              }
+              style={{
+                background: "rgba(255,255,255,0.05)",
+                fontSize: "0.85rem",
+                height: "40px",
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="items-list">
         {showSkeleton ? (

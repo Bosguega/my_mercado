@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import type { AppTab, HistoryFilters, SearchSortBy, SortDirection } from "../types/ui";
+import type { AppTab, HistoryFilters, SearchFilters, SearchSortBy, SortDirection } from "../types/ui";
 
 type UiState = {
   tab: AppTab;
@@ -11,6 +11,10 @@ type UiState = {
   setSortOrder: (value: SearchSortBy) => void;
   searchSortDirection: SortDirection;
   setSearchSortDirection: (value: SortDirection) => void;
+  searchFilters: SearchFilters;
+  setSearchFilters: (
+    value: SearchFilters | ((prev: SearchFilters) => SearchFilters),
+  ) => void;
   historyFilter: string;
   setHistoryFilter: (value: string) => void;
   historyFilters: HistoryFilters;
@@ -31,6 +35,12 @@ const DEFAULT_HISTORY_FILTERS: HistoryFilters = {
   endDate: "",
 };
 
+const DEFAULT_SEARCH_FILTERS: SearchFilters = {
+  period: "all",
+  startDate: "",
+  endDate: "",
+};
+
 export const useUiStore = create<UiState>()(
   persist(
     (set) => ({
@@ -42,6 +52,12 @@ export const useUiStore = create<UiState>()(
       setSortOrder: (value) => set({ sortOrder: value }),
       searchSortDirection: "desc",
       setSearchSortDirection: (value) => set({ searchSortDirection: value }),
+      searchFilters: DEFAULT_SEARCH_FILTERS,
+      setSearchFilters: (value) =>
+        set((state) => ({
+          searchFilters:
+            typeof value === "function" ? value(state.searchFilters) : value,
+        })),
       historyFilter: "",
       setHistoryFilter: (value) => set({ historyFilter: value }),
       historyFilters: DEFAULT_HISTORY_FILTERS,

@@ -697,6 +697,13 @@ Supabase indisponível
 
 ```text
 useUiStore (abas, filtros, busca, expandedReceipts)
+  - historyFilters: HistoryFilters (período, sortBy, sortOrder, startDate, endDate)
+  - searchFilters: SearchFilters (período, startDate, endDate)
+  - historyFilter: string (busca por mercado)
+  - searchQuery: string (busca por produto)
+  - tab: AppTab
+  - expandedReceipts: string[]
+
 useScannerStore (estado do scanner, zoom, torch, manualData)
 useReceiptsSessionStore (sessionUserId, error)
 useShoppingListStore (lista de compras local)
@@ -759,7 +766,8 @@ useShoppingListStore (lista de compras local)
 | **Fallback local** | ❌ | ✅ localStorage/IndexedDB integrados |
 | **Sincronização** | ❌ | ✅ Auto via `invalidateQueries` e `refetch` |
 | **Estado de UI** | ✅ `sessionUserId`, `error` | ❌ |
-| **Filtros e abas** | ✅ `useUiStore` | ❌ |
+| **Filtros HistoryTab** | ✅ `historyFilters` (período, sortBy, sortOrder) | ❌ |
+| **Filtros SearchTab** | ✅ `searchFilters` (período) | ❌ |
 | **Scanner** | ✅ `useScannerStore` | ❌ |
 | **Lista de compras** | ✅ `useShoppingListStore` (local) | ❌ |
 
@@ -1234,22 +1242,35 @@ const slug = toSlug("Cerveja Brahma 350ml");
 **Funções:**
 
 ```typescript
-filterBySearch(receipts, search)           // Filtra por termo de busca
-filterByPeriod(receipts, period, ...)      // Filtra por período
-sortReceipts(receipts, sortBy, sortOrder)  // Ordena receipts
-applyReceiptFilters(receipts, search, filters)  // Aplica todos os filtros
-filterItemsBySearch(items, search, fields) // Filtra items por campos
-sortItems(items, sortBy, direction, ...)   // Ordena items genéricos
+// Receipts
+filterBySearch(receipts, search)                    // Filtra receipts por termo de busca
+filterByPeriod(receipts, period, ...)               // Filtra receipts por período
+sortReceipts(receipts, sortBy, sortOrder)           // Ordena receipts
+applyReceiptFilters(receipts, search, filters)      // Aplica todos os filtros em receipts
+
+// Items (genérico)
+filterItemsBySearch(items, search, fields)          // Filtra items por campos
+filterItemsByPeriod(items, period, ...)             // Filtra items por período (purchasedAt)
+sortItems(items, sortBy, direction, ...)            // Ordena items genéricos
 ```
 
 **Exemplo de uso:**
 ```typescript
 import { applyReceiptFilters } from "../utils/filters";
 
+// HistoryTab - Filtros completos
 const { items, totalCount } = applyReceiptFilters(
   savedReceipts,
   historyFilter,
   historyFilters
+);
+
+// SearchTab - Apenas período
+const itemsByPeriod = filterItemsByPeriod(
+  allPurchasedItems,
+  searchFilters.period,
+  searchFilters.startDate,
+  searchFilters.endDate
 );
 ```
 
@@ -1366,6 +1387,24 @@ src/components/HistoryTab/
 └── ReceiptList.tsx            # Lista de recibos
 ```
 
+**Hooks:**
+- `useHistoryReceipts()` - Orquestra query, filtros e estado (HistoryTab específico)
+
+**Fluxo do hook:**
+```typescript
+useHistoryReceipts()
+  ├── 1. QUERY → useAllReceiptsQuery() busca todos os receipts
+  ├── 2. STORE → useUiStore() fornece historyFilters + historyFilter
+  ├── 3. FILTER → applyReceiptFilters() aplica filtros e ordenação
+  └── 4. UI → Retorna { items, totalCount, isLoading, filters, ... }
+```
+
+**Filtros disponíveis:**
+- **Período:** all, this-month, last-3-months, custom
+- **Ordenação:** date, value, store
+- **Direção:** asc, desc
+- **Busca:** texto por mercado
+
 **Utilitários:**
 - `applyReceiptFilters()` - Centralizado em `utils/filters.ts`
 
@@ -1377,6 +1416,44 @@ src/components/HistoryTab/
 - ✅ Hook de confirmação reutilizável
 - ✅ Componentes de seção isolados
 - ✅ Constantes centralizadas
+
+### SearchTab
+
+**Data da atualização:** 31 de março de 2026
+
+**Funcionalidades:**
+- Busca de produtos por nome ou categoria
+- Comparação de preços ao longo do tempo
+- Visualização de tendência (gráfico de linhas)
+- **Filtro de período** (mesma identidade visual do HistoryTab)
+
+**Filtros disponíveis:**
+- **Período:** all, this-month, last-3-months, custom
+- **Ordenação:** recent, price
+- **Direção:** asc, desc
+- **Busca:** texto por nome/categoria/canônico
+
+**Fluxo de filtragem:**
+```typescript
+allPurchasedItems
+    ↓
+filterItemsByPeriod() ← FILTRO DE PERÍODO (purchasedAt)
+    ↓
+filterBySearch() ← Busca por nome/categoria
+    ↓
+sortItems() ← Ordenação (recente/preço)
+    ↓
+UI (lista de items)
+```
+
+**Hook de filtro:**
+- `filterItemsByPeriod(items, period, startDate, endDate)` - Filtra items por `purchasedAt`
+
+**Estado (Zustand):**
+- `searchFilters: SearchFilters` - Período (startDate, endDate)
+- `searchQuery: string` - Termo de busca
+- `sortOrder: SearchSortBy` - recent | price
+- `searchSortDirection: SortDirection` - asc | desc
 
 ---
 

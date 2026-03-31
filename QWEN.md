@@ -261,9 +261,11 @@ O app usa IA para normalização de produtos. Configure via UI:
 | Escaneamento | `hooks/useReceiptScanner.ts` | `stores/useScannerStore.ts`, `utils/validation.ts` |
 | CRUD de notas | `hooks/queries/useReceiptsQuery.ts` | `services/receiptService.ts`, `services/storageFallbackService.ts` |
 | Estado de UI | `stores/useUiStore.ts` | Componentes `*Tab.tsx` |
+| Filtros HistoryTab | `hooks/queries/useHistoryReceipts.ts` | `utils/filters.ts`, `stores/useUiStore.ts` |
+| Filtros SearchTab | `components/SearchTab.tsx` | `utils/filters.ts`, `stores/useUiStore.ts` |
 | Dicionário | `components/DictionaryTab.tsx` | `services/dictionaryService.ts` |
 | Produtos canônicos | `hooks/queries/useCanonicalProductsQuery.ts` | `services/canonicalProductService.ts` |
-| Filtros/Ordenação | `utils/filters.ts` | `components/HistoryTab/` |
+| Filtros/Ordenação | `utils/filters.ts` | `components/HistoryTab/`, `components/SearchTab.tsx` |
 | Validação | `utils/validation.ts` | Schemas Zod |
 | IA | `utils/aiClient.ts` | `services/productService.ts` |
 | PWA Update | `hooks/usePWAUpdate.ts` | Service Worker |

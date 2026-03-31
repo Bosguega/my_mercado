@@ -23,6 +23,12 @@ export interface HistoryFilters {
   endDate: string;
 }
 
+export interface SearchFilters {
+  period: "all" | "this-month" | "last-3-months" | "custom";
+  startDate: string;
+  endDate: string;
+}
+
 export interface LoginProps {
   setSessionUser: (user: SessionUser | null) => void;
 }
