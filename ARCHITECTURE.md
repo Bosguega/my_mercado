@@ -1,5 +1,8 @@
 # My Mercado - Arquitetura
 
+**Data da última auditoria:** 30 de março de 2026  
+**Status da arquitetura:** ✅ Conforme (React Query = Dados, Zustand = UI, Hooks = Orquestração)
+
 **My Mercado** é um PWA para gerenciamento de compras de supermercado.
 O usuário escaneia QR Code de NFC-e, consulta histórico e compara preços ao longo do tempo.
 Persistência principal: Supabase (PostgreSQL + Auth + RLS), com **fallback local em camadas (IndexedDB → localStorage)**.
@@ -255,13 +258,16 @@ export async function getAllReceiptsFromDBWithFallback(): Promise<Receipt[]> {
 ### 3. UI Global
 
 **Estado da interface:**
-- `src/stores/useUiStore.ts`
+- `src/stores/useUiStore.ts` - Abas, filtros, ordenação, busca
+- `src/stores/useReceiptsSessionStore.ts` - Session user ID e erro de sessão
+- `src/stores/useScannerStore.ts` - Estado visual do scanner
 
 **Contém:**
 - Aba ativa (`tab`)
 - Filtros de histórico
 - Ordenação
 - Busca
+- Expanded receipts
 
 ### 4. Validação
 
@@ -333,13 +339,13 @@ my_mercado/
 |   |   |-- ConfirmDialog.tsx
 |   |   |-- DictionaryTab.tsx
 |   |   |-- DictionaryRow.tsx
-|   |   |-- ErrorBoundary.tsx              # NOVO: Captura erros globais
+|   |   |-- ErrorBoundary.tsx              # Captura erros globais
 |   |   |-- HistoryTab.tsx
 |   |   |-- Login.tsx
 |   |   |-- PerformancePanel.tsx
-|   |   |-- PWAUpdateNotification.tsx      # NOVO: Notifica updates
+|   |   |-- PWAUpdateNotification.tsx      # Detecta updates PWA
 |   |   |-- ReceiptCard.tsx
-|   |   |-- ScannerTab.tsx                 # Atualizado: Validação Zod
+|   |   |-- ScannerTab.tsx                 # Validação Zod
 |   |   |-- SearchTab.tsx
 |   |   |-- SearchItemRow.tsx
 |   |   |-- SettingsTab.tsx
@@ -354,30 +360,30 @@ my_mercado/
 |   |-- hooks/
 |   |   |-- useApiKey.ts
 |   |   |-- useCurrency.ts
-|   |   |-- useInfiniteReceipts.ts
 |   |   |-- usePerformanceMonitor.ts
-|   |   |-- usePWAUpdate.ts                # NOVO: Detecta updates PWA
+|   |   |-- usePWAUpdate.ts                # Detecta updates PWA
 |   |   |-- useReceiptParserWorker.ts
-|   |   |-- useReceiptScanner.ts           # Atualizado: Validação Zod
+|   |   |-- useReceiptScanner.ts           # Orquestração do scanner
 |   |   |-- useSupabaseSession.ts
 |   |   `-- queries/
 |   |       |-- useCanonicalProductsQuery.ts
-|   |       `-- useReceiptsQuery.ts
+|   |       `-- useReceiptsQuery.ts        # Fonte de verdade (React Query)
 |   |
 |   |-- stores/
-|   |   |-- useReceiptsStore.ts
-|   |   |-- useScannerStore.ts
-|   |   `-- useUiStore.ts
+|   |   |-- useReceiptsSessionStore.ts     # Estado de sessão (UI)
+|   |   |-- useScannerStore.ts             # Estado do scanner (UI)
+|   |   |-- useShoppingListStore.ts        # Lista de compras (local)
+|   |   `-- useUiStore.ts                  # Estado de UI global
 |   |
 |   |-- services/
 |   |   |-- auth.ts
-|   |   |-- dbMethods.ts                   # Atualizado: Fallback methods
+|   |   |-- dbMethods.ts                   # Fallback methods
 |   |   |-- productService.ts
 |   |   |-- receiptParser.ts
 |   |   `-- supabaseClient.ts
 |   |
 |   |-- utils/
-|   |   |-- aiClient.ts                    # Atualizado: Retry automático
+|   |   |-- aiClient.ts                    # Retry automático
 |   |   |-- aiConfig.ts
 |   |   |-- currency.ts
 |   |   |-- date.ts
@@ -451,7 +457,7 @@ graph TD
     QueryProvider --> App["App.tsx"]
 
     App --> uiStore["stores/useUiStore.ts"]
-    App --> receiptsStore["stores/useReceiptsStore.ts"]
+    App --> receiptsSessionStore["stores/useReceiptsSessionStore.ts"]
     App --> receiptsQuery["hooks/queries/useReceiptsQuery.ts"]
     App --> pwaUpdate["components/PWAUpdateNotification.tsx"]
 
@@ -462,7 +468,6 @@ graph TD
     scannerHook --> worker["workers/receiptParser.worker.ts"]
 
     HistoryTab --> receiptsQuery
-    HistoryTab --> infiniteHook["hooks/useInfiniteReceipts.ts"]
     HistoryTab --> ReceiptCard["components/ReceiptCard.tsx"]
 
     SearchTab --> receiptsQuery
@@ -471,13 +476,13 @@ graph TD
     receiptsQuery --> dbMethods["services/dbMethods.ts"]
     dbMethods --> storage["utils/storage.ts"]
     dbMethods --> supabase["services/supabaseClient.ts"]
-    
+
     receiptsQuery --> productService["services/productService.ts"]
     productService --> ai["utils/aiClient.ts"]
     productService --> dictionary["product_dictionary"]
 
     QueryProvider --> receiptsQuery
-    
+
     storage --> indexedDB["IndexedDB"]
     storage --> localStorage["localStorage"]
 ```
@@ -560,12 +565,13 @@ O sistema de produtos canônicos resolve o problema de fragmentação de dados o
 | Escaneamento (câmera/upload/link/manual) | `src/hooks/useReceiptScanner.ts` | `src/stores/useScannerStore.ts`, `src/utils/validation.ts` |
 | CRUD de notas e sincronização | `src/hooks/queries/useReceiptsQuery.ts` | `src/services/dbMethods.ts`, `src/utils/storage.ts` |
 | Estado de abas/filtros | `src/stores/useUiStore.ts` | `src/components/*Tab.tsx` |
+| Estado de sessão (user ID) | `src/stores/useReceiptsSessionStore.ts` | `src/App.tsx`, `src/components/*Tab.tsx` |
 | Dicionário manual | `src/components/DictionaryTab.tsx` | `src/services/dbMethods.ts`, `src/utils/validation.ts` |
 | Tendência de preços | `src/components/SearchTab.tsx` | `src/utils/analytics/` |
 | Parse da NFC-e | `src/services/receiptParser.ts` | `src/workers/receiptParser.worker.ts` |
 | Pipeline de normalização/IA | `src/services/productService.ts` | `src/utils/normalize.ts`, `src/utils/aiClient.ts` |
 | Cache de queries | `src/providers/QueryProvider.tsx` | `src/hooks/queries/useReceiptsQuery.ts` |
-| Paginação infinita | `src/hooks/useInfiniteReceipts.ts` | `src/services/dbMethods.ts` |
+| Paginação infinita | `src/hooks/queries/useReceiptsQuery.ts` | `src/services/dbMethods.ts` |
 | Validação de formulários | `src/utils/validation.ts` | Zod schemas |
 | Storage local | `src/utils/storage.ts` | IndexedDB API |
 | Error handling | `src/components/ErrorBoundary.tsx` | React Error Boundaries |
@@ -634,9 +640,10 @@ Supabase indisponível
 ### Estado de UI (Zustand)
 
 ```text
-useUiStore (abas, filtros, busca)
-useScannerStore (estado do scanner, zoom, torch)
-useReceiptsStore (sessionUserId, error)
+useUiStore (abas, filtros, busca, expandedReceipts)
+useScannerStore (estado do scanner, zoom, torch, manualData)
+useReceiptsSessionStore (sessionUserId, error)
+useShoppingListStore (lista de compras local)
 ```
 
 ---
@@ -681,6 +688,10 @@ useReceiptsStore (sessionUserId, error)
 
 **✅ Arquitetura Consolidada:** React Query é a fonte única da verdade para dados remotos. Zustand é usado apenas para estado de UI.
 
+**Nota de auditoria (30/03/2026):**
+- ✅ `useInfiniteReceipts.ts` removido (duplicava dados em useState)
+- ✅ `useReceiptsStore` renomeado para `useReceiptsSessionStore` (clareza semântica)
+
 | Responsabilidade | Zustand Store | React Query |
 |---|---|---|
 | **Dados de receipts** | ❌ | ✅ `useAllReceiptsQuery`, `useReceiptsQuery`, `useInfiniteReceiptsQuery` |
@@ -691,6 +702,7 @@ useReceiptsStore (sessionUserId, error)
 | **Estado de UI** | ✅ `sessionUserId`, `error` | ❌ |
 | **Filtros e abas** | ✅ `useUiStore` | ❌ |
 | **Scanner** | ✅ `useScannerStore` | ❌ |
+| **Lista de compras** | ✅ `useShoppingListStore` (local) | ❌ |
 
 **Regras de uso:**
 1. **React Query:** Fonte única para todos os dados de receipts (leitura e escrita)
@@ -712,7 +724,7 @@ const deleteReceiptMutation = useDeleteReceipt();
 await deleteReceiptMutation.mutateAsync(receiptId);
 
 // Para estado de UI (não dados)
-const sessionUserId = useReceiptsStore((state) => state.sessionUserId);
+const sessionUserId = useReceiptsSessionStore((state) => state.sessionUserId);
 const tab = useUiStore((state) => state.tab);
 ```
 
@@ -1367,7 +1379,7 @@ import.meta.env.DEV && debugDatabaseConnection();
 
 ## Changelog de Melhorias
 
-### Março 2026
+### Março 2026 (Auditoria de Arquitetura - 30/03/2026)
 
 **Adicionado:**
 - ✅ Storage unificado com fallback (IndexedDB → localStorage)
@@ -1379,11 +1391,16 @@ import.meta.env.DEV && debugDatabaseConnection();
 - ✅ ARIA labels (acessibilidade)
 
 **Removido:**
+- ❌ `src/hooks/useInfiniteReceipts.ts` (duplicação de dados persistentes em useState)
 - ❌ framer-motion (não utilizado, -60KB)
+
+**Renomeado:**
+- 🔄 `useReceiptsStore` → `useReceiptsSessionStore` (clareza semântica)
 
 **Atualizado:**
 - 🔄 vite-plugin-pwa para v0.21.0 (suporte Vite 6)
 - 🔄 Documentação completa
+- 🔄 ARCHITECTURE.md com regras arquiteturais consolidadas
 
 ---
 
@@ -1400,4 +1417,5 @@ import.meta.env.DEV && debugDatabaseConnection();
 
 **Última atualização:** 30 de março de 2026  
 **Versão:** 0.0.0  
-**Status:** ✅ Produção
+**Status:** ✅ Produção  
+**Arquitetura:** ✅ Conforme (Auditoria 30/03/2026)

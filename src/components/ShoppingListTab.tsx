@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useAllReceiptsQuery } from "../hooks/queries/useReceiptsQuery";
-import { useReceiptsStore } from "../stores/useReceiptsStore";
+import { useReceiptsSessionStore } from "../stores/useReceiptsSessionStore";
 import { useShoppingListStore } from "../stores/useShoppingListStore";
 import { formatBRL, parseBRL } from "../utils/currency";
 import { formatToBR, parseToDate } from "../utils/date";
@@ -65,7 +65,7 @@ function sanitizeListItem(item: unknown): ShoppingListItem | null {
 }
 
 function ShoppingListTab() {
-  const sessionUserId = useReceiptsStore((state) => state.sessionUserId);
+  const sessionUserId = useReceiptsSessionStore((state) => state.sessionUserId);
   const ownerKey =
     (typeof sessionUserId === "string" ? sessionUserId.trim() : "") || "__local__";
 

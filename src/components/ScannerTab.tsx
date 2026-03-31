@@ -27,7 +27,7 @@ type SaveReceiptResponse =
   | { success: true; receipt: Receipt }
   | { success: false; error: unknown };
 import { useReceiptScanner } from "../hooks/useReceiptScanner";
-import { useReceiptsStore } from "../stores/useReceiptsStore";
+import { useReceiptsSessionStore } from "../stores/useReceiptsSessionStore";
 import { useUiStore } from "../stores/useUiStore";
 import { useSaveReceipt } from "../hooks/queries/useReceiptsQuery";
 
@@ -113,7 +113,7 @@ const styles = {
 
 function ScannerTab() {
   const saveReceiptMutation = useSaveReceipt();
-  const sessionUserId = useReceiptsStore((state) => state.sessionUserId);
+  const sessionUserId = useReceiptsSessionStore((state) => state.sessionUserId);
   const tab = useUiStore((state) => state.tab);
 
   // Wrapper para adaptar a interface da mutation do React Query

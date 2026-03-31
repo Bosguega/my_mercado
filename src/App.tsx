@@ -17,7 +17,7 @@ import { PWAUpdateNotification } from "./components/PWAUpdateNotification";
 import { logPWADebugInfo } from "./utils/pwaDebug";
 import { debugDatabaseConnection } from "./utils/dbDebug";
 import type { AppTab } from "./types/ui";
-import { useReceiptsStore } from "./stores/useReceiptsStore";
+import { useReceiptsSessionStore } from "./stores/useReceiptsSessionStore";
 import { useScannerStore } from "./stores/useScannerStore";
 import { useUiStore } from "./stores/useUiStore";
 import { useAllReceiptsQuery } from "./hooks/queries/useReceiptsQuery";
@@ -72,8 +72,8 @@ const TabSkeleton = () => (
 function App() {
   const { sessionUser, setSessionUser, authLoading } = useSupabaseSession();
 
-  const setSessionUserId = useReceiptsStore((state) => state.setSessionUserId);
-  const setError = useReceiptsStore((state) => state.setError);
+  const setSessionUserId = useReceiptsSessionStore((state) => state.setSessionUserId);
+  const setError = useReceiptsSessionStore((state) => state.setError);
   const resetScannerState = useScannerStore((state) => state.resetScannerState);
 
   const tab = useUiStore((state) => state.tab);

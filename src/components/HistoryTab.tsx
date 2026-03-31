@@ -17,7 +17,6 @@ import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from "date-fns"
 import { calculateReceiptTotal, calculateTotalSpent } from "../utils/analytics";
 
 import { ReceiptCard } from "./ReceiptCard";
-// import { useInfiniteReceipts } from "../hooks/useInfiniteReceipts";
 import type { HistoryFilters } from "../types/ui";
 import type { ConfirmDialogConfig } from "../types/ui";
 import type { Receipt /*, ReceiptItem */ } from "../types/domain";

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-type ReceiptsUiState = {
+type ReceiptsSessionState = {
   sessionUserId: string | null;
   error: unknown;
   setSessionUserId: (userId: string | null) => void;
@@ -8,7 +8,7 @@ type ReceiptsUiState = {
   clearError: () => void;
 };
 
-export const useReceiptsStore = create<ReceiptsUiState>((set) => ({
+export const useReceiptsSessionStore = create<ReceiptsSessionState>((set) => ({
   sessionUserId: null,
   error: null,
 
