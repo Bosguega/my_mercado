@@ -7,7 +7,10 @@ export function useSupabaseSession() {
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
+    console.log('🔑 [Auth] Iniciando useSupabaseSession...');
+    
     if (!supabase) {
+      console.warn('⚠️ [Auth] Supabase não configurado');
       setAuthLoading(false);
       return;
     }
@@ -15,22 +18,33 @@ export function useSupabaseSession() {
     supabase.auth
       .getSession()
       .then(({ data: { session } }) => {
+        console.log('🔑 [Auth] Sessão obtida:', session ? 'COM sessão' : 'SEM sessão');
+        if (session) {
+          console.log('🔑 [Auth] User ID:', session.user.id);
+          console.log('🔑 [Auth] Email:', session.user.email);
+        }
         setSessionUser(session?.user ?? null);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error('❌ [Auth] Erro ao obter sessão:', err);
         setSessionUser(null);
       })
       .finally(() => {
+        console.log('🔑 [Auth] Loading = false');
         setAuthLoading(false);
       });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('🔄 [Auth] Mudança de estado:', _event, session ? 'COM sessão' : 'SEM sessão');
       setSessionUser(session?.user ?? null);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log('🔑 [Auth] Limpando subscription');
+      subscription.unsubscribe();
+    };
   }, []);
 
   return { sessionUser, setSessionUser, authLoading };

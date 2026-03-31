@@ -280,30 +280,50 @@ export function useReceiptScanner({
 
   const handleFileUpload = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
+      console.log('📷 [Scanner] Upload de arquivo iniciado');
       const file = event.target.files?.[0];
-      if (!file) return;
+      if (!file) {
+        console.log('⚠️ [Scanner] Nenhum arquivo selecionado');
+        return;
+      }
 
       setLoading(true);
+      let imageUrl: string | null = null;
+      
       try {
-        // Usar html5-qrcode para scan de arquivo
-        if (html5QrcodeRef.current) {
-          const decodedText = await html5QrcodeRef.current.scanFile(file, true);
-          if (decodedText) {
-            await handleScanSuccess(decodedText);
-          }
+        console.log('📷 [Scanner] Arquivo:', file.name, file.type);
+        imageUrl = URL.createObjectURL(file);
+
+        // Criar elemento temporário para o html5-qrcode
+        const tempDiv = document.createElement('div');
+        tempDiv.id = 'reader-temp';
+        tempDiv.style.display = 'none';
+        document.body.appendChild(tempDiv);
+        
+        // Criar instância temporária apenas para scan de arquivo
+        const tempHtml5QrCode = new Html5Qrcode('reader-temp');
+        
+        console.log('📷 [Scanner] Escaneando arquivo...');
+        const decodedText = await tempHtml5QrCode.scanFile(file, true);
+        
+        console.log('📷 [Scanner] Resultado do scan:', decodedText ? 'Sucesso!' : 'Falhou');
+        
+        // Limpar instância e elemento temporário
+        await tempHtml5QrCode.clear();
+        document.body.removeChild(tempDiv);
+        
+        if (decodedText) {
+          await handleScanSuccess(decodedText);
         } else {
-          // Criar instância temporária para scan de arquivo
-          const html5QrCode = new Html5Qrcode('reader');
-          const decodedText = await html5QrCode.scanFile(file, true);
-          html5QrCode.clear();
-          if (decodedText) {
-            await handleScanSuccess(decodedText);
-          }
+          toast.error('QR Code não detectado na imagem.');
         }
       } catch (err) {
-        console.error('Upload detection fail:', err);
-        toast.error('QR Code não detectado na imagem.');
+        console.error('❌ [Scanner] Upload detection fail:', err);
+        toast.error('QR Code não detectado. Tente uma imagem mais clara.');
       } finally {
+        if (imageUrl) {
+          URL.revokeObjectURL(imageUrl);
+        }
         setLoading(false);
       }
     },
