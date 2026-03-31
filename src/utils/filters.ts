@@ -34,7 +34,8 @@ export function filterByPeriod(
 
   const now = new Date();
   const thisMonth = { start: startOfMonth(now), end: endOfMonth(now) };
-  const last3Months = startOfMonth(subMonths(now, 3));
+  // Últimos 3 meses completos (mês atual + 2 meses anteriores)
+  const last3MonthsStart = startOfMonth(subMonths(now, 2));
 
   return receipts.filter((receipt) => {
     const receiptDate = parseToDate(receipt.date);
@@ -44,14 +45,22 @@ export function filterByPeriod(
       return isWithinInterval(receiptDate, thisMonth);
     }
     if (period === "last-3-months") {
-      return receiptDate >= last3Months;
+      return receiptDate >= last3MonthsStart;
     }
     if (period === "custom" && startDate && endDate) {
-      const start = new Date(startDate + "T00:00:00");
-      const end = new Date(endDate + "T23:59:59");
-      return isWithinInterval(receiptDate, { start, end });
+      const start = parseToDate(startDate);
+      const end = parseToDate(endDate);
+      
+      // Valida datas e garante que start <= end
+      if (!start || !end || start > end) return false;
+      
+      // Ajusta end para incluir o dia final completo
+      const intervalEnd = new Date(end);
+      intervalEnd.setHours(23, 59, 59, 999);
+      
+      return isWithinInterval(receiptDate, { start, end: intervalEnd });
     }
-    return true;
+    return false;
   });
 }
 

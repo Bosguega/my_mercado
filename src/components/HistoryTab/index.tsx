@@ -3,9 +3,9 @@ import { toast } from "react-hot-toast";
 import { parseBRL } from "../../utils/currency";
 import { calculateTotalSpent } from "../../utils/analytics";
 import { backupToJSON, exportToCSV } from "../../utils/backupRegistry";
-import { useAllReceiptsQuery, useDeleteReceipt, useRestoreReceipts } from "../../hooks/queries/useReceiptsQuery";
+import { useDeleteReceipt, useRestoreReceipts } from "../../hooks/queries/useReceiptsQuery";
+import { useHistoryReceipts } from "../../hooks/queries/useHistoryReceipts";
 import { useUiStore } from "../../stores/useUiStore";
-import { applyReceiptFilters } from "../../utils/filters";
 import ConfirmDialog from "../ConfirmDialog";
 import UniversalSearchBar from "../UniversalSearchBar";
 import { HeaderSection } from "./HeaderSection";
@@ -73,37 +73,38 @@ const PERIOD_OPTIONS = [
 ];
 
 function HistoryTab() {
-  // React Query para dados de receipts
-  const { data: savedReceipts = [], isLoading: loading, refetch: refetchReceipts } = useAllReceiptsQuery();
+  // Hook unificado para filtros e dados de receipts
+  const {
+    receipts: savedReceipts,
+    items: filteredItems,
+    totalCount,
+    isLoading: loading,
+    filters: historyFilters,
+    setFilters: setHistoryFilters,
+    searchQuery: historyFilter,
+    setSearchQuery: setHistoryFilter,
+    refetch: refetchReceipts,
+  } = useHistoryReceipts();
+
   const deleteReceiptMutation = useDeleteReceipt();
   const restoreReceiptsMutation = useRestoreReceipts();
 
   // Estados do diálogo de confirmação
   const { dialog, isOpen, busy, open, close, run } = useConfirmDialog();
 
-  // Store de UI
-  const historyFilter = useUiStore((state) => state.historyFilter);
-  const setHistoryFilter = useUiStore((state) => state.setHistoryFilter);
-  const historyFilters = useUiStore((state) => state.historyFilters);
-  const setHistoryFilters = useUiStore((state) => state.setHistoryFilters);
+  // Store de UI (apenas expandedReceipts)
   const expandedReceipts = useUiStore((state) => state.expandedReceipts);
   const setExpandedReceipts = useUiStore((state) => state.setExpandedReceipts);
 
-  // Aplicar filtros
-  const filteredReceipts = useMemo(
-    () => applyReceiptFilters(savedReceipts, historyFilter, historyFilters),
-    [savedReceipts, historyFilter, historyFilters]
-  );
-
   // Calcular total gasto
   const totalSpent = useMemo(
-    () => calculateTotalSpent(filteredReceipts.items, parseBRL),
-    [filteredReceipts.items]
+    () => calculateTotalSpent(filteredItems, parseBRL),
+    [filteredItems]
   );
 
   // Handlers de backup
   const handleBackupJSON = () => backupToJSON(savedReceipts);
-  const handleExportCSV = () => exportToCSV(filteredReceipts.items);
+  const handleExportCSV = () => exportToCSV(filteredItems);
 
   const handleRestoreJSON = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -183,13 +184,13 @@ function HistoryTab() {
   };
 
   const isEmpty = savedReceipts.length === 0;
-  const hasNoResults = filteredReceipts.items.length === 0 && !isEmpty && !loading;
+  const hasNoResults = filteredItems.length === 0 && !isEmpty && !loading;
 
   return (
     <>
       <HeaderSection
         totalCount={savedReceipts.length}
-        filteredCount={filteredReceipts.totalCount}
+        filteredCount={totalCount}
         isLoading={loading}
         onRefresh={refetchReceipts}
         onBackup={handleBackupJSON}
@@ -201,7 +202,7 @@ function HistoryTab() {
         <EmptyState />
       ) : (
         <>
-          <SummaryCard totalSpent={totalSpent} filteredCount={filteredReceipts.totalCount} />
+          <SummaryCard totalSpent={totalSpent} filteredCount={totalCount} />
 
           <UniversalSearchBar
             placeholder="Buscar por mercado..."
@@ -339,7 +340,7 @@ function HistoryTab() {
           )}
 
           <ReceiptList
-            receipts={filteredReceipts.items}
+            receipts={filteredItems}
             expandedReceipts={expandedReceipts}
             isLoading={loading && savedReceipts.length === 0}
             onToggleExpand={handleToggleExpand}
