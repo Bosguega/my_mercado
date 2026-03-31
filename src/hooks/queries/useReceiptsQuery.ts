@@ -159,15 +159,33 @@ export function useAllReceiptsQuery(enabled: boolean = true) {
     return useQuery({
         queryKey: receiptKeys.allReceipts(),
         queryFn: async () => {
-            const data = await getAllReceiptsFromDB();
-            // Sincronizar com localStorage como fallback
-            if (Array.isArray(data) && data.length > 0) {
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+            try {
+                const data = await getAllReceiptsFromDB();
+                // Sincronizar com localStorage como fallback
+                if (Array.isArray(data) && data.length > 0) {
+                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+                }
+                return data;
+            } catch (error) {
+                // Erro esperado: usuário não autenticado ou Supabase indisponível
+                console.warn('Supabase indisponível, usando dados locais:', error);
+                
+                // Fallback para localStorage
+                const localData = localStorage.getItem(LOCAL_STORAGE_KEY);
+                if (localData) {
+                    try {
+                        return JSON.parse(localData) as Receipt[];
+                    } catch (parseError) {
+                        console.error('Erro ao parsear dados locais:', parseError);
+                        return [];
+                    }
+                }
+                return [];
             }
-            return data;
         },
         staleTime: 5 * 60 * 1000, // 5 minutos
         enabled,
+        retry: false, // Não retry se falhar (provavelmente é auth error)
     });
 }
 

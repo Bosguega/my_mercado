@@ -199,8 +199,17 @@ export async function getReceiptsPaginated(
  * Busca todos os recibos (mantido para compatibilidade)
  */
 export async function getAllReceiptsFromDB(): Promise<Receipt[]> {
-  const result = await getReceiptsPaginated(1, 2000);
-  return result.data;
+  try {
+    const result = await getReceiptsPaginated(1, 2000);
+    return result.data;
+  } catch (error) {
+    // Se for erro de autenticação, lança erro específico
+    if (error instanceof Error && error.message?.includes('autenticado')) {
+      throw new Error('Usuário não autenticado');
+    }
+    // Outros erros, relança
+    throw error;
+  }
 }
 
 /**

@@ -92,12 +92,27 @@ function App() {
   useEffect(() => {
     if (receiptsError) {
       setError(receiptsError);
-      toast.error("Erro ao sincronizar dados com o servidor. Exibindo dados locais.");
       
-      // Debug automático quando há erro
-      if (import.meta.env.DEV) {
-        console.log('🔍 Executando debug de database devido a erro...');
-        debugDatabaseConnection();
+      // Verificar se é erro de autenticação (esperado em alguns casos)
+      const isAuthError = 
+        receiptsError.message?.includes('autenticado') ||
+        receiptsError.message?.includes('Unauthorized') ||
+        receiptsError.message?.includes('401');
+      
+      // Só mostrar toast se NÃO for erro de autenticação
+      if (!isAuthError) {
+        toast.error("Erro ao sincronizar dados com o servidor. Exibindo dados locais.");
+
+        // Debug automático quando há erro
+        if (import.meta.env.DEV) {
+          console.log('🔍 Executando debug de database devido a erro...');
+          debugDatabaseConnection();
+        }
+      } else {
+        // Erro de autenticação é normal - apenas log em dev
+        if (import.meta.env.DEV) {
+          console.log('ℹ️ Usuário não autenticado, usando dados locais se disponíveis');
+        }
       }
     } else {
       setError(null);
