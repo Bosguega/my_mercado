@@ -6,6 +6,7 @@ import { backupToJSON, exportToCSV } from "../../utils/backupRegistry";
 import { useDeleteReceipt, useRestoreReceipts } from "../../hooks/queries/useReceiptsQuery";
 import { useHistoryReceipts } from "../../hooks/queries/useHistoryReceipts";
 import { useUiStore } from "../../stores/useUiStore";
+import { PeriodSelector, PeriodDatePickers } from "../PeriodSelector";
 import ConfirmDialog from "../ConfirmDialog";
 import UniversalSearchBar from "../UniversalSearchBar";
 import { HeaderSection } from "./HeaderSection";
@@ -63,13 +64,6 @@ const SORT_OPTIONS = [
   { value: "date", label: "Data" },
   { value: "value", label: "Valor" },
   { value: "store", label: "Mercado" },
-];
-
-const PERIOD_OPTIONS = [
-  { value: "all", label: "Todo período" },
-  { value: "this-month", label: "Este mês" },
-  { value: "last-3-months", label: "Últimos 3 meses" },
-  { value: "custom", label: "Personalizado" },
 ];
 
 function HistoryTab() {
@@ -221,123 +215,19 @@ function HistoryTab() {
             }
             sortOptions={SORT_OPTIONS}
             extraActions={
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
-              >
-                <span
-                  style={{
-                    fontSize: "0.8rem",
-                    color: "#64748b",
-                    fontWeight: 500,
-                  }}
-                >
-                  PERÍODO:
-                </span>
-                <select
-                  value={historyFilters.period}
-                  onChange={(e) =>
-                    setHistoryFilters({
-                      ...historyFilters,
-                      period: e.target.value as HistoryFilters["period"],
-                    })
-                  }
-                  style={{
-                    background: "rgba(59, 130, 246, 0.1)",
-                    border: "none",
-                    borderRadius: "6px",
-                    color: "var(--primary)",
-                    fontSize: "0.8rem",
-                    fontWeight: 600,
-                    padding: "0.25rem 0.5rem",
-                    cursor: "pointer",
-                    outline: "none",
-                  }}
-                >
-                  {PERIOD_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <PeriodSelector
+                filters={historyFilters}
+                onChange={setHistoryFilters}
+                label="PERÍODO:"
+              />
             }
-          >
-            {/* Custom period date pickers */}
-          </UniversalSearchBar>
+          />
 
-          {historyFilters.period === "custom" && (
-            <div
-              className="glass-card"
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "0.75rem",
-                marginBottom: "1rem",
-                padding: "1rem",
-              }}
-            >
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.7rem",
-                    color: "#64748b",
-                    marginBottom: "0.5rem",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Início
-                </label>
-                <input
-                  type="date"
-                  className="search-input"
-                  value={historyFilters.startDate || ""}
-                  onChange={(e) =>
-                    setHistoryFilters({
-                      ...historyFilters,
-                      startDate: e.target.value,
-                    })
-                  }
-                  style={{
-                    background: "rgba(255,255,255,0.05)",
-                    fontSize: "0.85rem",
-                    height: "40px",
-                  }}
-                />
-              </div>
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.7rem",
-                    color: "#64748b",
-                    marginBottom: "0.5rem",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Fim
-                </label>
-                <input
-                  type="date"
-                  className="search-input"
-                  value={historyFilters.endDate || ""}
-                  onChange={(e) =>
-                    setHistoryFilters({
-                      ...historyFilters,
-                      endDate: e.target.value,
-                    })
-                  }
-                  style={{
-                    background: "rgba(255,255,255,0.05)",
-                    fontSize: "0.85rem",
-                    height: "40px",
-                  }}
-                />
-              </div>
-            </div>
-          )}
+          {/* Date Pickers para Período Personalizado */}
+          <PeriodDatePickers
+            filters={historyFilters}
+            onChange={setHistoryFilters}
+          />
 
           <ReceiptList
             receipts={filteredItems}

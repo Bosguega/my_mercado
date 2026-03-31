@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { LineChart as LineChartIcon, ArrowLeft } from "lucide-react";
 import UniversalSearchBar from "./UniversalSearchBar";
+import { PeriodSelector, PeriodDatePickers } from "./PeriodSelector";
 import {
   LineChart as RechartsLineChart,
   Line,
@@ -10,239 +11,175 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { parseBRL } from "../utils/currency";
-import { parseToDate } from "../utils/date";
-import { groupBy, filterBySearch, sortItems } from "../utils/analytics";
-import { filterItemsByPeriod } from "../utils/filters";
-import type { PurchasedItem, SearchSortBy, SearchFilters } from "../types/ui";
-import type { Receipt, ReceiptItem } from "../types/domain";
+import type { SearchSortBy } from "../types/ui";
 import { useUiStore } from "../stores/useUiStore";
 import { useAllReceiptsQuery } from "../hooks/queries/useReceiptsQuery";
 import { useCanonicalProductsQuery } from "../hooks/queries/useCanonicalProductsQuery";
+import { useSearchItems } from "../hooks/queries/useSearchItems";
+import { useFilteredSearchItems } from "../hooks/queries/useFilteredSearchItems";
+import { useSearchChartData } from "../hooks/queries/useSearchChartData";
 import { SearchItemRow } from "./SearchItemRow";
-
 import { Skeleton } from "./Skeleton";
 
-const PERIOD_OPTIONS = [
-  { value: "all", label: "Todo período" },
-  { value: "this-month", label: "Este mês" },
-  { value: "last-3-months", label: "Últimos 3 meses" },
-  { value: "custom", label: "Personalizado" },
-];
+// =========================
+// COMPONENTE DE GRÁFICO
+// =========================
+
+interface PriceChartProps {
+  chartData: Array<Record<string, string | number>>;
+  groupedItems: Record<string, unknown[]>;
+  onBack: () => void;
+}
+
+function PriceChart({ chartData, groupedItems, onBack }: PriceChartProps) {
+  const colors = [
+    "#3b82f6",
+    "#10b981",
+    "#f43f5e",
+    "#f59e0b",
+    "#8b5cf6",
+    "#ec4899",
+    "#14b8a6",
+    "#f97316",
+  ];
+
+  return (
+    <div className="glass-card" style={{ padding: "1.25rem" }}>
+      <button
+        className="btn"
+        onClick={onBack}
+        style={{
+          marginBottom: "1.5rem",
+          background: "rgba(255,255,255,0.05)",
+          boxShadow: "none",
+          color: "#94a3b8",
+          padding: "0.5rem 1rem",
+          fontSize: "0.85rem",
+        }}
+      >
+        <ArrowLeft size={16} /> Voltar
+      </button>
+      <h3
+        style={{ marginBottom: "1.5rem", color: "#fff", fontSize: "1.2rem" }}
+      >
+        Tendência de Preços
+      </h3>
+
+      <div style={{ width: "100%", height: 300, marginTop: "1rem" }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <RechartsLineChart data={chartData}>
+            <CartesianGrid
+              stroke="#1e293b"
+              strokeDasharray="5 5"
+              vertical={false}
+            />
+            <XAxis
+              dataKey="date"
+              stroke="#475569"
+              fontSize={10}
+              tickMargin={10}
+            />
+            <YAxis
+              stroke="#475569"
+              fontSize={10}
+              tickFormatter={(value) => `R$${value}`}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "rgba(15, 23, 42, 0.9)",
+                border: "1px solid var(--card-border)",
+                borderRadius: "12px",
+                fontSize: "0.8rem",
+              }}
+              itemStyle={{ padding: "2px 0" }}
+              cursor={{ stroke: "#334155" }}
+            />
+            {Object.keys(groupedItems).map((itemName, idx) => (
+              <Line
+                key={itemName}
+                type="monotone"
+                name={itemName}
+                dataKey={itemName}
+                stroke={colors[idx % colors.length]}
+                strokeWidth={2}
+                dot={{ r: 3, fill: colors[idx % colors.length] }}
+                activeDot={{ r: 5 }}
+                connectNulls
+              />
+            ))}
+          </RechartsLineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+// =========================
+// COMPONENTE PRINCIPAL
+// =========================
 
 function SearchTab() {
-  // React Query para dados de receipts
+  // =========================
+  // 1. DADOS (React Query)
+  // =========================
   const { data: savedReceipts = [], isLoading: loading } = useAllReceiptsQuery();
   const { data: canonicalProducts = [] } = useCanonicalProductsQuery();
 
-  // Estados da UI
+  // =========================
+  // 2. ESTADO DE UI (Zustand)
+  // =========================
   const searchQuery = useUiStore((state) => state.searchQuery);
   const setSearchQuery = useUiStore((state) => state.setSearchQuery);
   const sortOrder = useUiStore((state) => state.sortOrder);
   const setSortOrder = useUiStore((state) => state.setSortOrder);
   const sortDirection = useUiStore((state) => state.searchSortDirection);
   const setSortDirection = useUiStore((state) => state.setSearchSortDirection);
-
-  // Filtros de período
   const searchFilters = useUiStore((state) => state.searchFilters);
   const setSearchFilters = useUiStore((state) => state.setSearchFilters);
 
+  // Estado local
   const [showChart, setShowChart] = useState(false);
   const showSkeleton = loading && savedReceipts.length === 0;
 
-  // Memoize flattening of all items
-  const allPurchasedItems = useMemo(() => {
-    const items: (PurchasedItem & { canonical_name?: string })[] = [];
-    savedReceipts.forEach((receipt: Receipt) => {
-      if (receipt && Array.isArray(receipt.items)) {
-        receipt.items.forEach((item: ReceiptItem) => {
-          const vip = item.canonical_product_id 
-            ? canonicalProducts.find(p => p.id === item.canonical_product_id)
-            : null;
+  // =========================
+  // 3. HOOKS DE DOMÍNIO
+  // =========================
+  
+  // Transformação: receipts → items
+  const { items: allItems } = useSearchItems(savedReceipts, canonicalProducts);
 
-          items.push({
-            ...item,
-            purchasedAt: receipt.date,
-            store: receipt.establishment,
-            canonical_name: vip?.name || undefined
-          });
-        });
-      }
-    });
-    return items;
-  }, [savedReceipts, canonicalProducts]);
+  // Filtros + ordenação
+  const { items: filteredItems, totalCount } = useFilteredSearchItems({
+    items: allItems,
+    searchQuery,
+    sortOrder,
+    sortDirection,
+    searchFilters,
+  });
 
-  // Memoize filtered and sorted items
-  const { filteredItems, totalCount } = useMemo(() => {
-    // 1. Filtra por período primeiro
-    let baseItems = filterItemsByPeriod(
-      allPurchasedItems,
-      searchFilters.period,
-      searchFilters.startDate,
-      searchFilters.endDate
-    );
+  // Dados do gráfico
+  const { groupedItems, chartData } = useSearchChartData(
+    filteredItems,
+    canonicalProducts,
+    showChart
+  );
 
-    // 2. Filtra por busca
-    baseItems = searchQuery.trim() === ""
-      ? baseItems.slice(0, 50)
-      : filterBySearch(baseItems, searchQuery, ["name", "normalized_name", "category", "canonical_name"]);
-
-    const customSorters = {
-      price: (a: PurchasedItem, b: PurchasedItem) => parseBRL(a.price) - parseBRL(b.price),
-      recent: (a: PurchasedItem, b: PurchasedItem) => {
-        const dateA = parseToDate(a.purchasedAt || "");
-        const dateB = parseToDate(b.purchasedAt || "");
-        const timeA = dateA ? dateA.getTime() : 0;
-        const timeB = dateB ? dateB.getTime() : 0;
-        return timeA - timeB;
-      }
-    };
-
-    const sorted = sortItems(baseItems, sortOrder, sortDirection, customSorters);
-
-    return {
-      filteredItems: sorted.slice(0, 100),
-      totalCount: sorted.length
-    };
-  }, [allPurchasedItems, searchQuery, sortOrder, sortDirection, searchFilters]);
-
-  // Group items by canonical ID or name for the chart - memoized
-  const groupedItems = useMemo(() => {
-    return groupBy(filteredItems, (i) => {
-      if (i.canonical_product_id) {
-        const vip = canonicalProducts.find(cp => cp.id === i.canonical_product_id);
-        return vip ? `💎 ${vip.name}` : (i.normalized_name || i.name);
-      }
-      return i.normalized_name || i.name;
-    });
-  }, [filteredItems, canonicalProducts]);
-
-  // Memoize chart data calculation
-  const chartData = useMemo(() => {
-    if (!showChart) return [];
-
-    const allDates = new Set<string>();
-    Object.keys(groupedItems).forEach((key) => {
-      groupedItems[key].forEach((historyItem: PurchasedItem) => {
-        if (historyItem.purchasedAt) {
-          // Normalizar para YYYY-MM-DD para o conjunto de datas do gráfico
-          const d = parseToDate(historyItem.purchasedAt);
-          if (d) {
-            allDates.add(d.toISOString().substring(0, 10));
-          }
-        }
-      });
-    });
-
-    const sortedDates = Array.from(allDates).sort((a, b) => {
-      const dateA = parseToDate(a);
-      const dateB = parseToDate(b);
-      const timeA = dateA ? dateA.getTime() : 0;
-      const timeB = dateB ? dateB.getTime() : 0;
-      return timeA - timeB;
-    });
-
-    return sortedDates.map((dateStr) => {
-      const dataPoint: Record<string, string | number> = { date: dateStr };
-      Object.keys(groupedItems).forEach((itemName) => {
-        const match = groupedItems[itemName].find(
-          (h) => {
-            if (!h.purchasedAt) return false;
-            const d = parseToDate(h.purchasedAt);
-            return d && d.toISOString().startsWith(dateStr);
-          },
-        );
-        if (match) {
-          dataPoint[itemName] = parseBRL(match.price || match.unitPrice);
-        }
-      });
-      return dataPoint;
-    });
-  }, [showChart, groupedItems]);
-
+  // =========================
+  // 4. RENDER: GRÁFICO
+  // =========================
   if (showChart) {
-    const colors = [
-      "#3b82f6",
-      "#10b981",
-      "#f43f5e",
-      "#f59e0b",
-      "#8b5cf6",
-      "#ec4899",
-      "#14b8a6",
-      "#f97316",
-    ];
-
     return (
-      <div className="glass-card" style={{ padding: "1.25rem" }}>
-        <button
-          className="btn"
-          onClick={() => setShowChart(false)}
-          style={{
-            marginBottom: "1.5rem",
-            background: "rgba(255,255,255,0.05)",
-            boxShadow: "none",
-            color: "#94a3b8",
-            padding: "0.5rem 1rem",
-            fontSize: "0.85rem",
-          }}
-        >
-          <ArrowLeft size={16} /> Voltar
-        </button>
-        <h3
-          style={{ marginBottom: "1.5rem", color: "#fff", fontSize: "1.2rem" }}
-        >
-          Tendência de Preços
-        </h3>
-
-        <div style={{ width: "100%", height: 300, marginTop: "1rem" }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <RechartsLineChart data={chartData}>
-              <CartesianGrid
-                stroke="#1e293b"
-                strokeDasharray="5 5"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="date"
-                stroke="#475569"
-                fontSize={10}
-                tickMargin={10}
-              />
-              <YAxis
-                stroke="#475569"
-                fontSize={10}
-                tickFormatter={(value) => `R$${value}`}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "rgba(15, 23, 42, 0.9)",
-                  border: "1px solid var(--card-border)",
-                  borderRadius: "12px",
-                  fontSize: "0.8rem",
-                }}
-                itemStyle={{ padding: "2px 0" }}
-                cursor={{ stroke: "#334155" }}
-              />
-              {Object.keys(groupedItems).map((itemName, idx) => (
-                <Line
-                  key={itemName}
-                  type="monotone"
-                  name={itemName}
-                  dataKey={itemName}
-                  stroke={colors[idx % colors.length]}
-                  strokeWidth={2}
-                  dot={{ r: 3, fill: colors[idx % colors.length] }}
-                  activeDot={{ r: 5 }}
-                  connectNulls
-                />
-              ))}
-            </RechartsLineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      <PriceChart
+        chartData={chartData}
+        groupedItems={groupedItems}
+        onBack={() => setShowChart(false)}
+      />
     );
   }
 
+  // =========================
+  // 5. RENDER: LISTA
+  // =========================
   return (
     <div>
       <UniversalSearchBar
@@ -259,46 +196,11 @@ function SearchTab() {
         ]}
         extraActions={
           <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
-            {/* Seletor de Período */}
-            <div
-              style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
-            >
-              <span
-                style={{
-                  fontSize: "0.8rem",
-                  color: "#64748b",
-                  fontWeight: 500,
-                }}
-              >
-                PERÍODO:
-              </span>
-              <select
-                value={searchFilters.period}
-                onChange={(e) =>
-                  setSearchFilters({
-                    ...searchFilters,
-                    period: e.target.value as SearchFilters["period"],
-                  })
-                }
-                style={{
-                  background: "rgba(59, 130, 246, 0.1)",
-                  border: "none",
-                  borderRadius: "6px",
-                  color: "var(--primary)",
-                  fontSize: "0.8rem",
-                  fontWeight: 600,
-                  padding: "0.25rem 0.5rem",
-                  cursor: "pointer",
-                  outline: "none",
-                }}
-              >
-                {PERIOD_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Seletor de Período (componente reutilizável) */}
+            <PeriodSelector
+              filters={searchFilters}
+              onChange={setSearchFilters}
+            />
 
             {/* Contador e Botão de Gráfico */}
             {searchQuery && filteredItems.length > 0 && (
@@ -328,81 +230,13 @@ function SearchTab() {
         }
       />
 
-      {/* Date Pickers para Período Personalizado */}
-      {searchFilters.period === "custom" && (
-        <div
-          className="glass-card"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "0.75rem",
-            marginBottom: "1rem",
-            padding: "1rem",
-          }}
-        >
-          <div>
-            <label
-              style={{
-                display: "block",
-                fontSize: "0.7rem",
-                color: "#64748b",
-                marginBottom: "0.5rem",
-                fontWeight: 600,
-                textTransform: "uppercase",
-              }}
-            >
-              Início
-            </label>
-            <input
-              type="date"
-              className="search-input"
-              value={searchFilters.startDate || ""}
-              onChange={(e) =>
-                setSearchFilters({
-                  ...searchFilters,
-                  startDate: e.target.value,
-                })
-              }
-              style={{
-                background: "rgba(255,255,255,0.05)",
-                fontSize: "0.85rem",
-                height: "40px",
-              }}
-            />
-          </div>
-          <div>
-            <label
-              style={{
-                display: "block",
-                fontSize: "0.7rem",
-                color: "#64748b",
-                marginBottom: "0.5rem",
-                fontWeight: 600,
-                textTransform: "uppercase",
-              }}
-            >
-              Fim
-            </label>
-            <input
-              type="date"
-              className="search-input"
-              value={searchFilters.endDate || ""}
-              onChange={(e) =>
-                setSearchFilters({
-                  ...searchFilters,
-                  endDate: e.target.value,
-                })
-              }
-              style={{
-                background: "rgba(255,255,255,0.05)",
-                fontSize: "0.85rem",
-                height: "40px",
-              }}
-            />
-          </div>
-        </div>
-      )}
+      {/* Date Pickers para Período Personalizado (componente reutilizável) */}
+      <PeriodDatePickers
+        filters={searchFilters}
+        onChange={setSearchFilters}
+      />
 
+      {/* Lista de Items */}
       <div className="items-list">
         {showSkeleton ? (
           [...Array(6)].map((_, i) => (
@@ -429,12 +263,12 @@ function SearchTab() {
           </div>
         ) : (
           <>
-              {filteredItems.map((item, idx) => (
-                <SearchItemRow
-                  key={`${item.normalized_name || item.name}-${item.purchasedAt}-${idx}`}
-                  item={item}
-                />
-              ))}
+            {filteredItems.map((item, idx) => (
+              <SearchItemRow
+                key={`${item.normalized_name || item.name}-${item.purchasedAt}-${idx}`}
+                item={item}
+              />
+            ))}
           </>
         )}
       </div>
