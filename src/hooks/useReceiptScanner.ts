@@ -66,6 +66,8 @@ export function useReceiptScanner({
       if (processingRef.current) return;
       processingRef.current = true;
 
+      console.log('[useReceiptScanner] handleScanSuccess started:', { decodedText: decodedText?.substring(0, 50) });
+
       setScanning(false);
       setLoading(true);
       try {
@@ -73,8 +75,15 @@ export function useReceiptScanner({
           throw new Error('Conteúdo do QR Code inválido.');
         }
 
+        console.log('[useReceiptScanner] Parsing NFC-e...');
         setError(null);
         const extractedData = await parseNFCeSP(decodedText.trim());
+
+        console.log('[useReceiptScanner] Parse result:', {
+          hasData: !!extractedData,
+          hasItems: !!extractedData?.items,
+          itemsCount: extractedData?.items?.length,
+        });
 
         if (
           !extractedData ||
@@ -88,7 +97,10 @@ export function useReceiptScanner({
           return;
         }
 
+        console.log('[useReceiptScanner] Saving receipt...');
         const result = await saveReceipt(extractedData);
+
+        console.log('[useReceiptScanner] Save result:', result);
 
         if (isDuplicateResult(result)) {
           setDuplicateReceipt(extractedData);
@@ -97,11 +109,13 @@ export function useReceiptScanner({
             { icon: '⚠️' },
           );
         } else if (isSuccessResult(result)) {
+          console.log('[useReceiptScanner] Setting currentReceipt:', result.receipt);
           setCurrentReceipt(result.receipt);
           toast.success('Nota fiscal processada com sucesso!');
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Desconhecido';
+        console.error('[useReceiptScanner] Error:', err);
         toast.error('Erro ao processar nota. Tente novamente.');
         setError(
           `Erro de conexão ou processamento: ${message}`,
@@ -109,6 +123,7 @@ export function useReceiptScanner({
       } finally {
         setLoading(false);
         processingRef.current = false;
+        console.log('[useReceiptScanner] Finished');
       }
     },
     [saveReceipt, setCurrentReceipt, setDuplicateReceipt, setError, setLoading, setScanning],

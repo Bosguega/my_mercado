@@ -80,6 +80,17 @@ function ScannerTab() {
   const isLoading = loading;
   const isScanning = scanning;
 
+  // Debug em desenvolvimento
+  if (import.meta.env.DEV) {
+    console.log('[ScannerTab] Render:', {
+      manualMode,
+      currentReceipt: !!currentReceipt,
+      isScanning,
+      isLoading,
+      duplicateReceipt: !!duplicateReceipt,
+    });
+  }
+
   return (
     <>
       {/* Tela Manual */}
@@ -92,6 +103,15 @@ function ScannerTab() {
           onAddManualItem={handleAddManualItem}
           onSaveManualReceipt={handleSaveManualReceipt}
           onCancel={() => setManualMode(false)}
+          calculateReceiptTotal={calculateReceiptTotal}
+        />
+      )}
+
+      {/* Tela de Resultado (prioridade máxima) */}
+      {!manualMode && currentReceipt && (
+        <ResultScreen
+          currentReceipt={currentReceipt}
+          onReset={handleReset}
           calculateReceiptTotal={calculateReceiptTotal}
         />
       )}
@@ -110,7 +130,7 @@ function ScannerTab() {
       )}
 
       {/* Tela de Escaneamento */}
-      {!manualMode && isScanning && (
+      {!manualMode && !currentReceipt && isScanning && (
         <ScanningScreen
           onStopCamera={stopCamera}
           torch={torch}
@@ -120,16 +140,7 @@ function ScannerTab() {
       )}
 
       {/* Tela de Loading */}
-      {!manualMode && isLoading && <LoadingScreen />}
-
-      {/* Tela de Resultado */}
-      {!manualMode && currentReceipt && (
-        <ResultScreen
-          currentReceipt={currentReceipt}
-          onReset={handleReset}
-          calculateReceiptTotal={calculateReceiptTotal}
-        />
-      )}
+      {!manualMode && !currentReceipt && isLoading && <LoadingScreen />}
 
       {/* Modal de Duplicata */}
       {duplicateReceipt && (
