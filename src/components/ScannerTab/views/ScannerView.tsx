@@ -1,4 +1,4 @@
-import { Zap, ZapOff, ZoomIn, ZoomOut } from "lucide-react";
+import { Zap, ZapOff } from "lucide-react";
 import type { ScannerViewProps } from "../ScannerTab.types";
 
 const styles = {
@@ -21,9 +21,6 @@ export function ScannerView({
   torchSupported,
   torch,
   applyTorch,
-  zoomSupported,
-  zoom,
-  applyZoom,
 }: ScannerViewProps) {
   if (!isScanning) return null;
 
@@ -40,19 +37,15 @@ export function ScannerView({
         maxWidth: "500px",
         margin: "0 auto",
         position: "relative",
+        minHeight: "400px",
       }}
     >
-      <video
-        id="reader-video"
-        autoPlay
-        muted
-        playsInline
+      {/* Elemento div para o html5-qrcode */}
+      <div
+        id="reader"
         style={{
           width: "100%",
-          height: "auto",
-          display: "block",
-          objectFit: "cover",
-          minHeight: "300px",
+          minHeight: "400px",
         }}
       />
       <div
@@ -92,7 +85,7 @@ export function ScannerView({
             fontSize: "0.75rem",
           }}
         >
-          Dica: Afaste um pouco e use o Zoom se for pequeno
+          Dica: Afaste um pouco para melhor leitura
         </div>
       </div>
 
@@ -116,18 +109,6 @@ export function ScannerView({
             }}
           >
             {torch ? <ZapOff size={24} /> : <Zap size={24} />}
-          </button>
-        )}
-
-        {zoomSupported && (
-          <button
-            onClick={() => applyZoom(zoom === 1 ? 2.5 : 1)}
-            style={{
-              ...styles.cameraControl,
-              background: zoom > 1 ? "var(--primary)" : "rgba(15, 23, 42, 0.9)",
-            }}
-          >
-            {zoom === 1 ? <ZoomIn size={24} /> : <ZoomOut size={24} />}
           </button>
         )}
       </div>

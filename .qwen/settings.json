@@ -9,7 +9,8 @@
       "Bash(rm *)",
       "Bash(rmdir *)",
       "Bash(move *)",
-      "Bash(dir *)"
+      "Bash(dir *)",
+      "Bash(npm uninstall *)"
     ]
   },
   "$version": 3

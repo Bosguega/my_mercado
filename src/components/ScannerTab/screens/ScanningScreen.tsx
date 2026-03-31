@@ -4,9 +4,6 @@ import type { ScanningScreenProps } from "../ScannerTab.types";
 
 export function ScanningScreen({
   onStopCamera,
-  zoom,
-  zoomSupported,
-  applyZoom,
   torch,
   torchSupported,
   applyTorch,
@@ -33,9 +30,6 @@ export function ScanningScreen({
         torchSupported={torchSupported}
         torch={torch}
         applyTorch={applyTorch}
-        zoomSupported={zoomSupported}
-        zoom={zoom}
-        applyZoom={applyZoom}
       />
     </>
   );

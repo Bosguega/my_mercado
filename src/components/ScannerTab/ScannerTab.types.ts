@@ -72,9 +72,6 @@ export interface ScannerViewProps {
   torchSupported: boolean;
   torch: boolean;
   applyTorch: (value: boolean) => void;
-  zoomSupported: boolean;
-  zoom: number;
-  applyZoom: (value: number) => void;
 }
 
 export interface ReceiptResultProps {
@@ -93,9 +90,10 @@ export interface LoadingScreenProps {
   message?: string;
 }
 
-export interface ScanningScreenProps extends ScannerControls {
+export interface ScanningScreenProps {
   onStopCamera: () => void;
-  applyZoom: (value: number) => void;
+  torch: boolean;
+  torchSupported: boolean;
   applyTorch: (on: boolean) => void;
 }
 

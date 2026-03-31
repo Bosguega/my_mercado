@@ -70,9 +70,6 @@ function ScannerTab() {
     scanning,
     error,
     handleUrlSubmit,
-    zoom,
-    zoomSupported,
-    applyZoom,
     torch,
     torchSupported,
     applyTorch,
@@ -116,9 +113,6 @@ function ScannerTab() {
       {!manualMode && isScanning && (
         <ScanningScreen
           onStopCamera={stopCamera}
-          zoom={zoom}
-          zoomSupported={zoomSupported}
-          applyZoom={applyZoom}
           torch={torch}
           torchSupported={torchSupported}
           applyTorch={applyTorch}

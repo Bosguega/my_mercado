@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, type ChangeEvent } from 'react';
-import { BrowserMultiFormatReader, DecodeHintType } from '@zxing/library';
+import { Html5Qrcode } from 'html5-qrcode';
 import { toast } from 'react-hot-toast';
 import { parseNFCeSP } from '../services/receiptParser';
 import { useScannerStore } from '../stores/useScannerStore';
@@ -25,20 +25,6 @@ function isSuccessResult(
 ): result is { success: true; receipt: Receipt } {
   return 'success' in result && result.success === true;
 }
-
-type CameraCapabilities = MediaTrackCapabilities & {
-  zoom?: {
-    min: number;
-    max: number;
-  };
-  torch?: boolean;
-};
-
-type BarcodeDetectorLike = {
-  detect: (input: ImageBitmapSource) => Promise<Array<{ rawValue?: string }>>;
-};
-
-type BarcodeDetectorCtor = new (options: { formats: string[] }) => BarcodeDetectorLike;
 
 export function useReceiptScanner({
   saveReceipt,
@@ -72,93 +58,8 @@ export function useReceiptScanner({
   const torchSupported = useScannerStore((state) => state.torchSupported);
   const setTorchSupported = useScannerStore((state) => state.setTorchSupported);
 
-  const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
-  const startTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const html5QrcodeRef = useRef<Html5Qrcode | null>(null);
   const processingRef = useRef(false);
-  const streamRef = useRef<MediaStream | null>(null);
-
-  const applyZoom = useCallback(async (value: number) => {
-    const video = document.getElementById('reader-video') as HTMLVideoElement | null;
-    const stream = (streamRef.current || video?.srcObject) as MediaStream | null;
-    if (!stream) return;
-
-    const track = stream.getVideoTracks()[0];
-    if (track) {
-      const caps = (track.getCapabilities ? track.getCapabilities() : {}) as CameraCapabilities;
-      const zoomCaps = caps.zoom;
-      if (zoomCaps) {
-        const clamped = Math.max(zoomCaps.min, Math.min(zoomCaps.max, value));
-        try {
-          await track.applyConstraints({
-            advanced: [{ zoom: clamped }] as unknown as MediaTrackConstraintSet[],
-          });
-          setZoom(clamped);
-        } catch (_e) {
-          console.warn('Zoom error');
-        }
-      }
-    }
-  }, [setZoom]);
-
-  const applyTorch = useCallback(async (on: boolean) => {
-    const video = document.getElementById('reader-video') as HTMLVideoElement | null;
-    const stream = (streamRef.current || video?.srcObject) as MediaStream | null;
-    if (!stream) return;
-
-    const track = stream.getVideoTracks()[0];
-    if (track) {
-      const caps = (track.getCapabilities ? track.getCapabilities() : {}) as CameraCapabilities;
-      const canUseTorch = Boolean(caps.torch);
-      if (canUseTorch) {
-        try {
-          await track.applyConstraints({
-            advanced: [{ torch: on }] as unknown as MediaTrackConstraintSet[],
-          });
-          setTorch(on);
-        } catch (e) {
-          console.warn('Torch error:', e);
-        }
-      }
-    }
-  }, [setTorch]);
-
-  const stopCamera = useCallback(() => {
-    if (startTimeoutRef.current) {
-      clearTimeout(startTimeoutRef.current);
-      startTimeoutRef.current = null;
-    }
-
-    if (codeReaderRef.current) {
-      try {
-        codeReaderRef.current.reset();
-      } catch (err: unknown) {
-        console.warn('Erro ao parar ZXing:', err);
-      } finally {
-        codeReaderRef.current = null;
-      }
-    }
-
-    if (streamRef.current) {
-      try {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      } catch (err) {
-        console.warn('Erro ao parar stream:', err);
-      } finally {
-        streamRef.current = null;
-      }
-    }
-
-    const video = document.getElementById('reader-video') as HTMLVideoElement | null;
-    if (video) {
-      video.srcObject = null;
-    }
-
-    setScanning(false);
-    setZoom(1);
-    setZoomSupported(false);
-    setTorch(false);
-    setTorchSupported(false);
-  }, [setScanning, setTorch, setTorchSupported, setZoom, setZoomSupported]);
 
   const handleScanSuccess = useCallback(
     async (decodedText: string) => {
@@ -217,167 +118,120 @@ export function useReceiptScanner({
     if (scanning || loading) return;
     setScanning(true);
 
-    startTimeoutRef.current = setTimeout(async () => {
-      startTimeoutRef.current = null;
-
-      const video = document.getElementById('reader-video') as HTMLVideoElement | null;
-      if (!video) {
-        console.error('Video element not found');
-        setScanning(false);
-        return;
+    try {
+      // Limpar instância anterior
+      if (html5QrcodeRef.current) {
+        await html5QrcodeRef.current.stop();
+        html5QrcodeRef.current.clear();
       }
 
-      const BarcodeDetectorCtor = (window as Window & { BarcodeDetector?: BarcodeDetectorCtor })
-        .BarcodeDetector;
+      // Criar nova instância
+      const html5QrCode = new Html5Qrcode('reader');
+      html5QrcodeRef.current = html5QrCode;
 
-      if (BarcodeDetectorCtor) {
-        try {
-          const detector = new BarcodeDetectorCtor({ formats: ['qr_code'] });
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: 'environment',
-              width: { ideal: 1920 },
-              height: { ideal: 1080 },
-              advanced: [{ focusMode: 'continuous' } as unknown as MediaTrackConstraintSet],
-            },
-            audio: false,
-          });
+      const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0,
+        disableFlip: false,
+      };
 
-          streamRef.current = stream;
-          video.srcObject = stream;
-          await video.play();
+      // Verificar suporte a câmera traseira
+      const cameras = await Html5Qrcode.getCameras();
+      const backCamera = cameras.find(cam => 
+        cam.label.toLowerCase().includes('back') || 
+        cam.label.toLowerCase().includes('traseira') ||
+        cam.label.toLowerCase().includes('environment')
+      );
 
-          const track = stream.getVideoTracks()[0];
-          const caps = (track.getCapabilities ? track.getCapabilities() : {}) as CameraCapabilities;
-          const zoomCaps = caps.zoom;
-          const hasTorch = Boolean(caps.torch);
+      const cameraId = backCamera?.id || cameras[0]?.id;
 
-          if (zoomCaps) {
-            setZoomSupported(true);
-            const initialZoom = Math.min(zoomCaps.max, 1.25);
-            try {
-              await track.applyConstraints({
-                advanced: [{ zoom: initialZoom }] as unknown as MediaTrackConstraintSet[],
-              });
-              setZoom(initialZoom);
-            } catch (_e) {
-              setZoom(1);
-            }
-          }
-
-          if (hasTorch) {
-            setTorchSupported(true);
-            setTorch(false);
-          }
-
-          const detectFrame = async () => {
-            if (!streamRef.current || !video || video.paused || video.ended) return;
-
-            if (!processingRef.current && video.readyState >= 2) {
-              try {
-                const barcodes = await detector.detect(video);
-                if (barcodes.length > 0) {
-                  const text = barcodes[0].rawValue;
-                  stopCamera();
-                  if (text) {
-                    handleScanSuccess(text);
-                  }
-                  return;
-                }
-              } catch (err) {
-                console.error('ML Kit detection error:', err);
-              }
-            }
-
-            if (streamRef.current) {
-              setTimeout(() => {
-                if (streamRef.current) requestAnimationFrame(detectFrame);
-              }, 150);
-            }
-          };
-
-          requestAnimationFrame(detectFrame);
-          return;
-        } catch (err) {
-          console.warn('Falha ao iniciar ML Kit, tentando ZXing...', err);
-          if (streamRef.current) {
-            streamRef.current.getTracks().forEach((t) => t.stop());
-            streamRef.current = null;
-          }
-        }
+      if (!cameraId) {
+        throw new Error('Nenhuma câmera encontrada');
       }
 
-      try {
-        const hints = new Map();
-        hints.set(DecodeHintType.TRY_HARDER, true);
-
-        const codeReader = new BrowserMultiFormatReader(hints);
-        codeReaderRef.current = codeReader;
-
-        const constraints = {
-          audio: false,
-          video: {
-            facingMode: 'environment',
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            advanced: [{ focusMode: 'continuous' } as unknown as MediaTrackConstraintSet],
-          },
-        };
-
-        await codeReader.decodeFromConstraints(
-          constraints as MediaStreamConstraints,
-          video,
-          (result) => {
-            if (result) {
-              if (processingRef.current) return;
-              const text = result.getText();
-              stopCamera();
-              handleScanSuccess(text);
-            }
-          },
-        );
-
-        const track = streamRef.current?.getVideoTracks()[0];
-        if (track?.getCapabilities) {
-          const caps = track.getCapabilities() as CameraCapabilities;
-          const zoomCaps = caps.zoom;
-          const hasTorch = Boolean(caps.torch);
-          if (zoomCaps) {
-            setZoomSupported(true);
-            const initialZoom = Math.min(zoomCaps.max, 1.25);
-            try {
-              await track.applyConstraints({
-                advanced: [{ zoom: initialZoom }] as unknown as MediaTrackConstraintSet[],
-              });
-              setZoom(initialZoom);
-            } catch (_e) {
-              setZoom(1);
-            }
+      await html5QrCode.start(
+        cameraId,
+        config,
+        (decodedText) => {
+          if (!processingRef.current && decodedText) {
+            stopCamera();
+            handleScanSuccess(decodedText);
           }
-          if (hasTorch) {
-            setTorchSupported(true);
-            setTorch(false);
+        },
+        (errorMessage) => {
+          // Erros de leitura são normais durante o scan
+          if (import.meta.env.DEV) {
+            console.warn('Scan error:', errorMessage);
           }
-        }
-      } catch (err) {
-        setScanning(false);
-        toast.error(
-          'Câmera não disponível. Verifique as permissões ou se o site usa HTTPS.',
-        );
-        console.error('Camera fail:', err);
+        },
+      );
+
+      // Verificar suporte a torch (lanterna)
+      const track = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' } 
+      }).then(stream => stream.getVideoTracks()[0]);
+      
+      if (track) {
+        const capabilities = track.getCapabilities() as MediaTrackCapabilities & { torch?: boolean };
+        setTorchSupported(!!capabilities.torch);
+        track.stop();
       }
-    }, 150);
-  }, [
-    handleScanSuccess,
-    loading,
-    scanning,
-    setScanning,
-    setTorch,
-    setTorchSupported,
-    setZoom,
-    setZoomSupported,
-    stopCamera,
-  ]);
+
+      // Zoom não é suportado nativamente pelo html5-qrcode
+      setZoomSupported(false);
+
+    } catch (err) {
+      setScanning(false);
+      toast.error(
+        'Câmera não disponível. Verifique as permissões ou se o site usa HTTPS.',
+      );
+      console.error('Camera fail:', err);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handleScanSuccess, setScanning, setTorchSupported, setZoomSupported]);
+
+  const stopCamera = useCallback(() => {
+    if (html5QrcodeRef.current) {
+      html5QrcodeRef.current.stop()
+        .then(() => {
+          html5QrcodeRef.current?.clear();
+          html5QrcodeRef.current = null;
+        })
+        .catch((err) => {
+          console.warn('Erro ao parar html5-qrcode:', err);
+          html5QrcodeRef.current = null;
+        });
+    }
+    setScanning(false);
+    setZoom(1);
+    setZoomSupported(false);
+    setTorch(false);
+  }, [setScanning, setTorch, setZoom, setZoomSupported]);
+
+  const applyTorch = useCallback(async (on: boolean) => {
+    if (!html5QrcodeRef.current) return;
+
+    try {
+      // html5-qrcode não tem API direta para torch
+      // Tentar acessar a câmera e aplicar torch manualmente
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' } 
+      });
+      const track = stream.getVideoTracks()[0];
+      const capabilities = track.getCapabilities() as MediaTrackCapabilities & { torch?: boolean };
+      
+      if (capabilities.torch) {
+        await track.applyConstraints({ advanced: [{ torch: on }] as any });
+        setTorch(on);
+      }
+      
+      // Não paramos o stream pois interfere com o scanner
+      // O torch será resetado quando stopCamera for chamado
+    } catch (err) {
+      console.warn('Torch error:', err);
+    }
+  }, [setTorch]);
 
   const handleFileUpload = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
@@ -385,51 +239,27 @@ export function useReceiptScanner({
       if (!file) return;
 
       setLoading(true);
-      let imageUrl = null;
       try {
-        imageUrl = URL.createObjectURL(file);
-
-        const BarcodeDetectorCtor = (window as Window & { BarcodeDetector?: BarcodeDetectorCtor })
-          .BarcodeDetector;
-        if (BarcodeDetectorCtor) {
-          try {
-            const detector = new BarcodeDetectorCtor({ formats: ['qr_code'] });
-            const img = new Image();
-            img.src = imageUrl;
-            await new Promise((resolve, reject) => {
-              img.onload = resolve;
-              img.onerror = reject;
-            });
-
-            const barcodes = await detector.detect(img);
-            if (barcodes.length > 0) {
-              const rawValue = barcodes[0].rawValue;
-              if (rawValue) {
-                await handleScanSuccess(rawValue);
-              }
-              return;
-            }
-          } catch (err) {
-            console.warn('Native detect fail during upload:', err);
+        // Usar html5-qrcode para scan de arquivo
+        if (html5QrcodeRef.current) {
+          const decodedText = await html5QrcodeRef.current.scanFile(file, true);
+          if (decodedText) {
+            await handleScanSuccess(decodedText);
           }
-        }
-
-        const hints = new Map();
-        hints.set(DecodeHintType.TRY_HARDER, true);
-        const codeReader = new BrowserMultiFormatReader(hints);
-        const result = await codeReader.decodeFromImageUrl(imageUrl);
-
-        if (result) {
-          await handleScanSuccess(result.getText());
         } else {
-          throw new Error('Não detectado');
+          // Criar instância temporária para scan de arquivo
+          const html5QrCode = new Html5Qrcode('reader');
+          const decodedText = await html5QrCode.scanFile(file, true);
+          html5QrCode.clear();
+          if (decodedText) {
+            await handleScanSuccess(decodedText);
+          }
         }
       } catch (err) {
         console.error('Upload detection fail:', err);
-        toast.error('QR Code Não detectado na imagem.');
-        setLoading(false);
+        toast.error('QR Code não detectado na imagem.');
       } finally {
-        if (imageUrl) URL.revokeObjectURL(imageUrl);
+        setLoading(false);
       }
     },
     [handleScanSuccess, setLoading],
@@ -555,7 +385,7 @@ export function useReceiptScanner({
     handleSaveManualReceipt,
     zoom,
     zoomSupported,
-    applyZoom,
+    applyZoom: () => Promise.resolve(), // Não suportado pelo html5-qrcode
     torch,
     torchSupported,
     applyTorch,
