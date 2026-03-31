@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { 
-  Settings, 
-  Trash2, 
-  Cpu, 
-  LogOut, 
-  Database, 
-  BookOpen, 
+import {
+  Settings,
+  Trash2,
+  Cpu,
+  LogOut,
+  Database,
+  BookOpen,
   Package,
   ChevronRight,
-  // AlertTriangle
+  Wifi,
+  // WifiOff
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { logout } from "../services/auth";
@@ -18,6 +19,7 @@ import {
   clearCanonicalProductsInDB
 } from "../services";
 import { useScannerStore } from "../stores/useScannerStore";
+import { testSupabaseConnection } from "../utils/supabaseTest";
 // import { useUiStore } from "../stores/useUiStore";
 import ConfirmDialog from "./ConfirmDialog";
 import DictionaryTab from "./DictionaryTab";
@@ -47,6 +49,31 @@ export default function SettingsTab({ onOpenAiConfig }: SettingsTabProps) {
         toast.success("Sessão encerrada.");
       }
     });
+  };
+
+  const handleTestConnection = async () => {
+    setLoading(true);
+    try {
+      const status = await testSupabaseConnection();
+      
+      if (status.configured && status.authenticated && status.databaseAccessible) {
+        toast.success(`✅ Conexão OK!\nUsuário: ${status.email?.substring(0, 20)}...`);
+      } else if (!status.configured) {
+        toast.error('❌ Supabase não configurado\nVerifique as variáveis de ambiente');
+      } else if (!status.authenticated) {
+        toast('⚠️ Não autenticado\nFaça login para acessar seus dados', {
+          icon: '⚠️',
+          duration: 4000,
+        });
+      } else if (!status.databaseAccessible) {
+        toast.error(`❌ Erro no banco de dados\n${status.error}`);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao testar conexão.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleClearTable = (
@@ -123,6 +150,19 @@ export default function SettingsTab({ onOpenAiConfig }: SettingsTabProps) {
           <section style={{ marginBottom: "2rem" }}>
             <h3 style={styles.sectionHeading}>Geral</h3>
             <div className="glass-card" style={{ padding: "0.5rem" }}>
+              <button className="settings-item-btn" onClick={handleTestConnection}>
+                <div className="settings-item-icon" style={{ background: "rgba(16, 185, 129, 0.1)", color: "#10b981" }}>
+                  <Wifi size={20} />
+                </div>
+                <div style={{ flex: 1, textAlign: "left" }}>
+                  <div style={{ fontWeight: 600, color: "#f8fafc" }}>Testar Conexão</div>
+                  <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Verificar conexão com Supabase</div>
+                </div>
+                {loading && <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Testando...</div>}
+              </button>
+
+              <div style={{ height: "1px", background: "rgba(255,255,255,0.05)", margin: "0 1rem" }} />
+
               <button className="settings-item-btn" onClick={onOpenAiConfig}>
                 <div className="settings-item-icon" style={{ background: "rgba(59, 130, 246, 0.1)", color: "var(--primary)" }}>
                   <Cpu size={20} />

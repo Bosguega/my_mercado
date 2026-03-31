@@ -63,22 +63,27 @@ export function useReceiptScanner({
 
   const handleScanSuccess = useCallback(
     async (decodedText: string) => {
-      console.log('📱 [Scanner] handleScanSuccess iniciado');
-      console.log('📱 [Scanner] Texto decodificado:', decodedText.substring(0, 100) + '...');
+      if (import.meta.env.DEV) {
+        console.log('📱 [Scanner] handleScanSuccess iniciado');
+        console.log('📱 [Scanner] Texto decodificado:', decodedText.substring(0, 100) + '...');
+      }
       
       if (processingRef.current) {
-        console.log('⚠️ [Scanner] Processamento já em andamento, ignorando');
+        if (import.meta.env.DEV) {
+          console.log('⚠️ [Scanner] Processamento já em andamento, ignorando');
+        }
         return;
       }
       processingRef.current = true;
 
       setScanning(false);
       setLoading(true);
-      console.log('📱 [Scanner] Loading = true');
       
       try {
         if (!decodedText || typeof decodedText !== 'string') {
-          console.error('❌ [Scanner] Texto inválido:', decodedText);
+          if (import.meta.env.DEV) {
+            console.error('❌ [Scanner] Texto inválido:', decodedText);
+          }
           throw new Error('Conteúdo do QR Code inválido.');
         }
 
@@ -86,23 +91,32 @@ export function useReceiptScanner({
         
         // Verificar se é URL da NFC-e
         const isNfceUrl = decodedText.trim().includes('fazenda.sp.gov.br');
-        console.log('📱 [Scanner] É URL NFC-e?', isNfceUrl);
+        
+        if (import.meta.env.DEV) {
+          console.log('📱 [Scanner] É URL NFC-e?', isNfceUrl);
+        }
         
         if (isNfceUrl) {
-          console.log('📱 [Scanner] Buscando dados da NFC-e via proxy...');
           toast.loading('Buscando dados da NFC-e...', { duration: 2000 });
         }
         
-        console.log('📱 [Scanner] Chamando parseNFCeSP...');
+        if (import.meta.env.DEV) {
+          console.log('📱 [Scanner] Chamando parseNFCeSP...');
+        }
         const extractedData = await parseNFCeSP(decodedText.trim());
-        console.log('📱 [Scanner] Parse completado!', extractedData);
+        
+        if (import.meta.env.DEV) {
+          console.log('📱 [Scanner] Parse completado!', extractedData);
+        }
 
         if (
           !extractedData ||
           !extractedData.items ||
           extractedData.items.length === 0
         ) {
-          console.error('❌ [Scanner] Nenhum item extraído');
+          if (import.meta.env.DEV) {
+            console.error('❌ [Scanner] Nenhum item extraído');
+          }
           const errorMsg = isNfceUrl 
             ? 'Não foi possível ler os itens desta NFC-e.\n\nPossíveis causas:\n• NFC-e de outro estado (só SP suportado)\n• Proxy CORS indisponível\n• Nota muito antiga ou cancelada\n\nTente entrada manual.'
             : 'Não conseguimos ler os itens dessa nota. Verifique se o QR Code é de uma NFC-e válida.';
@@ -112,27 +126,38 @@ export function useReceiptScanner({
           return;
         }
 
-        console.log('📱 [Scanner] Itens extraídos:', extractedData.items.length);
-        console.log('📱 [Scanner] Estabelecimento:', extractedData.establishment);
-        console.log('📱 [Scanner] Salvando receipt...');
+        if (import.meta.env.DEV) {
+          console.log('📱 [Scanner] Itens extraídos:', extractedData.items.length);
+          console.log('📱 [Scanner] Estabelecimento:', extractedData.establishment);
+          console.log('📱 [Scanner] Salvando receipt...');
+        }
 
         const result = await saveReceipt(extractedData);
-        console.log('📱 [Scanner] Result do save:', result);
+        
+        if (import.meta.env.DEV) {
+          console.log('📱 [Scanner] Result do save:', result);
+        }
 
         if (isDuplicateResult(result)) {
-          console.log('⚠️ [Scanner] Nota duplicada detectada');
+          if (import.meta.env.DEV) {
+            console.log('⚠️ [Scanner] Nota duplicada detectada');
+          }
           setDuplicateReceipt(extractedData);
           toast(
             `Esta nota já está no seu histórico desde ${result.existingReceipt.date.split(' ')[0]}`,
             { icon: '⚠️' },
           );
         } else if (isSuccessResult(result)) {
-          console.log('✅ [Scanner] Nota salva com sucesso!', result.receipt.id);
+          if (import.meta.env.DEV) {
+            console.log('✅ [Scanner] Nota salva com sucesso!', result.receipt.id);
+          }
           setCurrentReceipt(result.receipt);
           toast.success('Nota fiscal processada com sucesso!');
         }
       } catch (err: unknown) {
-        console.error('❌ [Scanner] ERRO:', err);
+        if (import.meta.env.DEV) {
+          console.error('❌ [Scanner] ERRO:', err);
+        }
         const message = err instanceof Error ? err.message : 'Desconhecido';
         
         // Mensagens de erro mais úteis
@@ -153,7 +178,6 @@ export function useReceiptScanner({
       } finally {
         setLoading(false);
         processingRef.current = false;
-        console.log('📱 [Scanner] Loading = false, processamento concluído');
       }
     },
     [saveReceipt, setCurrentReceipt, setDuplicateReceipt, setError, setLoading, setScanning],
@@ -280,10 +304,14 @@ export function useReceiptScanner({
 
   const handleFileUpload = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
-      console.log('📷 [Scanner] Upload de arquivo iniciado');
+      if (import.meta.env.DEV) {
+        console.log('📷 [Scanner] Upload de arquivo iniciado');
+      }
       const file = event.target.files?.[0];
       if (!file) {
-        console.log('⚠️ [Scanner] Nenhum arquivo selecionado');
+        if (import.meta.env.DEV) {
+          console.log('⚠️ [Scanner] Nenhum arquivo selecionado');
+        }
         return;
       }
 
@@ -291,7 +319,9 @@ export function useReceiptScanner({
       let imageUrl: string | null = null;
       
       try {
-        console.log('📷 [Scanner] Arquivo:', file.name, file.type);
+        if (import.meta.env.DEV) {
+          console.log('📷 [Scanner] Arquivo:', file.name, file.type);
+        }
         imageUrl = URL.createObjectURL(file);
 
         // Criar elemento temporário para o html5-qrcode
@@ -303,10 +333,14 @@ export function useReceiptScanner({
         // Criar instância temporária apenas para scan de arquivo
         const tempHtml5QrCode = new Html5Qrcode('reader-temp');
         
-        console.log('📷 [Scanner] Escaneando arquivo...');
+        if (import.meta.env.DEV) {
+          console.log('📷 [Scanner] Escaneando arquivo...');
+        }
         const decodedText = await tempHtml5QrCode.scanFile(file, true);
         
-        console.log('📷 [Scanner] Resultado do scan:', decodedText ? 'Sucesso!' : 'Falhou');
+        if (import.meta.env.DEV) {
+          console.log('📷 [Scanner] Resultado do scan:', decodedText ? 'Sucesso!' : 'Falhou');
+        }
         
         // Limpar instância e elemento temporário
         await tempHtml5QrCode.clear();
@@ -318,7 +352,9 @@ export function useReceiptScanner({
           toast.error('QR Code não detectado na imagem.');
         }
       } catch (err) {
-        console.error('❌ [Scanner] Upload detection fail:', err);
+        if (import.meta.env.DEV) {
+          console.error('❌ [Scanner] Upload detection fail:', err);
+        }
         toast.error('QR Code não detectado. Tente uma imagem mais clara.');
       } finally {
         if (imageUrl) {

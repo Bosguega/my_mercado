@@ -86,9 +86,11 @@ export function useSaveReceipt() {
             sessionUserId: string | null;
             forceReplace?: boolean;
         }) => {
-            console.log('💾 [SaveReceipt] Iniciando salvamento...');
-            console.log('💾 [SaveReceipt] SessionUserId:', sessionUserId);
-            console.log('💾 [SaveReceipt] Receipt:', receipt);
+            if (import.meta.env.DEV) {
+              console.log('💾 [SaveReceipt] Iniciando salvamento...');
+              console.log('💾 [SaveReceipt] SessionUserId:', sessionUserId);
+              console.log('💾 [SaveReceipt] Receipt:', receipt);
+            }
             
             // Buscar receipts atuais do cache ou localStorage
             const currentReceipts = queryClient.getQueryData<Receipt[]>(receiptKeys.allReceipts()) ||
@@ -96,7 +98,10 @@ export function useSaveReceipt() {
 
             const rawReceiptId = receipt.id || Date.now().toString();
             const receiptId = toUserScopedReceiptId(rawReceiptId, sessionUserId ?? undefined);
-            console.log('💾 [SaveReceipt] ReceiptId:', receiptId);
+            
+            if (import.meta.env.DEV) {
+              console.log('💾 [SaveReceipt] ReceiptId:', receiptId);
+            }
             
             const idCandidates = new Set(
                 getReceiptIdCandidates(rawReceiptId, sessionUserId ?? undefined),
@@ -104,25 +109,36 @@ export function useSaveReceipt() {
             const existing = currentReceipts.find((r: Receipt) => idCandidates.has(String(r.id)));
 
             if (existing && !forceReplace) {
+              if (import.meta.env.DEV) {
                 console.log('⚠️ [SaveReceipt] Nota duplicada detectada');
+              }
                 return { duplicate: true, existingReceipt: existing };
             }
 
             // Se existe e forceReplace, deletar o antigo primeiro
             if (existing && forceReplace && existing.id !== receiptId) {
+              if (import.meta.env.DEV) {
                 console.log('💾 [SaveReceipt] Deletando nota antiga para substituir');
+              }
                 await deleteReceiptFromDB(existing.id);
             }
 
             // Processar items
-            console.log('💾 [SaveReceipt] Processando items...');
+            if (import.meta.env.DEV) {
+              console.log('💾 [SaveReceipt] Processando items...');
+            }
             const processedItems = await processItemsPipeline(receipt.items || []);
             const fullReceipt = { ...receipt, id: receiptId, items: processedItems };
 
             // Salvar no banco
-            console.log('💾 [SaveReceipt] Salvando no DB...');
+            if (import.meta.env.DEV) {
+              console.log('💾 [SaveReceipt] Salvando no DB...');
+            }
             const persistedReceipt = await saveReceiptToDB(fullReceipt, processedItems);
-            console.log('💾 [SaveReceipt] Salvo com sucesso!', persistedReceipt);
+            
+            if (import.meta.env.DEV) {
+              console.log('💾 [SaveReceipt] Salvo com sucesso!', persistedReceipt);
+            }
 
             const receiptForUi: Receipt = {
                 ...fullReceipt,

@@ -134,18 +134,25 @@ function cleanProductName(name: string | null | undefined): string {
 // ==============================
 
 export async function parseNFCeSP(url: string): Promise<Receipt> {
-  console.log('🔍 [Parser] parseNFCeSP chamado com URL:', url);
+  if (import.meta.env.DEV) {
+    console.log('🔍 [Parser] parseNFCeSP chamado com URL:', url);
+  }
   const targetUrl = validateNfceSpUrl(url);
   let html: string | null = null;
   const attemptErrors: string[] = [];
 
-  console.log('🔍 [Parser] Tentando buscar via proxies...');
+  if (import.meta.env.DEV) {
+    console.log('🔍 [Parser] Tentando buscar via proxies...');
+  }
   
   for (let index = 0; index < PROXIES.length; index += 1) {
     const getProxyUrl = PROXIES[index];
     try {
       const proxyUrl = getProxyUrl(targetUrl);
-      console.log(`🔍 [Parser] Tentativa ${index + 1}/${PROXIES.length}: ${proxyUrl.substring(0, 80)}...`);
+      
+      if (import.meta.env.DEV) {
+        console.log(`🔍 [Parser] Tentativa ${index + 1}/${PROXIES.length}: ${proxyUrl.substring(0, 80)}...`);
+      }
       
       const response = await fetchWithTimeout(proxyUrl, PROXY_TIMEOUT_MS);
 
@@ -174,11 +181,15 @@ export async function parseNFCeSP(url: string): Promise<Receipt> {
   }
 
   if (!html) {
-    console.error('❌ [Parser] Todos os proxies falharam:', attemptErrors);
+    if (import.meta.env.DEV) {
+      console.error('❌ [Parser] Todos os proxies falharam:', attemptErrors);
+    }
     throw new Error(`Falha ao acessar Sefaz via proxies. ${attemptErrors.join(" ")}`.trim());
   }
 
-  console.log('✅ [Parser] HTML obtido com sucesso, parseando...');
+  if (import.meta.env.DEV) {
+    console.log('✅ [Parser] HTML obtido com sucesso, parseando...');
+  }
 
   try {
     const parser = new DOMParser();

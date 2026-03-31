@@ -203,15 +203,19 @@ export async function getAllReceiptsFromDB(): Promise<Receipt[]> {
     const result = await getReceiptsPaginated(1, 2000);
     return result.data;
   } catch (error: any) {
-    console.error('❌ [getAllReceiptsFromDB] Erro:', error);
+    if (import.meta.env.DEV) {
+      console.error('❌ [getAllReceiptsFromDB] Erro:', error);
+    }
     
     // Se for erro de autenticação, lança erro específico
     if (error?.code === 'PGRST205') {
-      console.warn('⚠️ [getAllReceiptsFromDB] Tabela não encontrada ou RLS bloqueou');
-      console.warn('⚠️ [getAllReceiptsFromDB] Verifique se:');
-      console.warn('  1. Usuário está logado');
-      console.warn('  2. Tabelas existem no Supabase');
-      console.warn('  3. RLS policies estão configuradas');
+      if (import.meta.env.DEV) {
+        console.warn('⚠️ [getAllReceiptsFromDB] Tabela não encontrada ou RLS bloqueou');
+        console.warn('⚠️ [getAllReceiptsFromDB] Verifique se:');
+        console.warn('  1. Usuário está logado');
+        console.warn('  2. Tabelas existem no Supabase');
+        console.warn('  3. RLS policies estão configuradas');
+      }
       throw new Error('Erro de autenticação ou tabela não existe');
     }
     
