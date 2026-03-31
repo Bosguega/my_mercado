@@ -86,32 +86,43 @@ export function useSaveReceipt() {
             sessionUserId: string | null;
             forceReplace?: boolean;
         }) => {
+            console.log('💾 [SaveReceipt] Iniciando salvamento...');
+            console.log('💾 [SaveReceipt] SessionUserId:', sessionUserId);
+            console.log('💾 [SaveReceipt] Receipt:', receipt);
+            
             // Buscar receipts atuais do cache ou localStorage
             const currentReceipts = queryClient.getQueryData<Receipt[]>(receiptKeys.allReceipts()) ||
                 JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || "[]") as Receipt[];
 
             const rawReceiptId = receipt.id || Date.now().toString();
             const receiptId = toUserScopedReceiptId(rawReceiptId, sessionUserId ?? undefined);
+            console.log('💾 [SaveReceipt] ReceiptId:', receiptId);
+            
             const idCandidates = new Set(
                 getReceiptIdCandidates(rawReceiptId, sessionUserId ?? undefined),
             );
             const existing = currentReceipts.find((r: Receipt) => idCandidates.has(String(r.id)));
 
             if (existing && !forceReplace) {
+                console.log('⚠️ [SaveReceipt] Nota duplicada detectada');
                 return { duplicate: true, existingReceipt: existing };
             }
 
             // Se existe e forceReplace, deletar o antigo primeiro
             if (existing && forceReplace && existing.id !== receiptId) {
+                console.log('💾 [SaveReceipt] Deletando nota antiga para substituir');
                 await deleteReceiptFromDB(existing.id);
             }
 
             // Processar items
+            console.log('💾 [SaveReceipt] Processando items...');
             const processedItems = await processItemsPipeline(receipt.items || []);
             const fullReceipt = { ...receipt, id: receiptId, items: processedItems };
 
             // Salvar no banco
+            console.log('💾 [SaveReceipt] Salvando no DB...');
             const persistedReceipt = await saveReceiptToDB(fullReceipt, processedItems);
+            console.log('💾 [SaveReceipt] Salvo com sucesso!', persistedReceipt);
 
             const receiptForUi: Receipt = {
                 ...fullReceipt,

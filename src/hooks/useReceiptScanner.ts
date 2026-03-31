@@ -63,13 +63,22 @@ export function useReceiptScanner({
 
   const handleScanSuccess = useCallback(
     async (decodedText: string) => {
-      if (processingRef.current) return;
+      console.log('📱 [Scanner] handleScanSuccess iniciado');
+      console.log('📱 [Scanner] Texto decodificado:', decodedText.substring(0, 100) + '...');
+      
+      if (processingRef.current) {
+        console.log('⚠️ [Scanner] Processamento já em andamento, ignorando');
+        return;
+      }
       processingRef.current = true;
 
       setScanning(false);
       setLoading(true);
+      console.log('📱 [Scanner] Loading = true');
+      
       try {
         if (!decodedText || typeof decodedText !== 'string') {
+          console.error('❌ [Scanner] Texto inválido:', decodedText);
           throw new Error('Conteúdo do QR Code inválido.');
         }
 
@@ -77,18 +86,23 @@ export function useReceiptScanner({
         
         // Verificar se é URL da NFC-e
         const isNfceUrl = decodedText.trim().includes('fazenda.sp.gov.br');
+        console.log('📱 [Scanner] É URL NFC-e?', isNfceUrl);
         
         if (isNfceUrl) {
+          console.log('📱 [Scanner] Buscando dados da NFC-e via proxy...');
           toast.loading('Buscando dados da NFC-e...', { duration: 2000 });
         }
         
+        console.log('📱 [Scanner] Chamando parseNFCeSP...');
         const extractedData = await parseNFCeSP(decodedText.trim());
+        console.log('📱 [Scanner] Parse completado!', extractedData);
 
         if (
           !extractedData ||
           !extractedData.items ||
           extractedData.items.length === 0
         ) {
+          console.error('❌ [Scanner] Nenhum item extraído');
           const errorMsg = isNfceUrl 
             ? 'Não foi possível ler os itens desta NFC-e.\n\nPossíveis causas:\n• NFC-e de outro estado (só SP suportado)\n• Proxy CORS indisponível\n• Nota muito antiga ou cancelada\n\nTente entrada manual.'
             : 'Não conseguimos ler os itens dessa nota. Verifique se o QR Code é de uma NFC-e válida.';
@@ -98,19 +112,27 @@ export function useReceiptScanner({
           return;
         }
 
+        console.log('📱 [Scanner] Itens extraídos:', extractedData.items.length);
+        console.log('📱 [Scanner] Estabelecimento:', extractedData.establishment);
+        console.log('📱 [Scanner] Salvando receipt...');
+
         const result = await saveReceipt(extractedData);
+        console.log('📱 [Scanner] Result do save:', result);
 
         if (isDuplicateResult(result)) {
+          console.log('⚠️ [Scanner] Nota duplicada detectada');
           setDuplicateReceipt(extractedData);
           toast(
             `Esta nota já está no seu histórico desde ${result.existingReceipt.date.split(' ')[0]}`,
             { icon: '⚠️' },
           );
         } else if (isSuccessResult(result)) {
+          console.log('✅ [Scanner] Nota salva com sucesso!', result.receipt.id);
           setCurrentReceipt(result.receipt);
           toast.success('Nota fiscal processada com sucesso!');
         }
       } catch (err: unknown) {
+        console.error('❌ [Scanner] ERRO:', err);
         const message = err instanceof Error ? err.message : 'Desconhecido';
         
         // Mensagens de erro mais úteis
@@ -131,6 +153,7 @@ export function useReceiptScanner({
       } finally {
         setLoading(false);
         processingRef.current = false;
+        console.log('📱 [Scanner] Loading = false, processamento concluído');
       }
     },
     [saveReceipt, setCurrentReceipt, setDuplicateReceipt, setError, setLoading, setScanning],
