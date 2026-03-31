@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from "react";
 import { toast } from "react-hot-toast";
 import { parseBRL, formatBRL } from "../../utils/currency";
 import { validateManualItem } from "../../utils/validation";
+import { useScannerStore } from "../../stores/useScannerStore";
 import type { Receipt, ReceiptItem } from "../../types/domain";
 import type {
   SaveReceiptResponse,
@@ -20,6 +21,13 @@ interface UseScannerStateOptions {
 }
 
 export function useScannerState({ _saveReceipt, _tab }: UseScannerStateOptions) {
+  // Estados do Zustand (compartilhados)
+  const currentReceipt = useScannerStore((state) => state.currentReceipt);
+  const setCurrentReceipt = useScannerStore((state) => state.setCurrentReceipt);
+  const duplicateReceipt = useScannerStore((state) => state.duplicateReceipt);
+  const setDuplicateReceipt = useScannerStore((state) => state.setDuplicateReceipt);
+
+  // Estados locais (apenas UI do formulário)
   const [manualMode, setManualMode] = useState(false);
   const [manualData, setManualData] = useState<ManualReceiptData>({
     establishment: "",
@@ -31,8 +39,6 @@ export function useScannerState({ _saveReceipt, _tab }: UseScannerStateOptions) 
     qty: "1",
     unitPrice: "",
   });
-  const [currentReceipt, setCurrentReceipt] = useState<Receipt | null>(null);
-  const [duplicateReceipt, setDuplicateReceipt] = useState<Receipt | null>(null);
 
   // Determina a tela ativa baseado nos estados
   const activeScreen = useMemo<ScannerScreen>(() => {
@@ -47,11 +53,12 @@ export function useScannerState({ _saveReceipt, _tab }: UseScannerStateOptions) 
     setManualMode(false);
     setManualData({ establishment: "", date: "", items: [] });
     setManualItem({ name: "", qty: "1", unitPrice: "" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSetDuplicateReceipt = useCallback((receipt: Receipt | null) => {
     setDuplicateReceipt(receipt);
-  }, []);
+  }, [setDuplicateReceipt]);
 
   return {
     // Estados

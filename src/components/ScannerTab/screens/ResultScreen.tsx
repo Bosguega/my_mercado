@@ -9,15 +9,6 @@ export function ResultScreen({ currentReceipt, onReset, calculateReceiptTotal }:
   const [isExpanded, setIsExpanded] = useState(true);
   const displayDate = formatToBR(currentReceipt.date) || currentReceipt.date;
 
-  // Debug
-  if (import.meta.env.DEV) {
-    console.log('[ResultScreen] Rendered with:', {
-      establishment: currentReceipt.establishment,
-      itemsCount: currentReceipt.items.length,
-      date: currentReceipt.date,
-    });
-  }
-
   const formatItemTotal = (item: ReceiptItem) => {
     if (item.total) return item.total;
     const price = parseBRL(item.price || 0);

@@ -702,10 +702,15 @@ Supabase indisponível
 
 ```text
 useUiStore (abas, filtros, busca, expandedReceipts)
-useScannerStore (estado do scanner, zoom, torch, manualData)
+useScannerStore (estado do scanner, currentReceipt, zoom, torch, manualData)
 useReceiptsSessionStore (sessionUserId, error)
 useShoppingListStore (lista de compras local)
 ```
+
+**Nota importante sobre o ScannerStore:**
+- ✅ `currentReceipt` é armazenado no Zustand para compartilhamento entre hooks
+- ✅ Hooks como `useScannerState` devem se inscrever no store, não usar useState local
+- ✅ Isso garante reatividade correta entre componentes
 
 ---
 
@@ -1047,21 +1052,51 @@ type ScannerScreen = "idle" | "scanning" | "loading" | "result" | "manual";
 
 ```
 ScannerTab/
-├── index.tsx                  # Orquestração
-├── ScannerTab.types.ts        # Tipos
+├── index.tsx                  # Orquestração principal
+├── ScannerTab.types.ts        # Tipos e interfaces
 ├── ScannerTab.hooks.ts        # Hooks (useScannerState, useManualReceipt)
+│                              # useScannerState usa Zustand (não useState local!)
 ├── screens/
-│   ├── IdleScreen.tsx         # Tela inicial
-│   ├── ScanningScreen.tsx     # Câmera
-│   ├── LoadingScreen.tsx      # Loading
-│   └── ResultScreen.tsx       # Resultado
+│   ├── IdleScreen.tsx         # Tela inicial com opções de scan
+│   ├── ScanningScreen.tsx     # Câmera com html5-qrcode
+│   ├── LoadingScreen.tsx      # Loading skeleton
+│   └── ResultScreen.tsx       # Resultado (formato do histórico + confirmar)
 ├── forms/
-│   └── ManualReceiptForm.tsx  # Formulário manual
+│   └── ManualReceiptForm.tsx  # Formulário de entrada manual
 ├── views/
-│   └── ScannerView.tsx        # View da câmera
+│   └── ScannerView.tsx        # View da câmera (div para html5-qrcode)
 └── modals/
-    └── DuplicateModal.tsx     # Modal de duplicata
+    └── DuplicateModal.tsx     # Modal de nota duplicada
 ```
+
+### Fluxo de Escaneamento
+
+```text
+1. Usuário clica em "Escanear" → startCamera()
+2. html5-qrcode inicializa câmera
+3. QR Code detectado → handleScanSuccess()
+4. Parse da NFC-e → parseNFCeSP()
+5. Pipeline de normalização → processItemsPipeline()
+6. Salvamento → saveReceipt()
+7. Atualiza Zustand → setCurrentReceipt()
+8. ResultScreen exibida automaticamente
+9. Usuário clica "Confirmar e Concluir" → handleReset()
+```
+
+### ResultScreen (Atualizado em 31/03/2026)
+
+A tela de resultado agora mostra a nota no **mesmo formato do histórico**:
+
+- ✅ Header com feedback visual (ícone de check verde)
+- ✅ Card expansível com estabelecimento, data, total
+- ✅ Lista de itens detalhada (nome normalizado, categoria, preço)
+- ✅ Total em destaque
+- ✅ Botão "Confirmar e Concluir" grande e evidente
+
+**Por que usar o mesmo formato?**
+- Consistência visual em todo o app
+- Usuário já familiarizado com o layout
+- Facilita revisão dos itens antes de confirmar
 
 ### Exemplo de Uso
 
@@ -1078,6 +1113,23 @@ const {
   setManualMode,
   handleSaveManualReceipt,
 } = useReceiptScanner({ saveReceipt, tab });
+```
+
+### Padrão Importante: Zustand em Hooks
+
+```typescript
+// ❌ ERRADO: useState local não reage a mudanças do store
+export function useScannerState() {
+  const [currentReceipt, setCurrentReceipt] = useState(null);
+  return { currentReceipt, setCurrentReceipt };
+}
+
+// ✅ CORRETO: Usar Zustand diretamente
+export function useScannerState() {
+  const currentReceipt = useScannerStore((state) => state.currentReceipt);
+  const setCurrentReceipt = useScannerStore((state) => state.setCurrentReceipt);
+  return { currentReceipt, setCurrentReceipt };
+}
 ```
 
 ---
@@ -1849,6 +1901,68 @@ import { stripVariableInfo, cleanAIName } from "../utils/stringUtils";
    - `utils/stringUtils.ts`
    - `utils/filters.ts`
    - `utils/dateUtils.ts`
+
+---
+
+## Melhorias Recentes (31/03/2026)
+
+### 1. Tela de Resultado do Scanner
+
+**Problema:** A tela de resultado do scanner era diferente do histórico, causando inconsistência visual.
+
+**Solução:** `ResultScreen.tsx` agora usa o mesmo formato do `ReceiptCard` do histórico.
+
+**Mudanças:**
+- ✅ Card expansível com chevron para cima/baixo
+- ✅ Lista de itens com nome normalizado + categoria
+- ✅ Total em destaque no rodapé
+- ✅ Botão "Confirmar e Concluir" ao invés de "Registrar Nova Nota"
+- ✅ Header com ícone de check verde e mensagem "Nota Escaneada!"
+
+**Arquivos modificados:**
+- `components/ScannerTab/screens/ResultScreen.tsx` - Reescrito
+- `components/ScannerTab/index.tsx` - Prioridade de renderização ajustada
+
+**Prioridade de Renderização:**
+```typescript
+// ResultScreen agora tem prioridade máxima
+{!manualMode && currentReceipt && (
+  <ResultScreen ... />  // Renderiza primeiro
+)}
+
+// Outras telas verificam !currentReceipt
+{!manualMode && !currentReceipt && isScanning && (
+  <ScanningScreen ... />
+)}
+```
+
+### 2. Correção de Bug: Zustand no useScannerState
+
+**Problema:** O hook `useScannerState` usava `useState` local para `currentReceipt`, então não reagia às atualizações do `useScannerStore`.
+
+**Sintoma:** O receipt era salvo com sucesso, mas a tela de resultado nunca aparecia.
+
+**Solução:** Usar Zustand diretamente no hook:
+
+```typescript
+// ANTES (errado)
+export function useScannerState() {
+  const [currentReceipt, setCurrentReceipt] = useState(null);
+  return { currentReceipt, setCurrentReceipt };
+}
+
+// DEPOIS (correto)
+export function useScannerState() {
+  const currentReceipt = useScannerStore((state) => state.currentReceipt);
+  const setCurrentReceipt = useScannerStore((state) => state.setCurrentReceipt);
+  return { currentReceipt, setCurrentReceipt };
+}
+```
+
+**Arquivos modificados:**
+- `components/ScannerTab/ScannerTab.hooks.ts` - Usa Zustand em vez de useState
+
+**Lição:** Hooks customizados que compartilham estado devem usar stores globais (Zustand/Context), não estado local.
 
 ---
 

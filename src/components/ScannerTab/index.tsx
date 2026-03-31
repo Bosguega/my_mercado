@@ -53,6 +53,11 @@ function ScannerTab() {
     handleSetDuplicateReceipt,
   } = useScannerState({ _saveReceipt: saveReceipt, _tab: tab });
 
+  // Debug do currentReceipt
+  if (import.meta.env.DEV && currentReceipt) {
+    console.log('[ScannerTab] currentReceipt is SET:', currentReceipt.id);
+  }
+
   const { calculateReceiptTotal, handleAddManualItem, handleSaveManualReceipt } = useManualReceipt({
     manualData,
     manualItem,
@@ -79,17 +84,6 @@ function ScannerTab() {
   // Estados derivados
   const isLoading = loading;
   const isScanning = scanning;
-
-  // Debug em desenvolvimento
-  if (import.meta.env.DEV) {
-    console.log('[ScannerTab] Render:', {
-      manualMode,
-      currentReceipt: !!currentReceipt,
-      isScanning,
-      isLoading,
-      duplicateReceipt: !!duplicateReceipt,
-    });
-  }
 
   return (
     <>
