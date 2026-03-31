@@ -1,4 +1,4 @@
-import { getDictionary, updateDictionary, getCanonicalProducts, createCanonicalProduct } from "./dbMethods";
+import { getDictionary, updateDictionary, getCanonicalProducts, createCanonicalProduct } from ".";
 import { callAI } from "../utils/aiClient";
 import { normalizeKey } from "../utils/normalize";
 import type { AiNormalizationResult } from "../types/ai";

@@ -6,7 +6,7 @@ import {
     saveReceiptToDB,
     deleteReceiptFromDB,
     restoreReceiptsToDB
-} from "../../services/dbMethods";
+} from "../../services";
 import { processItemsPipeline } from "../../services/productService";
 import { getReceiptIdCandidates, toUserScopedReceiptId } from "../../utils/receiptId";
 import { canonicalProductKeys } from "./useCanonicalProductsQuery";

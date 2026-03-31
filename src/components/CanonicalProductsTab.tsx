@@ -13,7 +13,7 @@ import {
 import { toast } from "react-hot-toast";
 import UniversalSearchBar from "./UniversalSearchBar";
 import ConfirmDialog from "./ConfirmDialog";
-import { getFullDictionaryFromDB } from "../services/dbMethods";
+import { getFullDictionaryFromDB } from "../services";
 import {
     useCanonicalProductsQuery,
     useCreateCanonicalProduct,

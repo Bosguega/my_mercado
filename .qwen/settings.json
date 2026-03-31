@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npm run *)",
       "Bash(npm install)",
-      "Bash(del *)"
+      "Bash(del *)",
+      "Bash(select-object *)"
     ]
   },
   "$version": 3

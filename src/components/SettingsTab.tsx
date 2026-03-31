@@ -12,11 +12,11 @@ import {
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { logout } from "../services/auth";
-import { 
-  clearReceiptsAndItemsFromDB, 
-  clearDictionaryInDB, 
-  clearCanonicalProductsInDB 
-} from "../services/dbMethods";
+import {
+  clearReceiptsAndItemsFromDB,
+  clearDictionaryInDB,
+  clearCanonicalProductsInDB
+} from "../services";
 import { useScannerStore } from "../stores/useScannerStore";
 // import { useUiStore } from "../stores/useUiStore";
 import ConfirmDialog from "./ConfirmDialog";

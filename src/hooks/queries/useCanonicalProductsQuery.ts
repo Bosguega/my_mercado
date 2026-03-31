@@ -9,7 +9,7 @@ import {
     mergeCanonicalProducts,
     associateItemToCanonicalProduct,
     associateDictionaryToCanonicalProduct,
-} from "../../services/dbMethods";
+} from "../../services";
 import type { CanonicalProduct } from "../../types/domain";
 
 // Query keys para cache

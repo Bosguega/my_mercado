@@ -15,7 +15,7 @@ import {
   deleteDictionaryEntryFromDB,
   clearDictionaryInDB,
   applyDictionaryEntryToSavedItems,
-} from "../services/dbMethods";
+} from "../services";
 import { Skeleton } from "./Skeleton";
 import { toast } from "react-hot-toast";
 import { filterBySearch, sortItems } from "../utils/analytics";
