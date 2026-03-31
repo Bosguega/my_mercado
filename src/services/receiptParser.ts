@@ -4,8 +4,10 @@ const PROXIES = [
   (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
   (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
   (url: string) => `https://thingproxy.freeboard.io/fetch/${url}`,
+  (url: string) => `https://proxy.cors.sh/${encodeURIComponent(url)}`,
+  (url: string) => `https://cors-anywhere.herokuapp.com/${url}`,
 ];
-const PROXY_TIMEOUT_MS = 12000;
+const PROXY_TIMEOUT_MS = 15000;
 const SUPPORTED_HOST_SUFFIX = "fazenda.sp.gov.br";
 
 // ==============================

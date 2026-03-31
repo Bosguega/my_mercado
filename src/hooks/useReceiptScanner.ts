@@ -74,6 +74,14 @@ export function useReceiptScanner({
         }
 
         setError(null);
+        
+        // Verificar se é URL da NFC-e
+        const isNfceUrl = decodedText.trim().includes('fazenda.sp.gov.br');
+        
+        if (isNfceUrl) {
+          toast.loading('Buscando dados da NFC-e...', { duration: 2000 });
+        }
+        
         const extractedData = await parseNFCeSP(decodedText.trim());
 
         if (
@@ -81,9 +89,11 @@ export function useReceiptScanner({
           !extractedData.items ||
           extractedData.items.length === 0
         ) {
-          toast.error(
-            'Não conseguimos ler os itens dessa nota. Verifique se o QR Code é de uma NFC-e válida.',
-          );
+          const errorMsg = isNfceUrl 
+            ? 'Não foi possível ler os itens desta NFC-e.\n\nPossíveis causas:\n• NFC-e de outro estado (só SP suportado)\n• Proxy CORS indisponível\n• Nota muito antiga ou cancelada\n\nTente entrada manual.'
+            : 'Não conseguimos ler os itens dessa nota. Verifique se o QR Code é de uma NFC-e válida.';
+          
+          toast.error(errorMsg, { duration: 10000 });
           setError('Falha ao extrair itens da nota.');
           return;
         }
@@ -102,7 +112,19 @@ export function useReceiptScanner({
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Desconhecido';
-        toast.error('Erro ao processar nota. Tente novamente.');
+        
+        // Mensagens de erro mais úteis
+        let userMessage = 'Erro ao processar nota. ';
+        
+        if (message.includes('fetch') || message.includes('network') || message.includes('timeout')) {
+          userMessage = 'Erro de conexao ao buscar NFC-e.\n\nTente:\n• Verificar internet\n• Usar entrada manual\n• Tentar novamente';
+        } else if (message.includes('CORS') || message.includes('proxy')) {
+          userMessage = 'Erro de CORS ao buscar NFC-e.\n\nIsso é comum em PWA.\n\nUse entrada manual ou tente novamente mais tarde.';
+        } else if (message.includes('SP') || message.includes('Sao Paulo')) {
+          userMessage = 'Apenas NFC-e de Sao Paulo (SP) sao suportadas.\n\nSua nota parece ser de outro estado.';
+        }
+        
+        toast.error(userMessage, { duration: 8000 });
         setError(
           `Erro de conexão ou processamento: ${message}`,
         );
