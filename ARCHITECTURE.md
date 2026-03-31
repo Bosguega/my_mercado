@@ -1,7 +1,8 @@
 # My Mercado - Arquitetura
 
-**Data da última auditoria:** 30 de março de 2026  
+**Data da última auditoria:** 31 de março de 2026
 **Status da arquitetura:** ✅ Conforme (React Query = Dados, Zustand = UI, Hooks = Orquestração)
+**Status da refatoração:** ✅ Serviços modularizados + Componentes reestruturados
 
 **My Mercado** é um PWA para gerenciamento de compras de supermercado.
 O usuário escaneia QR Code de NFC-e, consulta histórico e compara preços ao longo do tempo.
@@ -33,20 +34,25 @@ Persistência principal: Supabase (PostgreSQL + Auth + RLS), com **fallback loca
 13. [Módulo de Validação (Zod)](#módulo-de-validação-zod)
 14. [Módulo de IA](#módulo-de-ia)
 15. [Módulo de Scanner](#módulo-de-scanner)
+16. [Serviços Modularizados](#serviços-modularizados)
 
-### Parte V - Qualidade
-16. [Error Handling](#error-handling)
-17. [Testes](#testes)
-18. [Acessibilidade](#acessibilidade)
+### Parte V - Componentes Reestruturados
+17. [ScannerTab](#scannertab)
+18. [HistoryTab](#historytab)
 
-### Parte VI - Performance
-19. [Otimizações de Performance](#otimizações-de-performance)
-20. [PWA e Service Worker](#pwa-e-service-worker)
-21. [Testes de Performance](#testes-de-performance)
+### Parte VI - Qualidade
+19. [Error Handling](#error-handling)
+20. [Testes](#testes)
+21. [Acessibilidade](#acessibilidade)
 
-### Parte VII - Deploy
-22. [Build e Deploy](#build-e-deploy)
-23. [Monitoramento](#monitoramento)
+### Parte VII - Performance
+22. [Otimizações de Performance](#otimizações-de-performance)
+23. [PWA e Service Worker](#pwa-e-service-worker)
+24. [Testes de Performance](#testes-de-performance)
+
+### Parte VIII - Deploy
+25. [Build e Deploy](#build-e-deploy)
+26. [Monitoramento](#monitoramento)
 
 ---
 
@@ -214,7 +220,8 @@ graph TD
 
 **Estado e operações centralizados em:**
 - `src/hooks/queries/useReceiptsQuery.ts` (React Query)
-- `src/services/dbMethods.ts` (com fallback)
+- `src/services/receiptService.ts` (CRUD)
+- `src/services/storageFallbackService.ts` (Fallback)
 
 **Hooks do React Query:**
 - `useAllReceiptsQuery()` - Todas as notas
@@ -226,7 +233,7 @@ graph TD
 
 **Fallback Automático:**
 ```typescript
-// dbMethods.ts
+// storageFallbackService.ts
 export async function getAllReceiptsFromDBWithFallback(): Promise<Receipt[]> {
   try {
     return await getAllReceiptsFromDB(); // Supabase
@@ -563,20 +570,209 @@ O sistema de produtos canônicos resolve o problema de fragmentação de dados o
 | Quero alterar | Arquivo principal | Arquivo de apoio |
 |---|---|---|
 | Escaneamento (câmera/upload/link/manual) | `src/hooks/useReceiptScanner.ts` | `src/stores/useScannerStore.ts`, `src/utils/validation.ts` |
-| CRUD de notas e sincronização | `src/hooks/queries/useReceiptsQuery.ts` | `src/services/dbMethods.ts`, `src/utils/storage.ts` |
+| CRUD de notas e sincronização | `src/hooks/queries/useReceiptsQuery.ts` | `src/services/receiptService.ts`, `src/services/storageFallbackService.ts` |
 | Estado de abas/filtros | `src/stores/useUiStore.ts` | `src/components/*Tab.tsx` |
 | Estado de sessão (user ID) | `src/stores/useReceiptsSessionStore.ts` | `src/App.tsx`, `src/components/*Tab.tsx` |
-| Dicionário manual | `src/components/DictionaryTab.tsx` | `src/services/dbMethods.ts`, `src/utils/validation.ts` |
+| Dicionário manual | `src/components/DictionaryTab.tsx` | `src/services/dictionaryService.ts`, `src/utils/validation.ts` |
+| Produtos canônicos | `src/hooks/queries/useCanonicalProductsQuery.ts` | `src/services/canonicalProductService.ts` |
 | Tendência de preços | `src/components/SearchTab.tsx` | `src/utils/analytics/` |
 | Parse da NFC-e | `src/services/receiptParser.ts` | `src/workers/receiptParser.worker.ts` |
 | Pipeline de normalização/IA | `src/services/productService.ts` | `src/utils/normalize.ts`, `src/utils/aiClient.ts` |
 | Cache de queries | `src/providers/QueryProvider.tsx` | `src/hooks/queries/useReceiptsQuery.ts` |
-| Paginação infinita | `src/hooks/queries/useReceiptsQuery.ts` | `src/services/dbMethods.ts` |
+| Paginação infinita | `src/hooks/queries/useReceiptsQuery.ts` | `src/services/receiptService.ts` |
 | Validação de formulários | `src/utils/validation.ts` | Zod schemas |
 | Storage local | `src/utils/storage.ts` | IndexedDB API |
+| Autenticação | `src/services/authService.ts` | `src/services/supabaseClient.ts` |
+| Sincronização offline | `src/services/syncService.ts` | `src/services/storageFallbackService.ts` |
 | Error handling | `src/components/ErrorBoundary.tsx` | React Error Boundaries |
 | PWA Update | `src/hooks/usePWAUpdate.ts` | Service Worker API |
 | Formatação monetária | `src/hooks/useCurrency.ts` | `src/utils/currency.ts` |
+
+---
+
+## Serviços Modularizados
+
+**Data da refatoração:** 31 de março de 2026
+
+### Visão Geral
+
+Os serviços foram reestruturados para melhorar a manutenibilidade e separação de responsabilidades. O arquivo monolítico `dbMethods.ts` foi dividido em 6 serviços especializados.
+
+### Estrutura
+
+```
+src/services/
+├── index.ts                       # Export unificado
+├── authService.ts                 # Autenticação e usuário
+├── receiptService.ts              # CRUD de recibos e itens
+├── dictionaryService.ts           # CRUD de dicionário de produtos
+├── canonicalProductService.ts     # CRUD de produtos canônicos
+├── storageFallbackService.ts      # Fallback local (IndexedDB/LocalStorage)
+├── syncService.ts                 # Sincronização e status
+├── productService.ts              # Pipeline de normalização
+├── receiptParser.ts               # Parse de NFC-e
+├── auth.ts                        # Auth helper (legado)
+└── supabaseClient.ts              # Cliente Supabase
+```
+
+### Serviços
+
+#### `authService.ts`
+**Responsabilidade:** Autenticação e gerenciamento de usuário
+
+**Funções:**
+- `requireSupabase()` - Verifica se Supabase está configurado
+- `getUserOrThrow()` - Obtém usuário ou lança erro
+- `isAuthenticated()` - Verifica se usuário está autenticado
+- `getUserOrNull()` - Obtém usuário ou null
+
+#### `receiptService.ts`
+**Responsabilidade:** CRUD de recibos e itens
+
+**Funções:**
+- `getReceiptsPaginated()` - Busca com paginação e filtros
+- `getAllReceiptsFromDB()` - Busca todos (compatibilidade)
+- `restoreReceiptsToDB()` - Restaura múltiplos recibos
+- `saveReceiptToDB()` - Salva ou atualiza recibo
+- `deleteReceiptFromDB()` - Deleta recibo
+- `clearReceiptsAndItemsFromDB()` - Limpa todos os recibos
+
+**Helpers internos:**
+- `mapDbItemToReceiptItem()` - Mapeia item do DB para ReceiptItem
+- `mapReceiptItemToDb()` - Mapeia ReceiptItem para DB
+- `mapDbReceiptToReceipt()` - Mapeia linha do DB para Receipt
+
+#### `dictionaryService.ts`
+**Responsabilidade:** CRUD de dicionário de produtos
+
+**Funções:**
+- `getFullDictionaryFromDB()` - Busca todas as entradas
+- `updateDictionaryEntryInDB()` - Atualiza entrada
+- `applyDictionaryEntryToSavedItems()` - Aplica entrada aos itens
+- `deleteDictionaryEntryFromDB()` - Deleta entrada
+- `clearDictionaryInDB()` - Limpa dicionário
+- `getDictionary()` - Busca por chaves (batch)
+- `updateDictionary()` - Atualiza múltiplas entradas (batch)
+- `associateDictionaryToCanonicalProduct()` - Associa ao produto canônico
+
+#### `canonicalProductService.ts`
+**Responsabilidade:** CRUD de produtos canônicos
+
+**Funções:**
+- `getCanonicalProducts()` - Lista produtos
+- `getCanonicalProduct()` - Busca por ID
+- `createCanonicalProduct()` - Cria novo produto
+- `updateCanonicalProduct()` - Atualiza produto
+- `deleteCanonicalProduct()` - Deleta produto (com verificação)
+- `mergeCanonicalProducts()` - Mescla produtos
+- `clearCanonicalProductsInDB()` - Limpa produtos
+- `associateItemToCanonicalProduct()` - Associa item ao produto
+
+#### `storageFallbackService.ts`
+**Responsabilidade:** Fallback local para operações
+
+**Funções:**
+- `getAllReceiptsFromDBWithFallback()` - Tenta Supabase, fallback IndexedDB
+- `saveReceiptToDBWithFallback()` - Salva no Supabase + backup local
+- `getDictionaryWithFallback()` - Fallback para dicionário
+- `getStorageConnectionStatus()` - Status do storage
+
+#### `syncService.ts`
+**Responsabilidade:** Sincronização e monitoramento
+
+**Funções:**
+- `syncLocalStorageWithSupabase()` - Sincroniza storage local
+- `getConnectionStatus()` - Verifica status da conexão
+
+### Importação
+
+```typescript
+// Import unificado (recomendado)
+import { saveReceiptToDB, getDictionary } from "../services";
+
+// Import direto do módulo
+import { saveReceiptToDB } from "../services/receiptService";
+import { getDictionary } from "../services/dictionaryService";
+```
+
+### Benefícios da Modularização
+
+| Benefício | Descrição |
+|-----------|-----------|
+| **Separação de responsabilidades** | Cada serviço tem uma única responsabilidade |
+| **Código mais legível** | Arquivos menores e focados |
+| **Testabilidade** | Mais fácil testar unidades isoladas |
+| **Manutenibilidade** | Mudanças localizadas |
+| **Type safety** | Tipagem específica por domínio |
+| **Reuso** | Funções auxiliares compartilháveis |
+
+---
+
+## Componentes Reestruturados
+
+### ScannerTab
+
+**Data da refatoração:** 31 de março de 2026
+
+**Estrutura:**
+```
+src/components/ScannerTab/
+├── index.tsx                  # Componente principal
+├── ScannerTab.types.ts        # Tipos e interfaces
+├── ScannerTab.hooks.ts        # Custom hooks
+├── screens/
+│   ├── IdleScreen.tsx         # Tela inicial
+│   ├── ScanningScreen.tsx     # Tela de escaneamento
+│   ├── LoadingScreen.tsx      # Loading skeleton
+│   └── ResultScreen.tsx       # Resultado
+├── forms/
+│   └── ManualReceiptForm.tsx  # Formulário manual
+├── views/
+│   └── ScannerView.tsx        # View da câmera
+└── modals/
+    └── DuplicateModal.tsx     # Modal de duplicata
+```
+
+**Hooks:**
+- `useScannerState()` - Gerencia estados da tela
+- `useManualReceipt()` - Lógica do formulário manual
+- `useUrlInput()` - Input de URL
+
+**Melhorias:**
+- ✅ Componentes tipados (sem `any`)
+- ✅ Lógica extraída para hooks dedicados
+- ✅ Estados derivados em funções puras
+- ✅ Subcomponentes reutilizáveis
+
+### HistoryTab
+
+**Data da refatoração:** 31 de março de 2026
+
+**Estrutura:**
+```
+src/components/HistoryTab/
+├── index.tsx                  # Componente principal
+├── HistoryTab.types.ts        # Tipos e interfaces
+├── HeaderSection.tsx          # Header com ações
+├── SummaryCard.tsx            # Card de totais
+├── EmptyState.tsx             # Estado vazio
+└── ReceiptList.tsx            # Lista de recibos
+```
+
+**Utilitários internos:**
+- `filterBySearch()` - Filtra por termo de busca
+- `filterByPeriod()` - Filtra por período
+- `sortReceipts()` - Ordena por critério
+- `applyFilters()` - Aplica todos os filtros
+
+**Hooks:**
+- `useConfirmDialog()` - Gerencia diálogos de confirmação
+
+**Melhorias:**
+- ✅ Filtros em funções puras (testáveis)
+- ✅ Hook de confirmação reutilizável
+- ✅ Componentes de seção isolados
+- ✅ Constantes centralizadas
 
 ---
 
@@ -1029,7 +1225,7 @@ createRoot(document.getElementById('root')).render(
 - 3 tentativas com exponential backoff
 - Fallback graceful
 
-**Supabase:** `src/services/dbMethods.ts`
+**Supabase:** `src/services/receiptService.ts` + `src/services/storageFallbackService.ts`
 - Fallback para IndexedDB/localStorage
 - Sincronização quando reconectar
 
@@ -1379,6 +1575,32 @@ import.meta.env.DEV && debugDatabaseConnection();
 
 ## Changelog de Melhorias
 
+### Março 2026 - Refatoração de Arquitetura (31/03/2026)
+
+**Adicionado:**
+- ✅ Serviços modularizados (6 arquivos especializados)
+- ✅ ScannerTab reestruturado em subcomponentes
+- ✅ HistoryTab reestruturado em seções
+- ✅ Tipos e interfaces dedicados por componente
+- ✅ Custom hooks para lógica compartilhada
+
+**Removido:**
+- ❌ `src/services/dbMethods.ts` (substituído por 6 serviços)
+- ❌ `src/components/ScannerTab.tsx` (movido para pasta dedicada)
+- ❌ `src/components/HistoryTab.tsx` (movido para pasta dedicada)
+- ❌ Suporte a schema legado do Supabase
+
+**Reestruturado:**
+- 🔄 `dbMethods.ts` → `authService.ts`, `receiptService.ts`, `dictionaryService.ts`, `canonicalProductService.ts`, `storageFallbackService.ts`, `syncService.ts`
+- 🔄 `ScannerTab.tsx` → `ScannerTab/` com screens, forms, views, modals
+- 🔄 `HistoryTab.tsx` → `HistoryTab/` com sections e hooks dedicados
+
+**Benefícios:**
+- 📉 Arquivos menores (média de 800 → 200 linhas)
+- 📈 Maior testabilidade (hooks e funções puras)
+- 🔒 Type safety melhorado (interfaces dedicadas)
+- 🔄 Reuso de código (componentes e hooks compartilháveis)
+
 ### Março 2026 (Auditoria de Arquitetura - 30/03/2026)
 
 **Adicionado:**
@@ -1415,7 +1637,8 @@ import.meta.env.DEV && debugDatabaseConnection();
 
 ---
 
-**Última atualização:** 30 de março de 2026  
-**Versão:** 0.0.0  
-**Status:** ✅ Produção  
-**Arquitetura:** ✅ Conforme (Auditoria 30/03/2026)
+**Última atualização:** 31 de março de 2026
+**Versão:** 0.0.0
+**Status:** ✅ Produção
+**Arquitetura:** ✅ Conforme (Auditoria 30/03/2026 + Refatoração 31/03/2026)
+**Refatoração:** ✅ Serviços modularizados + Componentes reestruturados
