@@ -57,6 +57,7 @@ export default defineConfig(({ mode }) => {
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: true,
+          cacheId: 'my-mercado-cache-v2', // Força novo cache
 
           globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
 
@@ -66,7 +67,7 @@ export default defineConfig(({ mode }) => {
               urlPattern: ({ request }) => request.mode === 'navigate',
               handler: 'NetworkFirst',
               options: {
-                cacheName: 'pages',
+                cacheName: 'pages-v2',
               }
             },
 
@@ -77,7 +78,7 @@ export default defineConfig(({ mode }) => {
                 request.destination === 'style',
               handler: 'StaleWhileRevalidate',
               options: {
-                cacheName: 'assets',
+                cacheName: 'assets-v2',
               }
             },
 
@@ -87,7 +88,7 @@ export default defineConfig(({ mode }) => {
                 request.destination === 'image',
               handler: 'StaleWhileRevalidate',
               options: {
-                cacheName: 'images',
+                cacheName: 'images-v2',
               }
             }
           ]
