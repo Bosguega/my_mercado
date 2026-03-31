@@ -79,8 +79,8 @@ function App() {
   const tab = useUiStore((state) => state.tab);
   const setTab = useUiStore((state) => state.setTab);
 
-  // React Query para carregar receipts quando usuário logar
-  const { error: receiptsError } = useAllReceiptsQuery(!!sessionUser);
+  // React Query para carregar receipts (sempre busca, mas tenta Supabase se logado)
+  const { error: receiptsError, refetch } = useAllReceiptsQuery(!!sessionUser);
 
   useEffect(() => {
     setSessionUserId(sessionUser?.id ?? null);
@@ -88,6 +88,30 @@ function App() {
       resetScannerState();
     }
   }, [resetScannerState, sessionUser, setSessionUserId]);
+
+  // Sincronizar dados locais quando usuário logar
+  useEffect(() => {
+    if (sessionUser) {
+      // Aguardar um pouco para garantir que o auth está estabilizado
+      const timer = setTimeout(async () => {
+        try {
+          const { syncLocalStorageWithSupabase } = await import('./services/syncService');
+          const result = await syncLocalStorageWithSupabase();
+          
+          if (result.synced > 0) {
+            toast.success(`${result.synced} nota(s) sincronizada(s) com a nuvem!`);
+          }
+          
+          // Re-fetch para atualizar dados do Supabase
+          await refetch();
+        } catch (error) {
+          console.warn('Erro ao sincronizar dados locais:', error);
+        }
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [sessionUser, refetch]);
 
   useEffect(() => {
     if (receiptsError) {

@@ -159,32 +159,35 @@ export function useAllReceiptsQuery(enabled: boolean = true) {
     return useQuery({
         queryKey: receiptKeys.allReceipts(),
         queryFn: async () => {
-            try {
-                const data = await getAllReceiptsFromDB();
-                // Sincronizar com localStorage como fallback
-                if (Array.isArray(data) && data.length > 0) {
-                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
-                }
-                return data;
-            } catch (error) {
-                // Erro esperado: usuário não autenticado ou Supabase indisponível
-                console.warn('Supabase indisponível, usando dados locais:', error);
-                
-                // Fallback para localStorage
-                const localData = localStorage.getItem(LOCAL_STORAGE_KEY);
-                if (localData) {
-                    try {
-                        return JSON.parse(localData) as Receipt[];
-                    } catch (parseError) {
-                        console.error('Erro ao parsear dados locais:', parseError);
-                        return [];
+            // Sempre tentar Supabase primeiro se enabled for true
+            if (enabled) {
+                try {
+                    const data = await getAllReceiptsFromDB();
+                    // Sincronizar com localStorage como fallback
+                    if (Array.isArray(data) && data.length > 0) {
+                        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
                     }
+                    return data;
+                } catch (error) {
+                    // Erro esperado: usuário não autenticado ou Supabase indisponível
+                    console.warn('Supabase indisponível, usando dados locais:', error);
                 }
-                return [];
             }
+            
+            // Fallback para localStorage (sempre disponível)
+            const localData = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (localData) {
+                try {
+                    return JSON.parse(localData) as Receipt[];
+                } catch (parseError) {
+                    console.error('Erro ao parsear dados locais:', parseError);
+                    return [];
+                }
+            }
+            return [];
         },
         staleTime: 5 * 60 * 1000, // 5 minutos
-        enabled,
+        enabled: true, // Sempre enabled para pelo menos buscar do localStorage
         retry: false, // Não retry se falhar (provavelmente é auth error)
     });
 }
