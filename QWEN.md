@@ -70,7 +70,13 @@ my_mercado/
 │   ├── hooks/               # Hooks personalizados
 │   │   ├── queries/         # React Query hooks
 │   │   │   ├── useReceiptsQuery.ts
-│   │   │   └── useCanonicalProductsQuery.ts
+│   │   │   ├── useCanonicalProductsQuery.ts
+│   │   │   ├── useHistoryReceipts.ts
+│   │   │   ├── useSearchItems.ts
+│   │   │   ├── useFilteredSearchItems.ts
+│   │   │   ├── useSearchChartData.ts
+│   │   │   ├── usePurchaseHistory.ts
+│   │   │   └── useSortedShoppingItems.ts
 │   │   ├── useReceiptScanner.ts
 │   │   └── useSupabaseSession.ts
 │   │
@@ -94,6 +100,7 @@ my_mercado/
 │   │   ├── aiClient.ts      # Cliente de IA
 │   │   ├── analytics/       # Analytics engine
 │   │   ├── filters.ts       # Filtros centralizados
+│   │   ├── shoppingList.ts  # Utils da lista de compras
 │   │   ├── stringUtils.ts
 │   │   └── dateUtils.ts
 │   │
@@ -263,6 +270,7 @@ O app usa IA para normalização de produtos. Configure via UI:
 | Estado de UI | `stores/useUiStore.ts` | Componentes `*Tab.tsx` |
 | Filtros HistoryTab | `hooks/queries/useHistoryReceipts.ts` | `utils/filters.ts`, `stores/useUiStore.ts` |
 | Filtros SearchTab | `components/SearchTab.tsx` | `utils/filters.ts`, `stores/useUiStore.ts` |
+| Lista de Compras | `components/ShoppingListTab.tsx` | `hooks/queries/usePurchaseHistory.ts`, `utils/shoppingList.ts` |
 | Dicionário | `components/DictionaryTab.tsx` | `services/dictionaryService.ts` |
 | Produtos canônicos | `hooks/queries/useCanonicalProductsQuery.ts` | `services/canonicalProductService.ts` |
 | Filtros/Ordenação | `utils/filters.ts` | `components/HistoryTab/`, `components/SearchTab.tsx` |

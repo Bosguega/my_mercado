@@ -1274,6 +1274,30 @@ const itemsByPeriod = filterItemsByPeriod(
 );
 ```
 
+### shoppingList.ts
+
+**Arquivo:** `src/utils/shoppingList.ts`
+
+**Funções:**
+
+```typescript
+toNumber(value, fallback)           // Converte para número seguro
+toText(value)                       // Converte para texto seguro
+sanitizeListItem(item)              // Sanitiza item da lista de compras
+sanitizeShoppingList(items)         // Filtra e sanitiza lista de items
+```
+
+**Exemplo de uso:**
+```typescript
+import { sanitizeShoppingList, toText } from "../utils/shoppingList";
+
+// Sanitizar lista completa
+const validItems = sanitizeShoppingList(rawItems);
+
+// Converter valor desconhecido
+const name = toText(unknownValue);
+```
+
 ### dateUtils.ts
 
 **Arquivo:** `src/utils/dateUtils.ts`
@@ -1454,6 +1478,48 @@ UI (lista de items)
 - `searchQuery: string` - Termo de busca
 - `sortOrder: SearchSortBy` - recent | price
 - `searchSortDirection: SortDirection` - asc | desc
+
+### ShoppingListTab
+
+**Data da refatoração:** 31 de março de 2026
+
+**Funcionalidades:**
+- Lista de compras com checklist
+- Sugestões baseadas no histórico de compras
+- Histórico de preços por item (últimas 3 compras)
+- Preço médio recente
+- Marcar/desmarcar items
+- Limpar items marcados ou lista completa
+
+**Hooks:**
+- `usePurchaseHistory(savedReceipts)` - Monta histórico de compras por item
+- `useSortedShoppingItems(shoppingItems)` - Ordena items (não verificados primeiro)
+
+**Componentes:**
+- `ShoppingListItem` - Renderização de um item da lista
+
+**Fluxo de dados:**
+```typescript
+savedReceipts
+    ↓
+usePurchaseHistory()
+    ├── historyByKey: Map<key, PurchaseHistoryEntry[]>
+    └── suggestions: { key, label, count }[]
+    
+shoppingItems (Zustand)
+    ↓
+useSortedShoppingItems()
+    └── orderedItems (não verificados primeiro, por data)
+```
+
+**Estado (Zustand):**
+- `itemsByUser[ownerKey]` - Items da lista por usuário
+- `addItem()`, `toggleChecked()`, `removeItem()`, `clearChecked()`, `clearAll()`
+
+**Utils:**
+- `sanitizeShoppingList(items)` - Sanitiza items da lista
+- `toNumber(value, fallback)` - Converte para número seguro
+- `toText(value)` - Converte para texto seguro
 
 ---
 
