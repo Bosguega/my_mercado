@@ -1,12 +1,11 @@
 import { useMemo, useState, useCallback, type ChangeEvent } from "react";
 import { toast } from "react-hot-toast";
-import { formatBRL, parseBRL } from "../../utils/currency";
-import { parseToDate } from "../../utils/date";
-import { calculateTotalSpent, calculateReceiptTotal } from "../../utils/analytics";
+import { parseBRL } from "../../utils/currency";
+import { calculateTotalSpent } from "../../utils/analytics";
 import { backupToJSON, exportToCSV } from "../../utils/backupRegistry";
-import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from "date-fns";
 import { useAllReceiptsQuery, useDeleteReceipt, useRestoreReceipts } from "../../hooks/queries/useReceiptsQuery";
 import { useUiStore } from "../../stores/useUiStore";
+import { applyReceiptFilters } from "../../utils/filters";
 import ConfirmDialog from "../ConfirmDialog";
 import UniversalSearchBar from "../UniversalSearchBar";
 import { HeaderSection } from "./HeaderSection";
@@ -15,88 +14,6 @@ import { EmptyState } from "./EmptyState";
 import { ReceiptList } from "./ReceiptList";
 import type { Receipt } from "../../types/domain";
 import type { HistoryFilters } from "../../types/ui";
-
-// =========================
-// UTILITÁRIOS
-// =========================
-
-function filterBySearch(receipts: Receipt[], search: string): Receipt[] {
-  if (!search.trim()) return receipts;
-  const searchLower = search.toLowerCase();
-  return receipts.filter((receipt) =>
-    receipt.establishment?.toLowerCase().includes(searchLower)
-  );
-}
-
-function filterByPeriod(
-  receipts: Receipt[],
-  period: HistoryFilters["period"],
-  startDate?: string,
-  endDate?: string
-): Receipt[] {
-  if (period === "all") return receipts;
-
-  const now = new Date();
-  const thisMonth = { start: startOfMonth(now), end: endOfMonth(now) };
-  const last3Months = startOfMonth(subMonths(now, 3));
-
-  return receipts.filter((receipt) => {
-    const receiptDate = parseToDate(receipt.date);
-    if (!receiptDate) return false;
-
-    if (period === "this-month") {
-      return isWithinInterval(receiptDate, thisMonth);
-    }
-    if (period === "last-3-months") {
-      return receiptDate >= last3Months;
-    }
-    if (period === "custom" && startDate && endDate) {
-      const start = new Date(startDate + "T00:00:00");
-      const end = new Date(endDate + "T23:59:59");
-      return isWithinInterval(receiptDate, { start, end });
-    }
-    return true;
-  });
-}
-
-function sortReceipts(
-  receipts: Receipt[],
-  sortBy: HistoryFilters["sortBy"],
-  sortOrder: HistoryFilters["sortOrder"]
-): Receipt[] {
-  return [...receipts].sort((a, b) => {
-    if (sortBy === "date") {
-      const timeA = parseToDate(a.date)?.getTime() || -Infinity;
-      const timeB = parseToDate(b.date)?.getTime() || -Infinity;
-      return sortOrder === "asc" ? timeA - timeB : timeB - timeA;
-    }
-    if (sortBy === "value") {
-      const totalA = calculateReceiptTotal(a, parseBRL);
-      const totalB = calculateReceiptTotal(b, parseBRL);
-      return sortOrder === "asc" ? totalA - totalB : totalB - totalA;
-    }
-    if (sortBy === "store") {
-      const storeA = (a.establishment || "").toLowerCase();
-      const storeB = (b.establishment || "").toLowerCase();
-      return sortOrder === "asc" ? storeA.localeCompare(storeB) : storeB.localeCompare(storeA);
-    }
-    return 0;
-  });
-}
-
-function applyFilters(
-  receipts: Receipt[],
-  search: string,
-  filters: HistoryFilters
-) {
-  let filtered = filterBySearch(receipts, search);
-  filtered = filterByPeriod(filtered, filters.period, filters.startDate, filters.endDate);
-  filtered = sortReceipts(filtered, filters.sortBy, filters.sortOrder);
-  return {
-    items: filtered.slice(0, 50),
-    totalCount: filtered.length,
-  };
-}
 
 // =========================
 // HOOK: USE CONFIRM DIALOG
@@ -174,7 +91,7 @@ function HistoryTab() {
 
   // Aplicar filtros
   const filteredReceipts = useMemo(
-    () => applyFilters(savedReceipts, historyFilter, historyFilters),
+    () => applyReceiptFilters(savedReceipts, historyFilter, historyFilters),
     [savedReceipts, historyFilter, historyFilters]
   );
 
@@ -281,7 +198,7 @@ function HistoryTab() {
       />
 
       {isEmpty && !loading ? (
-        <EmptyState onRestore={() => document.getElementById("restore-input")?.click()} />
+        <EmptyState />
       ) : (
         <>
           <SummaryCard totalSpent={totalSpent} filteredCount={filteredReceipts.totalCount} />

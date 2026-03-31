@@ -19,7 +19,10 @@ function ScannerTab() {
 
   // Wrapper para adaptar a interface da mutation do React Query
   const saveReceipt = useCallback(
-    async (receipt: Parameters<typeof saveReceiptMutation.mutateAsync>[0]["receipt"], forceReplace?: boolean): Promise<SaveReceiptResponse> => {
+    async (
+      receipt: Parameters<typeof saveReceiptMutation.mutateAsync>[0]["receipt"],
+      forceReplace?: boolean
+    ): Promise<SaveReceiptResponse> => {
       const result = await saveReceiptMutation.mutateAsync({
         receipt,
         sessionUserId,
@@ -45,12 +48,10 @@ function ScannerTab() {
     manualItem,
     setManualItem,
     currentReceipt,
-    setCurrentReceipt,
     duplicateReceipt,
-    setDuplicateReceipt,
     handleReset,
     handleSetDuplicateReceipt,
-  } = useScannerState({ saveReceipt, sessionUserId, tab });
+  } = useScannerState({ _saveReceipt: saveReceipt, _tab: tab });
 
   const { calculateReceiptTotal, handleAddManualItem, handleSaveManualReceipt } = useManualReceipt({
     manualData,
@@ -58,7 +59,6 @@ function ScannerTab() {
     setManualData,
     setManualItem,
     saveReceipt,
-    sessionUserId,
     onReset: handleReset,
   });
 

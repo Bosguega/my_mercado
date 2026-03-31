@@ -1,4 +1,3 @@
-import { supabase } from "./supabaseClient";
 import { formatToISO, formatToBR } from "../utils/date";
 import { parseBRL, formatBRL, calc } from "../utils/currency";
 import { startOfMonth, endOfMonth, subMonths } from "date-fns";

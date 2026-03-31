@@ -15,12 +15,11 @@ import type {
 // =========================
 
 interface UseScannerStateOptions {
-  saveReceipt: (receipt: Receipt, forceReplace?: boolean) => Promise<SaveReceiptResponse>;
-  sessionUserId: string | null;
-  tab: string;
+  _saveReceipt: (receipt: Receipt, forceReplace?: boolean) => Promise<SaveReceiptResponse>;
+  _tab: string;
 }
 
-export function useScannerState({ saveReceipt, sessionUserId, tab }: UseScannerStateOptions) {
+export function useScannerState({ _saveReceipt, _tab }: UseScannerStateOptions) {
   const [manualMode, setManualMode] = useState(false);
   const [manualData, setManualData] = useState<ManualReceiptData>({
     establishment: "",
@@ -86,7 +85,6 @@ interface UseManualReceiptOptions {
   setManualData: (data: ManualReceiptData) => void;
   setManualItem: (item: ManualReceiptItemInput) => void;
   saveReceipt: (receipt: Receipt, forceReplace?: boolean) => Promise<SaveReceiptResponse>;
-  sessionUserId: string | null;
   onReset: () => void;
 }
 
@@ -96,7 +94,6 @@ export function useManualReceipt({
   setManualData,
   setManualItem,
   saveReceipt,
-  sessionUserId,
   onReset,
 }: UseManualReceiptOptions) {
   // Calcula o total do recibo

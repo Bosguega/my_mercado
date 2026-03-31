@@ -1,5 +1,4 @@
 import type { Receipt } from "../../types/domain";
-import type { HistoryFilters } from "../../types/ui";
 
 // =========================
 // FILTER RESULTS
@@ -43,7 +42,7 @@ export interface HeaderSectionProps {
   isLoading: boolean;
   onRefresh: () => void;
   onBackup: () => void;
-  onRestore: () => void;
+  onRestore: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onExportCSV: () => void;
 }
 

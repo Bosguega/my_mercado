@@ -1,4 +1,4 @@
-import type { Receipt, ReceiptItem } from "../types/domain";
+import type { Receipt, ReceiptItem } from "../../types/domain";
 
 // =========================
 // SCREEN STATES
@@ -91,6 +91,12 @@ export interface DuplicateModalProps {
 
 export interface LoadingScreenProps {
   message?: string;
+}
+
+export interface ScanningScreenProps extends ScannerControls {
+  onStopCamera: () => void;
+  applyZoom: (value: number) => void;
+  applyTorch: (on: boolean) => void;
 }
 
 // =========================

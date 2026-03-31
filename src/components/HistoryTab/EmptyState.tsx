@@ -1,7 +1,6 @@
 import { History } from "lucide-react";
-import type { EmptyStateProps } from "../HistoryTab.types";
 
-export function EmptyState({ onRestore }: EmptyStateProps) {
+export function EmptyState() {
   return (
     <div
       className="glass-card"

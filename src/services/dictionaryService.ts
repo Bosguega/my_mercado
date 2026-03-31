@@ -1,4 +1,3 @@
-import { supabase } from "./supabaseClient";
 import { getUserOrThrow, requireSupabase } from "./authService";
 import type { DictionaryEntry, DictionaryMap } from "../types/domain";
 
@@ -9,11 +8,10 @@ interface DbDictionaryRow {
   canonical_product_id?: string | null;
 }
 
-export interface DictionaryUpdateEntry
-  extends Pick<
-    DictionaryEntry,
-    "key" | "normalized_name" | "category" | "canonical_product_id"
-  > {}
+export type DictionaryUpdateEntry = Pick<
+  DictionaryEntry,
+  "key" | "normalized_name" | "category" | "canonical_product_id"
+>;
 
 // =========================
 // DICTIONARY CRUD
@@ -142,7 +140,7 @@ export async function getDictionary(keys: string[]): Promise<DictionaryMap> {
   const user = await getUserOrThrow();
   const client = requireSupabase();
 
-  let { data, error } = await client
+  const { data, error } = await client
     .from("product_dictionary")
     .select("key, normalized_name, category, canonical_product_id")
     .eq("user_id", user.id)

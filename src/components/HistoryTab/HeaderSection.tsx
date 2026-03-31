@@ -1,5 +1,5 @@
 import { History, Download, Upload, Save } from "lucide-react";
-import type { HeaderSectionProps } from "../HistoryTab.types";
+import type { HeaderSectionProps } from "./HistoryTab.types";
 
 export function HeaderSection({
   totalCount,

@@ -1,10 +1,6 @@
 import { X } from "lucide-react";
 import { ScannerView } from "../views/ScannerView";
-import type { ScannerControls } from "../ScannerTab.types";
-
-interface ScanningScreenProps extends ScannerControls {
-  onStopCamera: () => void;
-}
+import type { ScanningScreenProps } from "../ScannerTab.types";
 
 export function ScanningScreen({
   onStopCamera,

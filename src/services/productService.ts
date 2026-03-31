@@ -1,42 +1,11 @@
 import { getDictionary, updateDictionary, getCanonicalProducts, createCanonicalProduct } from ".";
 import { callAI } from "../utils/aiClient";
 import { normalizeKey } from "../utils/normalize";
+import { stripVariableInfo, cleanAIName } from "../utils/stringUtils";
 import type { AiNormalizationResult } from "../types/ai";
 import type { DictionaryMap, ReceiptItem } from "../types/domain";
 
 const isDev = import.meta.env.DEV;
-
-// ==============================
-// Remover peso variavel
-// ==============================
-
-function stripVariableInfo(
-  name: string | undefined,
-  unit: string | undefined,
-  qty: string | number | undefined,
-): string {
-  if (!name) return "";
-
-  const cleanName = name.replace(/(?<!\d)\s+(KG|G|ML|L|UN|PC|CX)\b$/i, "").trim();
-
-  const qtyNum = parseFloat(String(qty || "0").replace(",", "."));
-
-  if (unit === "KG" && qtyNum < 5) {
-    return cleanName.replace(/\b\d+[.,]?\d*\s?(KG|G)\b/gi, "").trim();
-  }
-
-  return cleanName;
-}
-
-// ==============================
-// Limpeza pos IA
-// ==============================
-
-function cleanAIName(name: string): string {
-  if (!name) return "";
-
-  return name.replace(/\s+/g, " ").trim();
-}
 
 // ==============================
 // Conversao numerica

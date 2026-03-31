@@ -1,4 +1,3 @@
-import { supabase } from "./supabaseClient";
 import { getUserOrThrow, requireSupabase } from "./authService";
 import type { CanonicalProduct } from "../types/domain";
 
