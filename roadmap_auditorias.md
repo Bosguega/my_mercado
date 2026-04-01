@@ -1,4 +1,4 @@
-# Roadmap Consolidado das Auditorias
+﻿# Roadmap Consolidado das Auditorias
 
 Data: 2026-04-01  
 Fontes: `listas.md`, `historico.md`, `precos.md`, `dicionario.md`, `itens_canonicos.md`
@@ -78,7 +78,7 @@ Racional:
 
 9. **Gráfico de preços com agregação correta por dia**
 - média/mediana por produto-dia;
-- reduzir viés de “primeira ocorrência”.
+- reduzir vies de "primeira ocorrencia".
 
 10. **Melhoria de matching**
 - lista: fallback de histórico mais preciso (menos `includes` ingênuo);
@@ -159,7 +159,7 @@ Racional:
 
 ## 7) Resultado Esperado
 
-Com esse roadmap, a aplicação evolui de “funcional e prática” para “confiável, escalável e governável”, sem sacrificar a velocidade de entrega.
+Com esse roadmap, a aplicacao evolui de "funcional e pratica" para "confiavel, escalavel e governavel", sem sacrificar a velocidade de entrega.
 
 
 ---
@@ -306,5 +306,34 @@ Implementacao tecnica:
 Limitacoes conhecidas deste MVP:
 
 - armazenamento em `user_metadata` (nao ideal para payloads muito grandes);
-- estrategia atual de resolucao de conflito e "mais recente vence";
+- estrategia atual de resolucao de conflito faz merge estrutural por lista (pendente merge fino por item);
 - sincronizacao automatica ocorre no login e tambem em background com debounce apos alteracoes locais.
+
+---
+
+## 10) Quadro de Progresso Atual (2026-04-01)
+
+### Concluido
+
+- Sprint 1: completo.
+- Sprint 2: completo.
+- Sprint 3: completo.
+- Sprint 4.1: sincronizacao de listas entregue.
+- Sprint 4.3 (matching lista/historico): entregue com score por tokens + badge de confianca.
+
+### Parcial
+
+- Sprint 4.2 (grafico com agregacao diaria): pendente.
+
+### Pendencias principais
+
+1. Agregacao correta por dia no grafico de precos.
+2. Governanca avancada de catalogo canonico.
+3. Evolucao de sync de listas para merge por item na mesma lista.
+
+### Ajuste de observacao tecnica
+
+A limitacao "mais recente vence" nao descreve mais o estado atual do sync.
+A estrategia atual ja faz merge estrutural por lista usando `updated_at` por lista.
+O ponto pendente e merge fino por item dentro de uma mesma lista.
+

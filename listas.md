@@ -1,4 +1,4 @@
-# Auditoria Técnica: Listas de Compras (My Mercado)
+﻿# Auditoria Técnica: Listas de Compras (My Mercado)
 
 Data: 2026-04-01  
 Escopo: comportamento atual da feature de lista de compras, integração com histórico de notas, riscos, melhorias e plano de evolução.
@@ -66,7 +66,7 @@ Impacto prático:
 
 - `sessionUserId` vem de `useReceiptsSessionStore`.
 - `ownerKey` da lista usa `sessionUserId.trim()` ou fallback `__local__`.
-- Cada usuário autenticado mantém uma “fatia” própria em `itemsByUser`.
+- Cada usuario autenticado mantem uma "fatia" propria em `itemsByUser`.
 
 Impacto prático:
 
@@ -237,7 +237,7 @@ Na `ShoppingListTab`:
 
 4. Suporte a múltiplas listas de compras
 - Modelo atual é lista única por usuário; evoluir para `listas` + `itens por lista`.
-- Exemplos de uso: “mensal”, “hortifruti”, “festa”, “farmácia”.
+- Exemplos de uso: "mensal", "hortifruti", "festa", "farmacia".
 - Requisitos mínimos:
   - criar/renomear/excluir lista;
   - definir lista ativa;
@@ -253,11 +253,11 @@ Na `ShoppingListTab`:
 - reduzir duplicidade entre UI e store.
 
 7. Métrica simples de precisão de histórico
-- Exibir indicador “match aproximado” quando cair no fallback.
+- Exibir indicador "match aproximado" quando cair no fallback.
 
 ### P2 (médio impacto, médio esforço)
 
-8. Feature “reabrir item comprado”
+8. Feature "reabrir item comprado"
 - ação para desmarcar e atualizar posição/ordenação sem perder contexto.
 
 9. Quantidade estruturada (número + unidade)
@@ -272,7 +272,7 @@ Na `ShoppingListTab`:
 11. Lista compartilhável
 - compartilhar lista entre membros/família.
 
-12. Sugestão automática “comprar de novo”
+12. Sugestao automatica "comprar de novo"
 - sugerir itens com base em intervalo médio de recompra.
 
 ---
@@ -316,4 +316,36 @@ A implementação atual é sólida para um modelo local-first e já entrega valo
 O maior gap de produto é a ausência de sincronização da lista.  
 O maior gap técnico é a falta de cobertura automatizada das regras centrais.
 
-Com o pacote P0 + P1, a feature evolui de “boa e prática” para “confiável em escala de uso real”.
+Com o pacote P0 + P1, a feature evolui de "boa e pratica" para "confiavel em escala de uso real".
+
+---
+
+## 10) Status Atualizado (2026-04-01)
+
+### Melhorias ja implementadas
+
+- [x] Confirmacao para `clearAll` e `clearChecked`.
+- [x] Testes de regras centrais da lista (store + ordenacao + matching/historico).
+- [x] Evolucao para multiplas listas (criar/renomear/excluir/ativa).
+- [x] Mover e copiar item entre listas.
+- [x] Sincronizacao opcional com nuvem (toggle + sync manual + sync no login).
+- [x] Autosync em background com debounce e protecao contra concorrencia.
+- [x] Resolucao de conflito em sync evoluida para merge estrutural por lista.
+- [x] Matching de historico melhorado (token-score) com badge de confianca (`Exato`/`Aproximado`).
+
+### Pontos ainda pendentes
+
+- [ ] Estrategia de merge por item dentro da mesma lista (quando dois dispositivos alteram a mesma lista em paralelo).
+- [ ] Quantidade estruturada (`valor` + `unidade`) em vez de string livre.
+- [ ] Lista compartilhavel e sugestao automatica de recompra.
+
+### Observacao de arquitetura
+
+A arquitetura atual nao e mais "lista unica em `itemsByUser`".
+Hoje o modelo persistido e por usuario com:
+
+- multiplas listas (`lists`),
+- lista ativa (`activeListId`),
+- itens por lista (`itemsByList`),
+- carimbo de atualizacao (`updatedAt`) para suporte ao sync.
+

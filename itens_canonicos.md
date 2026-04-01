@@ -1,4 +1,4 @@
-# Auditoria Técnica: Itens Canônicos (Produtos Canônicos)
+﻿# Auditoria Técnica: Itens Canônicos (Produtos Canônicos)
 
 Data: 2026-04-01  
 Escopo: cadastro e manutenção de produtos canônicos, merge entre produtos e impactos nas associações de itens/dicionário.
@@ -164,8 +164,8 @@ Isso acelera cobertura, mas aumenta necessidade de governança de qualidade do c
 
 ### P1
 
-4. “Fila de revisão” para produtos auto-criados
-- pipeline cria em estado “pendente” até confirmação.
+4. "Fila de revisao" para produtos auto-criados
+- pipeline cria em estado "pendente" ate confirmacao.
 
 5. Detecção de duplicados candidatos antes de criar
 - fuzzy match por nome/slug/categoria/marca.
@@ -187,4 +187,22 @@ Isso acelera cobertura, mas aumenta necessidade de governança de qualidade do c
 
 O módulo de Itens Canônicos é uma base forte para padronização de produtos.  
 A próxima etapa é elevar governança e segurança operacional, especialmente nos fluxos automáticos e de merge.
+
+
+---
+
+## 8) Status Atualizado (2026-04-01)
+
+### Melhorias ja implementadas
+
+- [x] Validacao forte de criacao/edicao (slug/nome/categoria/marca).
+- [x] Teste de merge end-to-end de servico.
+- [x] Escopo por usuario reforcado em mutacoes amplas (`items` e `product_dictionary`).
+
+### Melhorias ainda pendentes
+
+- [ ] Fila de revisao para auto-criados no pipeline.
+- [ ] Deteccao preventiva de duplicados candidatos.
+- [ ] Historico/rastreabilidade de merges com possibilidade de desfazer controlado.
+- [ ] Ferramentas bulk de governanca.
 

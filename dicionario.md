@@ -1,4 +1,4 @@
-# Auditoria Técnica: Dicionário
+﻿# Auditoria Técnica: Dicionário
 
 Data: 2026-04-01  
 Escopo: gestão de entradas do dicionário de produtos, edição, exclusão, limpeza e aplicação retroativa em itens salvos.
@@ -146,7 +146,7 @@ Lacunas principais:
 - sem truncamento silencioso.
 
 6. Auditoria de mudanças
-- log local/remoto de “quem alterou o quê e quando”.
+- log local/remoto de "quem alterou o que e quando".
 
 ### P2
 
@@ -162,4 +162,23 @@ Lacunas principais:
 
 O Dicionário está funcional e útil no dia a dia operacional.  
 Os próximos ganhos estão em robustez de validação, consistência de cache e governança segura das atualizações retroativas.
+
+
+---
+
+## 8) Status Atualizado (2026-04-01)
+
+### Melhorias ja implementadas
+
+- [x] Migracao da listagem para React Query (`useDictionaryQuery`).
+- [x] Paginacao visivel com botao "Carregar mais" (sem truncamento silencioso).
+- [x] Escopo explicito por usuario nas mutacoes de dicionario.
+- [x] Invalidacao de cache de receipts apos aplicacao retroativa.
+
+### Melhorias ainda pendentes
+
+- [ ] Validacao forte (schema) no formulario de edicao do dicionario.
+- [ ] Auditoria de mudancas (log de alteracoes).
+- [ ] Edicao em lote.
+- [ ] Metricas de cobertura do dicionario.
 

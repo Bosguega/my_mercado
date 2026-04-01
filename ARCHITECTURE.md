@@ -1,6 +1,6 @@
-# My Mercado - Arquitetura
+﻿# My Mercado - Arquitetura
 
-**Data da última auditoria:** 31 de março de 2026
+**Data da última atualização:** 1 de abril de 2026
 **Status da arquitetura:** ✅ Conforme (React Query = Dados, Zustand = UI, Hooks = Orquestração)
 **Status da refatoração:** ✅ Serviços modularizados + Componentes reestruturados
 **Status da qualidade:** ✅ 0 erros TypeScript | ✅ 0 erros ESLint | ✅ Build OK
@@ -55,8 +55,8 @@ Persistência principal: Supabase (PostgreSQL + Auth + RLS), com **fallback loca
 25. [Build e Deploy](#build-e-deploy)
 26. [Monitoramento](#monitoramento)
 
-### Parte IX - Auditoria
-27. [Auditoria Técnica de 31/03/2026](#auditoria-técnica-de-31032026)
+### Parte IX - Estado Atual
+27. [Evolução Recente e Estado Atual](#evolução-recente-e-estado-atual)
 
 ---
 
@@ -337,7 +337,6 @@ const all = await storage.getAll<Receipt>();
 - **React Query:** `src/providers/QueryProvider.tsx`
 - **Hooks de query:** `src/hooks/queries/useReceiptsQuery.ts`
 - **Web Worker:** `src/workers/receiptParser.worker.ts`
-- **Hook do worker:** `src/hooks/useReceiptParserWorker.ts`
 - **PWA Update:** `src/hooks/usePWAUpdate.ts`
 
 ---
@@ -393,10 +392,8 @@ my_mercado/
 |   |
 |   |-- hooks/
 |   |   |-- useApiKey.ts
-|   |   |-- useCurrency.ts
 |   |   |-- usePerformanceMonitor.ts
 |   |   |-- usePWAUpdate.ts                # Detecta updates PWA
-|   |   |-- useReceiptParserWorker.ts
 |   |   |-- useReceiptScanner.ts           # Orquestração do scanner
 |   |   |-- useSupabaseSession.ts
 |   |   `-- queries/
@@ -435,9 +432,8 @@ my_mercado/
 |   |   ├── currency.ts
 |   |   ├── currency.test.ts
 |   |   ├── date.ts
-|   |   ├── dateUtils.ts                   # NOVO: Utilitários de data
 |   |   ├── dbDebug.ts
-|   |   ├── filters.ts                     # NOVO: Filtros e ordenação
+|   |   ├── filters.ts                     # Filtros e ordenação
 |   |   ├── logger.ts
 |   |   ├── normalize.ts
 |   |   ├── normalize.test.ts
@@ -445,8 +441,8 @@ my_mercado/
 |   |   ├── pwaDebug.ts
 |   |   ├── receiptId.ts
 |   |   ├── storage.ts                     # Storage unificado
-|   |   ├── stringUtils.ts                 # NOVO: Manipulação de strings
-|   |   ├── supabaseTest.ts                # NOVO: Teste de conexão
+|   |   ├── stringUtils.ts                 # Manipulação de strings
+|   |   ├── supabaseTest.ts                # Teste de conexão
 |   |   └── validation.ts                  # Validação Zod
 |   |
 |   |-- providers/
@@ -627,10 +623,10 @@ O sistema de produtos canônicos resolve o problema de fragmentação de dados o
 | Sincronização offline | `src/services/syncService.ts` | `src/services/storageFallbackService.ts` |
 | Error handling | `src/components/ErrorBoundary.tsx` | React Error Boundaries |
 | PWA Update | `src/hooks/usePWAUpdate.ts` | Service Worker API |
-| Formatação monetária | `src/hooks/useCurrency.ts` | `src/utils/currency.ts` |
+| Formatação monetária | `src/utils/currency.ts` | Componentes de histórico, busca e lista |
 | Teste de conexão | `src/utils/supabaseTest.ts` | SettingsTab |
 | Manipulação de strings | `src/utils/stringUtils.ts` | `src/services/productService.ts` |
-| Utilitários de data | `src/utils/dateUtils.ts` | `src/utils/date.ts` |
+| Utilitários de data | `src/utils/date.ts` | hooks de histórico, busca e lista |
 
 ---
 
@@ -1088,7 +1084,7 @@ const {
 
 ## Serviços Modularizados
 
-**Data da refatoração:** 31 de março de 2026
+**Data da atualização:** 1 de abril de 2026
 
 ### Visão Geral
 
@@ -1298,9 +1294,9 @@ const validItems = sanitizeShoppingList(rawItems);
 const name = toText(unknownValue);
 ```
 
-### dateUtils.ts
+### date.ts
 
-**Arquivo:** `src/utils/dateUtils.ts`
+**Arquivo:** `src/utils/date.ts`
 
 **Funções:**
 
@@ -1314,13 +1310,13 @@ extractYearMonth(isoDate)       // Extrai ano/mês de ISO
 
 **Exemplo de uso:**
 ```typescript
-import { normalizeManualDate, isValidBRDate } from "../utils/dateUtils";
+import { parseToDate, formatDateBR } from "../utils/date";
 
-const normalized = normalizeManualDate("31/03/2026");
-// "20260331"
+const parsed = parseToDate("31/03/2026");
+// Date válido
 
-const isValid = isValidBRDate("31/03/2026");
-// true
+const label = formatDateBR("2026-03-31");
+// "31/03/2026"
 ```
 
 ### supabaseTest.ts (NOVO)
@@ -1363,7 +1359,7 @@ if (status.configured && status.authenticated) {
 
 ### ScannerTab
 
-**Data da refatoração:** 31 de março de 2026
+**Data da atualização:** 1 de abril de 2026
 
 **Estrutura:**
 ```
@@ -1385,9 +1381,10 @@ src/components/ScannerTab/
 ```
 
 **Hooks:**
-- `useScannerState()` - Gerencia estados da tela (usa Zustand)
+- `useReceiptScanner()` - Orquestra scanner, manual e persistência
+- `useCameraScanner()` - Gestão de câmera/torch/start-stop
+- `useQRCodeProcessor()` - Processamento do conteúdo lido
 - `useManualReceipt()` - Lógica do formulário manual
-- `useUrlInput()` - Input de URL
 
 **Melhorias:**
 - ✅ Componentes tipados (sem `any`)
@@ -1395,10 +1392,12 @@ src/components/ScannerTab/
 - ✅ Estados derivados em funções puras
 - ✅ Subcomponentes reutilizáveis
 - ✅ ResultScreen com formato do histórico
+- ✅ Fluxo idle-first (não abre câmera automaticamente ao entrar na aba)
+- ✅ Botão de fechar/encerrar escaneamento na tela de scanner
 
 ### HistoryTab
 
-**Data da refatoração:** 31 de março de 2026
+**Data da atualização:** 1 de abril de 2026
 
 **Estrutura:**
 ```
@@ -1481,15 +1480,18 @@ UI (lista de items)
 
 ### ShoppingListTab
 
-**Data da refatoração:** 31 de março de 2026
+**Data da atualização:** 1 de abril de 2026
 
 **Funcionalidades:**
 - Lista de compras com checklist
+- Múltiplas listas por usuário (criar, renomear, excluir, lista ativa)
 - Sugestões baseadas no histórico de compras
 - Histórico de preços por item (últimas 3 compras)
 - Preço médio recente
 - Marcar/desmarcar items
 - Limpar items marcados ou lista completa
+- Mover e copiar item entre listas
+- Sincronização opcional com nuvem (manual, login e autosync com debounce)
 
 **Hooks:**
 - `usePurchaseHistory(savedReceipts)` - Monta histórico de compras por item
@@ -1510,16 +1512,27 @@ shoppingItems (Zustand)
     ↓
 useSortedShoppingItems()
     └── orderedItems (não verificados primeiro, por data)
+
+shoppingListStore (Zustand persist)
+    ├── lists[]
+    ├── activeListId
+    ├── itemsByList
+    └── updatedAt (controle de sync)
 ```
 
 **Estado (Zustand):**
-- `itemsByUser[ownerKey]` - Items da lista por usuário
+- `dataByUser[ownerKey]` com `lists`, `activeListId`, `itemsByList`, `updatedAt`
 - `addItem()`, `toggleChecked()`, `removeItem()`, `clearChecked()`, `clearAll()`
+- `createList()`, `renameList()`, `deleteList()`, `setActiveList()`
+- `moveItemToList()`, `copyItemToList()`
+- `getCloudSnapshot()` e `applyCloudSnapshot()` para sync
 
 **Utils:**
 - `sanitizeShoppingList(items)` - Sanitiza items da lista
 - `toNumber(value, fallback)` - Converte para número seguro
 - `toText(value)` - Converte para texto seguro
+- `scoreHistoryKeyMatch()` - Fallback de histórico por similaridade de tokens
+- `mergeShoppingListSnapshots()` - Merge estrutural local/nuvem
 
 ---
 
@@ -1631,7 +1644,7 @@ export default defineConfig({
 | `src/utils/currency.test.ts` | 100% | parseBRL, formatBRL, calc |
 | `src/utils/normalize.test.ts` | 100% | normalizeKey |
 
-**Total:** 15 testes passando
+**Total atual:** 51 testes passando (12 arquivos de teste)
 
 ### Comandos
 
@@ -1703,7 +1716,7 @@ describe('normalize utils', () => {
 ## Otimizações de Performance
 
 ### Fase 1: Redução de Complexidade
-- ✅ Hook `useCurrency`: Centraliza formatação monetária
+- ✅ Utilitários `utils/currency.ts`: Centralizam formatação monetária
 - ✅ Componentes extraídos: `ScannerActions`, `ManualEntryForm`, `ReceiptResult`
 - ✅ `ReceiptCard` com React.memo: Previne re-renders
 
@@ -1924,278 +1937,97 @@ import.meta.env.DEV && debugDatabaseConnection();
 
 ---
 
-## Auditoria Técnica de 31/03/2026
+## Evolução Recente e Estado Atual
 
 ### Resumo Executivo
 
-**Status:** ✅ Concluída com sucesso
+Estado atual da arquitetura:
 
-| Métrica | Antes | Depois |
-|---------|-------|--------|
-| Erros TypeScript | 6 | **0** |
-| Erros ESLint | 15 | **0** |
-| Build | ❌ Falhava | ✅ OK |
-| Código duplicado | 3 blocos | **Centralizado** |
+- React Query como fonte principal de dados remotos e cache;
+- Zustand para estado de UI/sessão/scanner e domínio local-first da lista de compras;
+- pipeline de processamento de itens com normalização, dicionário e produtos canônicos;
+- scanner modular com fluxo idle-first e fechamento explícito;
+- sincronização opcional de listas de compras com nuvem.
 
-### Correções Críticas (Prioridade 1)
+### Qualidade Técnica Atual
 
-#### 1. Erros de Compilação TypeScript (6 erros)
+| Métrica | Status atual |
+|---------|--------------|
+| Testes automatizados | **51 testes passando** |
+| Build de produção | **OK** |
+| Arquitetura de estado | **Consolidada (React Query + Zustand)** |
+| Sync de listas | **Ativo (opcional, com merge estrutural)** |
 
-| Arquivo | Erro | Correção |
-|---------|------|----------|
-| `HistoryTab/EmptyState.tsx` | Import inexistente | Removido import não usado |
-| `HistoryTab/HeaderSection.tsx` | Import inexistente | Corrigido path para `./HistoryTab.types` |
-| `ScannerTab/ScannerTab.types.ts` | Import path errado | Corrigido para `../../types/domain` |
-| `ScannerTab/ScanningScreen.tsx` | Props faltando | Adicionadas `applyZoom` e `applyTorch` |
-| `ScannerTab/index.tsx` | Props mismatch | Ajustado para usar tipos corretos |
+### Estado Atual por Módulo
 
-#### 2. Código Morto e Imports Não Utilizados (15 erros)
+#### 1. Scanner
 
-**Removidos:**
-- `supabase` import não usado em `receiptService.ts`, `canonicalProductService.ts`, `dictionaryService.ts`
-- `formatBRL` não usado em `HistoryTab/index.tsx`
-- `setCurrentReceipt`, `setDuplicateReceipt` não usados em `ScannerTab/index.tsx`
-- `onRestore` não usado em `HistoryTab/EmptyState.tsx`
-- Parâmetros não usados em `ScannerTab/ScannerTab.hooks.ts`
+- Entrada por câmera, imagem, URL e modo manual;
+- `useReceiptScanner` como orquestrador;
+- fluxo inicial em `IdleScreen` (sem autoabertura de câmera);
+- tela de escaneamento com ação de parada/fechamento;
+- tratamento de duplicidade via modal dedicado.
 
-#### 3. Interface Vazia
+#### 2. Histórico
 
-**Arquivo:** `dictionaryService.ts`
-```typescript
-// Antes
-export interface DictionaryUpdateEntry extends Pick<...> {}
+- Fonte em `useAllReceiptsQuery`;
+- filtros centralizados (`applyReceiptFilters`) por período, busca e ordenação;
+- paginação visível na UI.
 
-// Depois
-export type DictionaryUpdateEntry = Pick<...>;
-```
+#### 3. Preços
 
-### Melhorias Estruturais (Prioridade 2)
+- Pipeline por hooks (`useSearchItems`, `useFilteredSearchItems`, `useSearchChartData`);
+- paginação visível para lista de resultados;
+- filtro de período alinhado ao histórico.
 
-#### 1. Utilitários Centralizados
+#### 4. Dicionário
 
-**Criados:**
-- `src/utils/stringUtils.ts` - Manipulação de strings
-- `src/utils/filters.ts` - Filtros e ordenação
-- `src/utils/dateUtils.ts` - Utilitários de data
-- `src/utils/supabaseTest.ts` - Teste de conexão
+- Listagem via React Query (`useDictionaryQuery`);
+- edição, exclusão, limpeza e aplicação retroativa para itens salvos;
+- invalidação de cache de receipts após aplicação retroativa.
 
-**Benefícios:**
-- Funções reutilizáveis
-- Testabilidade isolada
-- Menos duplicação
+#### 5. Itens Canônicos
 
-#### 2. Centralização de Filtros
+- CRUD e merge por serviço dedicado;
+- validação de criação/edição por schema;
+- cobertura de teste para merge de serviço.
 
-**Antes:**
-```typescript
-// HistoryTab/index.tsx - 80 linhas de lógica
-function filterBySearch() { ... }
-function filterByPeriod() { ... }
-function sortReceipts() { ... }
-```
+#### 6. Listas de Compras
 
-**Depois:**
-```typescript
-// HistoryTab/index.tsx - 3 linhas
-import { applyReceiptFilters } from "../../utils/filters";
-const filteredReceipts = useMemo(
-  () => applyReceiptFilters(savedReceipts, historyFilter, historyFilters),
-  [savedReceipts, historyFilter, historyFilters]
-);
-```
+- Modelo atual com múltiplas listas por usuário:
+  - `lists`
+  - `activeListId`
+  - `itemsByList`
+  - `updatedAt`
+- ações: criar/renomear/excluir lista, selecionar ativa, mover/copiar item;
+- matching de histórico com exato + fallback por score de tokens;
+- indicador de confiança no item (`Exato` / `Aproximado`);
+- sincronização opcional com nuvem:
+  - toggle em Configurações;
+  - sync manual;
+  - sync no login;
+  - autosync com debounce e proteção contra concorrência;
+  - merge estrutural por lista entre local e nuvem.
 
-#### 3. Refatoração de Serviços
+### Arquivos-Chave de Referência (Estado Vigente)
 
-**`productService.ts`:**
-```typescript
-// Antes: 30 linhas de funções locais
-function stripVariableInfo() { ... }
-function cleanAIName() { ... }
+- `src/App.tsx`
+- `src/hooks/queries/useReceiptsQuery.ts`
+- `src/hooks/queries/useDictionaryQuery.ts`
+- `src/stores/useShoppingListStore.ts`
+- `src/services/shoppingListCloudSyncService.ts`
+- `src/utils/shoppingListCloudMerge.ts`
+- `src/components/ScannerTab/index.tsx`
+- `src/hooks/useReceiptScanner.ts`
 
-// Depois: 1 linha de import
-import { stripVariableInfo, cleanAIName } from "../utils/stringUtils";
-```
+### Próximas Evoluções Arquiteturais (Pendentes)
 
-### Arquivos Modificados
-
-| Arquivo | Tipo | Mudança |
-|---------|------|---------|
-| `ScannerTab.types.ts` | Correção | Import path |
-| `ScanningScreen.tsx` | Correção | Props interface |
-| `HistoryTab.types.ts` | Correção | Tipos e imports |
-| `HeaderSection.tsx` | Correção | Import path |
-| `EmptyState.tsx` | Correção | Removido prop |
-| `ScannerTab.hooks.ts` | Correção | Params prefix |
-| `ScannerTab/index.tsx` | Correção | Imports e props |
-| `HistoryTab/index.tsx` | Refatoração | Usa filters centralizados |
-| `receiptService.ts` | Limpeza | Remove import |
-| `canonicalProductService.ts` | Limpeza | Remove import |
-| `dictionaryService.ts` | Limpeza/Refatoração | Remove interface vazia |
-| `productService.ts` | Refatoração | Usa stringUtils |
-
-### Arquivos Criados
-
-| Arquivo | Responsabilidade | Linhas |
-|---------|------------------|--------|
-| `utils/stringUtils.ts` | Manipulação de strings | 70 |
-| `utils/filters.ts` | Filtros e ordenação | 120 |
-| `utils/dateUtils.ts` | Utilitários de data | 50 |
-| `utils/supabaseTest.ts` | Teste de conexão | 90 |
-
-### Próximos Passos Recomendados
-
-1. **Testes Unitários** - Criar testes para:
-   - `utils/stringUtils.ts`
-   - `utils/filters.ts`
-   - `utils/dateUtils.ts`
-   - `utils/supabaseTest.ts`
-
-2. **Documentação** - Manter ARCHITECTURE.md atualizado
-
-3. **Monitoramento Contínuo** - Rodar typecheck e lint regularmente
-
----
-
-## Melhorias Recentes (31/03/2026 - Atualizações)
-
-### 1. Remoção de Logs de Produção
-
-**Problema:** Logs apareciam em produção, poluindo o console.
-
-**Solução:** Todos os logs agora são condicionais a `import.meta.env.DEV`:
-
-```typescript
-// Antes
-console.log('📱 [Scanner] handleScanSuccess iniciado');
-
-// Depois
-if (import.meta.env.DEV) {
-  console.log('📱 [Scanner] handleScanSuccess iniciado');
-}
-```
-
-**Arquivos atualizados:**
-- `useReceiptScanner.ts`
-- `useSupabaseSession.ts`
-- `receiptService.ts`
-- `receiptParser.ts`
-- `useReceiptsQuery.ts`
-
-### 2. Teste de Conexão com Supabase
-
-**Novo arquivo:** `utils/supabaseTest.ts`
-
-**Funções:**
-```typescript
-testSupabaseConnection()  // Testa conexão completa
-checkAuthentication()     // Verifica autenticação
-isSupabaseConfigured()    // Verifica configuração
-```
-
-**UI no SettingsTab:**
-- Botão "Testar Conexão" em Configurações → Geral
-- Retorna status detalhado:
-  - ✅ Configuração
-  - ✅ Autenticação
-  - ✅ Acesso ao banco
-
-### 3. Mensagens de Erro Melhoradas
-
-**Exemplos:**
-```typescript
-// Erro de CORS
-"Erro de CORS ao buscar NFC-e.
-Isso é comum em PWA.
-Use entrada manual ou tente novamente mais tarde."
-
-// Erro de estado
-"Apenas NFC-e de Sao Paulo (SP) sao suportadas.
-Sua nota parece ser de outro estado."
-```
-
-### 4. PWA Cache Busting v2
-
-**Problema:** Service Worker cacheava versão antiga com chaves erradas.
-
-**Solução:** Cache busting no `vite.config.js`:
-
-```javascript
-VitePWA({
-  workbox: {
-    cacheId: 'my-mercado-cache-v2',
-    runtimeCaching: [
-      {
-        cacheName: 'pages-v2',  // Nomes com v2
-      }
-    ]
-  }
-})
-```
-
-### 5. Correção de Upload de Foto
-
-**Problema:** Elemento `#reader` não existia ao fazer upload.
-
-**Solução:** Cria elemento temporário:
-
-```typescript
-const tempDiv = document.createElement('div');
-tempDiv.id = 'reader-temp';
-tempDiv.style.display = 'none';
-document.body.appendChild(tempDiv);
-
-const tempHtml5QrCode = new Html5Qrcode('reader-temp');
-const decodedText = await tempHtml5QrCode.scanFile(file, true);
-
-await tempHtml5QrCode.clear();
-document.body.removeChild(tempDiv);
-```
-
----
-
-## Changelog de Melhorias
-
-### Março 2026 - Refatoração de Arquitetura (31/03/2026)
-
-**Adicionado:**
-- ✅ Serviços modularizados (6 arquivos especializados)
-- ✅ ScannerTab reestruturado em subcomponentes
-- ✅ HistoryTab reestruturado em seções
-- ✅ Tipos e interfaces dedicados por componente
-- ✅ Custom hooks para lógica compartilhada
-- ✅ Utilitários centralizados (stringUtils, filters, dateUtils, supabaseTest)
-
-**Corrigido:**
-- ✅ 6 erros TypeScript
-- ✅ 15 erros ESLint
-- ✅ Imports quebrados
-- ✅ Props não utilizadas
-- ✅ Logs em produção
-- ✅ Upload de foto (elemento temporário)
-- ✅ PWA cache busting v2
-
-**Removido:**
-- ❌ Suporte a schema legado do Supabase
-- ❌ Código duplicado de filtros
-- ❌ Funções locais de string manipulation
-- ❌ Logs de produção
-
-**Reestruturado:**
-- 🔄 `dbMethods.ts` → 6 serviços especializados
-- 🔄 `ScannerTab.tsx` → `ScannerTab/` com screens, forms, views, modals
-- 🔄 `HistoryTab.tsx` → `HistoryTab/` com sections e hooks dedicados
-- 🔄 Filtros locais → `utils/filters.ts`
-- 🔄 String utils locais → `utils/stringUtils.ts`
-
-**Benefícios:**
-- 📉 Arquivos menores (média de 800 → 200 linhas)
-- 📈 Testabilidade aumentada
-- 📈 Manutenibilidade melhorada
-- 📈 Reuso de código facilitado
-- 📈 Performance melhorada (290KB economizados)
+1. Agregação diária no gráfico de preços (média/mediana por produto-dia).
+2. Política de merge por item dentro da mesma lista no sync.
+3. Governança avançada de catálogo canônico (revisão de auto-criados e prevenção de duplicatas).
 
 ---
 
 **My Mercado - Arquitetura Documentada e Atualizada**
 
-*Última atualização: 31 de março de 2026*
+*Última atualização: 1 de abril de 2026*

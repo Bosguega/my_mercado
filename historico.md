@@ -1,4 +1,4 @@
-# Auditoria Técnica: Histórico
+﻿# Auditoria Técnica: Histórico
 
 Data: 2026-04-01  
 Escopo: aba de histórico (`HistoryTab`), filtros, backup/restore, exportação e operações de deleção/sincronização de notas.
@@ -137,14 +137,14 @@ Restore:
 
 1. Limite fixo no cliente (`50`) no resultado final do histórico
 - pode ocultar dados em bases grandes;
-- pode induzir percepção de “sumiço” sem sinalização clara.
+- pode induzir percepcao de "sumico" sem sinalizacao clara.
 
 2. Restore aceita payloads sem validação profunda
 - valida apenas presença de array `receipts`;
 - sem validação estrita de campos críticos por receipt/item.
 
 3. Dependência de refetch manual para visibilidade imediata em alguns fluxos
-- parte das mutações já invalida cache, mas ainda existe ação manual de “Sincronizar”.
+- parte das mutacoes ja invalida cache, mas ainda existe acao manual de "Sincronizar".
 
 4. CSV exporta valores formatados (string BRL), não números crus
 - reduz utilidade analítica direta em algumas ferramentas.
@@ -159,7 +159,7 @@ Restore:
 - schema com Zod para backup (version, receipts, items, tipos).
 
 2. Feedback explícito quando houver truncamento por limite
-- mensagem: “Exibindo 50 de N notas”.
+- mensagem: "Exibindo 50 de N notas".
 
 3. Cobertura de testes para `applyReceiptFilters`
 - casos de período custom inválido, ordenação por valor e busca vazia.
@@ -169,7 +169,7 @@ Restore:
 4. Paginação/infinite scroll real no histórico
 - eliminar `slice(0, 50)` fixo no cliente.
 
-5. Export CSV com opção “numérico cru”
+5. Export CSV com opcao "numerico cru"
 - `price`/`total` como decimal sem formatação visual.
 
 6. Restore com modo merge opcional
@@ -189,4 +189,23 @@ Restore:
 
 O módulo de Histórico está funcionalmente sólido e com boa UX básica.  
 Os principais ganhos de maturidade estão em validação forte do restore e escalabilidade de listagem sem truncamento fixo.
+
+
+---
+
+## 8) Status Atualizado (2026-04-01)
+
+### Melhorias ja implementadas
+
+- [x] Validacao forte do restore com schema dedicado.
+- [x] Cobertura de testes para filtros centrais de historico.
+- [x] Remocao de truncamento silencioso fixo no hook de filtros.
+- [x] Paginacao visivel no Historico ("Carregar mais").
+
+### Melhorias ainda pendentes
+
+- [ ] Export CSV com opcao numerica crua.
+- [ ] Restore com modo merge opcional.
+- [ ] Metricas de qualidade de dados no historico.
+- [ ] Presets de filtros por usuario.
 

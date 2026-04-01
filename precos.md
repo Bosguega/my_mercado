@@ -1,4 +1,4 @@
-# Auditoria Técnica: Preços (Busca de Itens)
+﻿# Auditoria Técnica: Preços (Busca de Itens)
 
 Data: 2026-04-01  
 Escopo: aba de preços (`SearchTab`), busca, filtros, ordenação, visualização por lista e gráfico de tendência.
@@ -24,7 +24,7 @@ Pontos fortes:
 Lacunas principais:
 
 - limite fixo de itens e cortes antecipados (50/100) podem distorcer percepção;
-- gráfico usa “primeira ocorrência por data” em vez de agregação;
+- grafico usa "primeira ocorrencia por data" em vez de agregacao;
 - estado de loading inferido por `receipts.length === 0` em hook de busca.
 
 ---
@@ -82,7 +82,7 @@ Série:
 ### 3.4 UX e renderização
 
 - `UniversalSearchBar` com seleção de ordem e período;
-- botão “Gráfico” visível quando há query e resultados;
+- botao "Grafico" visivel quando ha query e resultados;
 - `PriceChart` carregado sob demanda (`lazy` + `Suspense`).
 
 ---
@@ -125,7 +125,7 @@ Série:
 
 1. Truncamento em duas etapas (50 antes da busca vazia, 100 no final)
 - pode esconder itens relevantes;
-- dificulta diagnóstico de “não apareceu na busca” dependendo do caminho.
+- dificulta diagnostico de "nao apareceu na busca" dependendo do caminho.
 
 2. Série temporal sem agregação por dia
 - múltiplas compras no mesmo dia podem ser representadas por um valor arbitrário (primeiro match).
@@ -156,7 +156,7 @@ Série:
 ### P1
 
 4. Agregação de preço por dia no gráfico
-- média/mediana por produto-dia em vez de “primeira ocorrência”.
+- media/mediana por produto-dia em vez de "primeira ocorrencia".
 
 5. Métrica de dispersão de preço
 - adicionar min/max/variação no período para cada grupo.
@@ -178,4 +178,23 @@ Série:
 
 A base do módulo de preços é boa e modular.  
 O maior ganho imediato está em corrigir truncamentos e melhorar a fidelidade da série temporal no gráfico.
+
+
+---
+
+## 8) Status Atualizado (2026-04-01)
+
+### Melhorias ja implementadas
+
+- [x] Remocao de truncamentos silenciosos no hook de filtro.
+- [x] Paginacao visivel no SearchTab com "Carregar mais" e contador exibido.
+- [x] Estado de loading real vindo de `useAllReceiptsQuery` na UI.
+- [x] Teste de regressao para garantir ausencia de corte interno no hook.
+
+### Melhorias ainda pendentes
+
+- [ ] Agregacao diaria correta no grafico (media/mediana por produto-dia).
+- [ ] Metricas de dispersao de preco (min/max/variacao).
+- [ ] Busca/ranking mais avancados para Precos.
+- [ ] Drill-down no grafico para receipts de origem.
 
