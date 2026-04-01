@@ -1,4 +1,5 @@
 import { toast } from "react-hot-toast";
+import { formatBRL } from "./currency";
 import type { Receipt, ReceiptItem } from "../types/domain";
 
 /**
@@ -41,10 +42,10 @@ export const exportToCSV = (items: Receipt[]) => {
       receipt.date,
       receipt.establishment,
       item.name,
-      item.qty || "1",
+      item.quantity || 1,
       item.unit || "un",
-      item.unitPrice || "0,00",
-      item.total || "0,00",
+      formatBRL(item.price || 0),
+      formatBRL(item.total || 0),
     ]),
   );
 

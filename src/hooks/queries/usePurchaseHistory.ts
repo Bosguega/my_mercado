@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { parseToDate } from "../../utils/date";
-import { toNumber, toText } from "../../utils/shoppingList";
+import { toText } from "../../utils/shoppingList";
 import { normalizeKey } from "../../utils/normalize";
 import type { Receipt, ReceiptItem } from "../../types/domain";
 
@@ -75,9 +75,9 @@ export function usePurchaseHistory(savedReceipts: Receipt[]): UsePurchaseHistory
 
           if (!key) continue;
 
-          const quantity = toNumber(current.qty ?? current.quantity, 1);
-          const unitPrice = toNumber(current.unitPrice ?? current.price, 0);
-          const total = toNumber(current.total, unitPrice * (quantity || 1));
+          const quantity = current.quantity || 1;
+          const unitPrice = current.price || 0;
+          const total = current.total ?? unitPrice * quantity;
 
           const list = map.get(key) || [];
           list.push({

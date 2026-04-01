@@ -10,10 +10,61 @@ import type { Receipt } from "../types/domain";
 import type { HistoryFilters, SearchFilters } from "../types/ui";
 import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from "date-fns";
 
+// ==============================
+// Funções Genéricas
+// ==============================
+
 /**
- * Filtra receipts por termo de busca
+ * Filtra items por termo de busca em múltiplos campos
  */
-export function filterBySearch(receipts: Receipt[], search: string): Receipt[] {
+export function filterBySearch<T extends object>(
+  items: T[],
+  query: string,
+  fields: (keyof T)[],
+): T[] {
+  if (!query) return items;
+
+  const q = query.toLowerCase();
+
+  return items.filter((item) =>
+    fields.some((field) => {
+      const value = (item as Record<string, unknown>)[field as string];
+      return String(value ?? "").toLowerCase().includes(q);
+    })
+  );
+}
+
+/**
+ * Ordena items por critério com suporte a custom sorters
+ */
+export function sortItems<T extends object>(
+  items: T[],
+  sortBy: string,
+  direction: "asc" | "desc",
+  customSorters: Record<string, (a: T, b: T) => number> = {},
+): T[] {
+  const sorted = [...items];
+
+  if (customSorters[sortBy]) {
+    sorted.sort((a, b) =>
+      direction === "asc"
+        ? customSorters[sortBy](a, b)
+        : customSorters[sortBy](b, a)
+    );
+    return sorted;
+  }
+
+  return sorted;
+}
+
+// ==============================
+// Funções Específicas para Receipts
+// ==============================
+
+/**
+ * Filtra receipts por termo de busca (estabelecimento)
+ */
+export function filterReceiptsBySearch(receipts: Receipt[], search: string): Receipt[] {
   if (!search.trim()) return receipts;
   const searchLower = search.toLowerCase();
   return receipts.filter((receipt) =>
@@ -125,11 +176,11 @@ export function sortReceipts(
     }
     if (sortBy === "value") {
       const totalA = a.items.reduce(
-        (acc, item) => acc + parseBRL(item.price || "0") * parseBRL(String(item.quantity || item.qty || 1)),
+        (acc, item) => acc + parseBRL(item.price || "0") * (item.quantity || 1),
         0
       );
       const totalB = b.items.reduce(
-        (acc, item) => acc + parseBRL(item.price || "0") * parseBRL(String(item.quantity || item.qty || 1)),
+        (acc, item) => acc + parseBRL(item.price || "0") * (item.quantity || 1),
         0
       );
       return sortOrder === "asc" ? totalA - totalB : totalB - totalA;
@@ -151,64 +202,11 @@ export function applyReceiptFilters(
   search: string,
   filters: HistoryFilters
 ): { items: Receipt[]; totalCount: number } {
-  let filtered = filterBySearch(receipts, search);
+  let filtered = filterReceiptsBySearch(receipts, search);
   filtered = filterByPeriod(filtered, filters.period, filters.startDate, filters.endDate);
   filtered = sortReceipts(filtered, filters.sortBy, filters.sortOrder);
   return {
     items: filtered.slice(0, 50),
     totalCount: filtered.length,
   };
-}
-
-/**
- * Filtra items por termo de busca em múltiplos campos
- */
-export function filterItemsBySearch<T extends Record<string, unknown>>(
-  items: T[],
-  search: string,
-  fields: (keyof T)[]
-): T[] {
-  if (!search.trim()) return items;
-  const searchLower = search.toLowerCase();
-  return items.filter((item) =>
-    fields.some((field) => {
-      const value = item[field];
-      if (typeof value === "string") {
-        return value.toLowerCase().includes(searchLower);
-      }
-      return false;
-    })
-  );
-}
-
-/**
- * Ordena items por critério
- */
-export function sortItems<T extends Record<string, unknown>>(
-  items: T[],
-  sortBy: string,
-  sortDirection: "asc" | "desc",
-  customSorters?: Record<string, (a: T, b: T) => number>
-): T[] {
-  return [...items].sort((a, b) => {
-    if (customSorters?.[sortBy]) {
-      const result = customSorters[sortBy](a, b);
-      return sortDirection === "asc" ? result : -result;
-    }
-
-    const aValue = a[sortBy];
-    const bValue = b[sortBy];
-
-    if (typeof aValue === "string" && typeof bValue === "string") {
-      return sortDirection === "asc"
-        ? aValue.localeCompare(bValue)
-        : bValue.localeCompare(aValue);
-    }
-
-    if (typeof aValue === "number" && typeof bValue === "number") {
-      return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
-    }
-
-    return 0;
-  });
 }

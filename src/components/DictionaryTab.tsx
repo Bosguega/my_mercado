@@ -18,7 +18,7 @@ import {
 } from "../services";
 import { Skeleton } from "./Skeleton";
 import { toast } from "react-hot-toast";
-import { filterBySearch, sortItems } from "../utils/analytics";
+import { filterBySearch, sortItems } from "../utils/filters";
 import type { SortDirection, ConfirmDialogConfig } from "../types/ui";
 import type { DictionaryEntry /*, Receipt, ReceiptItem */ } from "../types/domain";
 import { useAllReceiptsQuery } from "../hooks/queries/useReceiptsQuery";

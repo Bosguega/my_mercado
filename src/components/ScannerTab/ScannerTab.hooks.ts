@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import { toast } from "react-hot-toast";
-import { parseBRL, formatBRL } from "../../utils/currency";
+import { parseBRL } from "../../utils/currency";
 import { validateManualItem } from "../../utils/validation";
 import { useScannerStore } from "../../stores/useScannerStore";
 import type { Receipt, ReceiptItem } from "../../types/domain";
@@ -107,7 +107,7 @@ export function useManualReceipt({
   const calculateReceiptTotal = useCallback((items: ReceiptItem[]) => {
     return items.reduce((acc: number, curr: ReceiptItem) => {
       if (curr.total != null) return acc + parseBRL(curr.total);
-      return acc + parseBRL(curr.price || "0") * parseBRL(String(curr.quantity || curr.qty || 1));
+      return acc + parseBRL(curr.price || "0") * (curr.quantity || 1);
     }, 0);
   }, []);
 
@@ -128,11 +128,9 @@ export function useManualReceipt({
 
     const newItem: ReceiptItem = {
       name: name.trim(),
-      qty: qtyNum,
-      unitPrice: formatBRL(priceNum),
-      total: formatBRL(totalNum),
       quantity: qtyNum,
       price: priceNum,
+      total: totalNum,
     };
 
     setManualData({ ...manualData, items: [newItem, ...manualData.items] });

@@ -87,7 +87,7 @@ export function useSearchChartData(
           }
         );
         if (match) {
-          dataPoint[itemName] = parseBRL(match.price || match.unitPrice);
+          dataPoint[itemName] = parseBRL(match.price);
         }
       });
       return dataPoint;

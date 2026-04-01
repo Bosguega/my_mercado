@@ -3,6 +3,22 @@ export interface SessionUser {
   email?: string | null;
 }
 
+/**
+ * Item de receipt no formato RAW (output do parser)
+ * Todos os valores numéricos são strings no formato brasileiro
+ */
+export interface RawReceiptItem {
+  name: string;
+  qty: string;
+  unit: string;
+  unitPrice: string;
+  total: string;
+}
+
+/**
+ * Item de receipt processado (formato DB/estado da aplicação)
+ * Valores numéricos normalizados como numbers
+ */
 export interface ReceiptItem {
   id?: string;
   name: string;
@@ -10,24 +26,26 @@ export interface ReceiptItem {
   normalized_name?: string;
   category?: string;
   canonical_product_id?: string;
-  qty?: string | number;
-  quantity?: string | number;
+  quantity: number;
   unit?: string;
-  unitPrice?: string | number;
-  price?: string | number;
-  total?: string | number;
-  [key: string]: unknown;
+  price: number;
+  total?: number;
 }
 
+/**
+ * Receipt (nota fiscal)
+ */
 export interface Receipt {
   id: string;
   establishment: string;
   date: string;
   items: ReceiptItem[];
   created_at?: string;
-  [key: string]: unknown;
 }
 
+/**
+ * Entrada do dicionário de produtos
+ */
 export interface DictionaryEntry {
   key: string;
   normalized_name: string;
@@ -35,19 +53,23 @@ export interface DictionaryEntry {
   canonical_product_id?: string;
   user_id?: string;
   created_at?: string;
-  [key: string]: unknown;
 }
 
+/**
+ * Mapa do dicionário de produtos (key → dados)
+ */
 export type DictionaryMap = Record<
   string,
   {
     normalized_name?: string;
     category?: string;
     canonical_product_id?: string;
-    [key: string]: unknown;
   }
 >;
 
+/**
+ * Produto canônico (agrupa variações do mesmo produto)
+ */
 export interface CanonicalProduct {
   id: string;
   slug: string;
@@ -58,5 +80,4 @@ export interface CanonicalProduct {
   merge_count?: number;
   created_at?: string;
   updated_at?: string;
-  [key: string]: unknown;
 }

@@ -1,5 +1,5 @@
 import { formatToISO, formatToBR } from "../utils/date";
-import { parseBRL, formatBRL, calc } from "../utils/currency";
+import { calc } from "../utils/currency";
 import { startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { toUserScopedReceiptId } from "../utils/receiptId";
 import { getUserOrThrow, requireSupabase } from "./authService";
@@ -43,19 +43,14 @@ function mapDbItemToReceiptItem(item: DbItemRow): ReceiptItem {
     quantity,
     unit: item.unit ?? undefined,
     price,
-    qty: formatBRL(quantity),
-    unitPrice: formatBRL(price),
-    total: formatBRL(total),
+    total,
   };
 }
 
 /**
- * Mapeia um ReceiptItem para o formato de inserção no banco
+ * Mapeia ReceiptItem para o formato de inserção no banco
  */
 function mapReceiptItemToDb(item: ReceiptItem, receiptId: string) {
-  const qty = parseBRL(item.qty || item.quantity);
-  const price = parseBRL(item.unitPrice || item.price);
-
   return {
     receipt_id: receiptId,
     name: item.name,
@@ -63,9 +58,9 @@ function mapReceiptItemToDb(item: ReceiptItem, receiptId: string) {
     normalized_name: item.normalized_name,
     category: item.category,
     canonical_product_id: item.canonical_product_id,
-    quantity: qty,
+    quantity: item.quantity,
     unit: item.unit || "un",
-    price,
+    price: item.price,
   };
 }
 

@@ -57,8 +57,6 @@ const ScannerTab = lazyWithRetry(() => import("./components/ScannerTab"));
 const ShoppingListTab = lazyWithRetry(() => import("./components/ShoppingListTab"));
 const HistoryTab = lazyWithRetry(() => import("./components/HistoryTab"));
 const SearchTab = lazyWithRetry(() => import("./components/SearchTab"));
-// const DictionaryTab = lazy(() => import("./components/DictionaryTab"));
-// const CanonicalProductsTab = lazy(() => import("./components/CanonicalProductsTab"));
 const SettingsTab = lazyWithRetry(() => import("./components/SettingsTab"));
 
 // Componente de loading para Suspense
@@ -197,12 +195,7 @@ function App() {
   }
 
   if (!sessionUser) {
-    return (
-      <>
-        <Login setSessionUser={setSessionUser} />
-        <Toaster position="top-center" toastOptions={{ style: { background: "rgba(15, 23, 42, 0.95)", color: "#fff", borderRadius: "12px" } }} />
-      </>
-    );
+    return <Login setSessionUser={setSessionUser} />;
   }
 
   return (

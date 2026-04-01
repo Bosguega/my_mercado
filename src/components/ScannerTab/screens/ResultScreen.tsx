@@ -10,9 +10,9 @@ export function ResultScreen({ currentReceipt, onReset, calculateReceiptTotal }:
   const displayDate = formatToBR(currentReceipt.date) || currentReceipt.date;
 
   const formatItemTotal = (item: ReceiptItem) => {
-    if (item.total) return item.total;
+    if (item.total) return formatBRL(item.total);
     const price = parseBRL(item.price || 0);
-    const quantity = parseBRL(item.quantity || item.qty || 1);
+    const quantity = parseBRL(item.quantity || 1);
     return formatBRL(price * quantity);
   };
 
@@ -191,8 +191,8 @@ export function ResultScreen({ currentReceipt, onReset, calculateReceiptTotal }:
                     }}
                   >
                     {item.normalized_name
-                      ? `${item.qty} x R$ ${item.unitPrice}`
-                      : `${item.qty} x R$ ${item.unitPrice}`}
+                      ? `${item.quantity} x R$ ${formatBRL(item.price)}`
+                      : `${item.quantity} x R$ ${formatBRL(item.price)}`}
                   </div>
                 </div>
                 <div

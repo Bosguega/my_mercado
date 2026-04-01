@@ -1,4 +1,4 @@
-import type { Receipt, ReceiptItem } from "../types/domain";
+import type { RawReceiptItem, Receipt } from "../types/domain";
 
 const PROXIES = [
   (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
@@ -197,7 +197,7 @@ export async function parseNFCeSP(url: string): Promise<Receipt> {
 
     let establishment = "Estabelecimento Desconhecido";
     let date = "";
-    const items: ReceiptItem[] = [];
+    const items: RawReceiptItem[] = [];
 
     const companyDiv = doc.querySelector(".txtTopo");
     if (companyDiv) {
@@ -272,7 +272,13 @@ export async function parseNFCeSP(url: string): Promise<Receipt> {
       id: accessKey || Date.now().toString(),
       establishment,
       date,
-      items,
+      items: items.map((rawItem) => ({
+        name: rawItem.name,
+        quantity: parseFloat(rawItem.qty.replace(",", ".")) || 1,
+        unit: rawItem.unit,
+        price: parseFloat(rawItem.unitPrice.replace(",", ".")) || 0,
+        total: parseFloat(rawItem.total.replace(",", ".")) || 0,
+      })),
     };
   } catch (error) {
     console.error("Erro ao parsear NFC-e:", error);

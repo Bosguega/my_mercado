@@ -2,31 +2,36 @@ import { getDictionary, updateDictionary, getCanonicalProducts, createCanonicalP
 import { callAI } from "../utils/aiClient";
 import { normalizeKey } from "../utils/normalize";
 import { stripVariableInfo, cleanAIName } from "../utils/stringUtils";
+import { toNumber } from "../utils/shoppingList";
 import type { AiNormalizationResult } from "../types/ai";
-import type { DictionaryMap, ReceiptItem } from "../types/domain";
+import type { DictionaryMap, RawReceiptItem, ReceiptItem } from "../types/domain";
 
 const isDev = import.meta.env.DEV;
-
-// ==============================
-// Conversao numerica
-// ==============================
-
-function toNumber(value: string | number | null | undefined, fallback = 0): number {
-  if (value === null || value === undefined || value === "") return fallback;
-
-  if (typeof value === "number") return Number.isNaN(value) ? fallback : value;
-
-  const num = parseFloat(String(value).replace(",", "."));
-  return Number.isNaN(num) ? fallback : num;
-}
 
 // ==============================
 // Pipeline principal
 // ==============================
 
-type ItemWithKey = ReceiptItem & { normalized_key: string };
+/**
+ * Converte RawReceiptItem (parser output) para ReceiptItem (DB format)
+ */
+function rawToProcessed(item: RawReceiptItem): ReceiptItem {
+  const quantity = toNumber(item.qty, 1);
+  const unitPrice = toNumber(item.unitPrice, 0);
+  const totalValue = quantity * unitPrice;
 
-export async function processItemsPipeline(rawItems: ReceiptItem[] = []): Promise<ReceiptItem[]> {
+  return {
+    name: item.name,
+    quantity,
+    unit: item.unit || "UN",
+    price: unitPrice,
+    total: totalValue,
+  };
+}
+
+type ItemWithKey = RawReceiptItem & { normalized_key: string; id?: string };
+
+export async function processItemsPipeline(rawItems: RawReceiptItem[] = []): Promise<ReceiptItem[]> {
   if (!rawItems.length) return [];
 
   // Carregar produtos VIP existentes para o Auto-Match
@@ -148,15 +153,10 @@ export async function processItemsPipeline(rawItems: ReceiptItem[] = []): Promis
   const finalItems: ReceiptItem[] = itemsWithKey.map((item) => {
     const dictEntry = dictionary[item.normalized_key] || aiMap[item.normalized_key];
 
-    const quantity = toNumber(item.qty, 1);
-    const unitPrice = toNumber(item.unitPrice, 0);
-    const totalValue = quantity * unitPrice;
-
-    const fmtQty = quantity.toString().replace(".", ",");
-    const fmtPrice = unitPrice.toFixed(2).replace(".", ",");
-    const fmtTotal = totalValue.toFixed(2).replace(".", ",");
+    const { quantity, price, total } = rawToProcessed(item);
 
     return {
+      id: item.id,
       name: item.name,
       normalized_key: item.normalized_key,
       normalized_name: dictEntry?.normalized_name || item.name,
@@ -164,10 +164,8 @@ export async function processItemsPipeline(rawItems: ReceiptItem[] = []): Promis
       canonical_product_id: dictEntry?.canonical_product_id,
       quantity,
       unit: item.unit || "UN",
-      price: unitPrice,
-      qty: fmtQty,
-      unitPrice: fmtPrice,
-      total: fmtTotal,
+      price,
+      total,
     };
   });
 

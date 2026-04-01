@@ -1,16 +1,7 @@
-import { useState } from "react";
-import { LineChart as LineChartIcon, ArrowLeft } from "lucide-react";
+import { useState, lazy, Suspense } from "react";
+import { LineChart as LineChartIcon } from "lucide-react";
 import UniversalSearchBar from "./UniversalSearchBar";
 import { PeriodSelector, PeriodDatePickers } from "./PeriodSelector";
-import {
-  LineChart as RechartsLineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 import type { SearchSortBy } from "../types/ui";
 import { useUiStore } from "../stores/useUiStore";
 import { useAllReceiptsQuery } from "../hooks/queries/useReceiptsQuery";
@@ -19,100 +10,19 @@ import { useSearchItems } from "../hooks/queries/useSearchItems";
 import { useFilteredSearchItems } from "../hooks/queries/useFilteredSearchItems";
 import { useSearchChartData } from "../hooks/queries/useSearchChartData";
 import { SearchItemRow } from "./SearchItemRow";
-import { Skeleton } from "./Skeleton";
+import { SearchItemSkeleton } from "./SearchItemSkeleton";
 
-// =========================
-// COMPONENTE DE GRÁFICO
-// =========================
+// Lazy loading do gráfico (recharts ~200KB)
+const PriceChart = lazy(() => import("./PriceChart"));
 
-interface PriceChartProps {
-  chartData: Array<Record<string, string | number>>;
-  groupedItems: Record<string, unknown[]>;
-  onBack: () => void;
-}
-
-function PriceChart({ chartData, groupedItems, onBack }: PriceChartProps) {
-  const colors = [
-    "#3b82f6",
-    "#10b981",
-    "#f43f5e",
-    "#f59e0b",
-    "#8b5cf6",
-    "#ec4899",
-    "#14b8a6",
-    "#f97316",
-  ];
-
-  return (
-    <div className="glass-card" style={{ padding: "1.25rem" }}>
-      <button
-        className="btn"
-        onClick={onBack}
-        style={{
-          marginBottom: "1.5rem",
-          background: "rgba(255,255,255,0.05)",
-          boxShadow: "none",
-          color: "#94a3b8",
-          padding: "0.5rem 1rem",
-          fontSize: "0.85rem",
-        }}
-      >
-        <ArrowLeft size={16} /> Voltar
-      </button>
-      <h3
-        style={{ marginBottom: "1.5rem", color: "#fff", fontSize: "1.2rem" }}
-      >
-        Tendência de Preços
-      </h3>
-
-      <div style={{ width: "100%", height: 300, marginTop: "1rem" }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <RechartsLineChart data={chartData}>
-            <CartesianGrid
-              stroke="#1e293b"
-              strokeDasharray="5 5"
-              vertical={false}
-            />
-            <XAxis
-              dataKey="date"
-              stroke="#475569"
-              fontSize={10}
-              tickMargin={10}
-            />
-            <YAxis
-              stroke="#475569"
-              fontSize={10}
-              tickFormatter={(value) => `R$${value}`}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "rgba(15, 23, 42, 0.9)",
-                border: "1px solid var(--card-border)",
-                borderRadius: "12px",
-                fontSize: "0.8rem",
-              }}
-              itemStyle={{ padding: "2px 0" }}
-              cursor={{ stroke: "#334155" }}
-            />
-            {Object.keys(groupedItems).map((itemName, idx) => (
-              <Line
-                key={itemName}
-                type="monotone"
-                name={itemName}
-                dataKey={itemName}
-                stroke={colors[idx % colors.length]}
-                strokeWidth={2}
-                dot={{ r: 3, fill: colors[idx % colors.length] }}
-                activeDot={{ r: 5 }}
-                connectNulls
-              />
-            ))}
-          </RechartsLineChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  );
-}
+// Componente de loading para Suspense
+const ChartSkeleton = () => (
+  <div className="glass-card" style={{ padding: "1.25rem", textAlign: "center" }}>
+    <div className="skeleton-line" style={{ width: "100px", height: "36px", margin: "0 auto 1.5rem" }} />
+    <div className="skeleton-line" style={{ width: "200px", height: "24px", margin: "0 auto 1.5rem" }} />
+    <div className="skeleton-line" style={{ width: "100%", height: "300px" }} />
+  </div>
+);
 
 // =========================
 // COMPONENTE PRINCIPAL
@@ -169,11 +79,13 @@ function SearchTab() {
   // =========================
   if (showChart) {
     return (
-      <PriceChart
-        chartData={chartData}
-        groupedItems={groupedItems}
-        onBack={() => setShowChart(false)}
-      />
+      <Suspense fallback={<ChartSkeleton />}>
+        <PriceChart
+          chartData={chartData}
+          groupedItems={groupedItems}
+          onBack={() => setShowChart(false)}
+        />
+      </Suspense>
     );
   }
 
@@ -240,16 +152,7 @@ function SearchTab() {
       <div className="items-list">
         {showSkeleton ? (
           [...Array(6)].map((_, i) => (
-            <div key={i} className="item-row" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", display: "flex", padding: "1rem", marginBottom: "0.5rem", borderRadius: "1rem" }}>
-              <div style={{ flex: 1 }}>
-                <Skeleton width="60%" height="18px" style={{ marginBottom: "8px" }} />
-                <Skeleton width="40%" height="14px" />
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <Skeleton width="80px" height="20px" style={{ marginBottom: "4px" }} />
-                <Skeleton width="40px" height="12px" style={{ marginLeft: "auto" }} />
-              </div>
-            </div>
+            <SearchItemSkeleton key={i} />
           ))
         ) : filteredItems.length === 0 ? (
           <div

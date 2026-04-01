@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent } from "react";
+import { useId, useState, useMemo, type FormEvent } from "react";
 import { Eraser, ListChecks, Plus, Trash2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useAllReceiptsQuery } from "../hooks/queries/useReceiptsQuery";
@@ -36,7 +36,10 @@ function ShoppingListTab() {
     },
   );
 
-  const shoppingItems = sanitizeShoppingList(rawShoppingItems);
+  const shoppingItems = useMemo(
+    () => sanitizeShoppingList(rawShoppingItems),
+    [rawShoppingItems]
+  );
 
   const addItem = useShoppingListStore((state) => state.addItem);
   const toggleChecked = useShoppingListStore((state) => state.toggleChecked);

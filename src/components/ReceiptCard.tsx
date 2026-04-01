@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback } from "react";
 import { Trash2, ChevronDown, ChevronUp } from "lucide-react";
-import { parseBRL } from "../utils/currency";
+import { parseBRL, formatBRL } from "../utils/currency";
 import { calculateReceiptTotal } from "../utils/analytics";
 import { formatToBR } from "../utils/date";
 import type { Receipt, ReceiptItem } from "../types/domain";
@@ -205,7 +205,7 @@ export const ReceiptCard = React.memo(function ReceiptCard({
                                 >
                                     {item.normalized_name
                                         ? item.name
-                                        : `${item.qty} x R$ ${item.unitPrice}`}
+                                        : `${item.quantity} x R$ ${formatBRL(item.price)}`}
                                 </div>
                                 {item.normalized_name && (
                                     <div
@@ -214,7 +214,7 @@ export const ReceiptCard = React.memo(function ReceiptCard({
                                             color: "#94a3b8",
                                         }}
                                     >
-                                        {item.qty} x R$ {item.unitPrice}
+                                        {item.quantity} x R$ {formatBRL(item.price)}
                                     </div>
                                 )}
                             </div>

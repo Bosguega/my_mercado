@@ -1,3 +1,6 @@
+import { toStoreSlug } from './stringUtils';
+import { normalizeManualDate } from './date';
+
 const USER_SCOPE_SEPARATOR = '__u_';
 
 function normalizeReceiptId(rawId: string | number | null | undefined): string {
@@ -26,23 +29,10 @@ export function getReceiptIdCandidates(
   return [...new Set([scopedId, baseId])];
 }
 
+/**
+ * Gera um ID único para receipt manual
+ */
 export function generateManualReceiptId(establishment: string, dateStr: string): string {
-  const toStoreSlug = (value: string) => {
-    return (value || '')
-      .toString()
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, '_')
-      .replace(/[^a-z0-9_]/g, '') || 'mercado';
-  };
-
-  const normalizeManualDate = (value: string) => {
-    const match = (value || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-    if (!match) return 'data';
-    const [, dd, mm, yyyy] = match;
-    return `${yyyy}${mm}${dd}`;
-  };
-
   const randomSuffix = (globalThis.crypto?.randomUUID?.() ||
     `${Date.now()}_${Math.random().toString(16).slice(2)}`).replace(/-/g, '').slice(0, 12);
 

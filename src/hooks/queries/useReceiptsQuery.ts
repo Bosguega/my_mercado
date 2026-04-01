@@ -127,7 +127,15 @@ export function useSaveReceipt() {
             if (import.meta.env.DEV) {
               console.log('💾 [SaveReceipt] Processando items...');
             }
-            const processedItems = await processItemsPipeline(receipt.items || []);
+            // Converter ReceiptItem para RawReceiptItem para o pipeline
+            const rawItems = (receipt.items || []).map((item) => ({
+              name: item.name,
+              qty: item.quantity.toString().replace('.', ','),
+              unit: item.unit || 'UN',
+              unitPrice: item.price.toString().replace('.', ','),
+              total: (item.total ?? item.price * item.quantity).toString().replace('.', ','),
+            }));
+            const processedItems = await processItemsPipeline(rawItems);
             const fullReceipt = { ...receipt, id: receiptId, items: processedItems };
 
             // Salvar no banco

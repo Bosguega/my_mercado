@@ -4,6 +4,7 @@
  */
 
 import { getApiKey, getApiModel, detectProvider } from "./aiConfig";
+import { CATEGORIES } from "../constants/domain";
 import type { AiNormalizationInput, AiNormalizationResult } from "../types/ai";
 
 // ==============================
@@ -12,6 +13,7 @@ import type { AiNormalizationInput, AiNormalizationResult } from "../types/ai";
 
 function buildPrompt(items: AiNormalizationInput[]): string {
   const list = items.map((i) => `- key: "${i.key}", raw: "${i.raw}"`).join("\n");
+  const categoriesList = CATEGORIES.join(", ");
 
   return `Voce e um especialista em normalizar nomes de produtos de supermercado brasileiro.
 Para cada item abaixo, converta o nome bruto (muitas vezes abreviado e em letras maiusculas) em um nome amigavel, legivel e bem formatado.
@@ -21,7 +23,7 @@ REGRAS:
 2. MANTENHA variantes importantes (ex: Zero, Integral, Desnatado, Sem Lactose, Diet, Light).
 3. Converta abreviacoes comuns para o nome completo (ex: "CERV" -> "Cerveja", "LTA" -> "Lata", "BISC" -> "Biscoito", "REFR" -> "Refrigerante").
 4. Use Title Case (Primeira Letra Maiuscula).
-5. Categorize em: Acougue, Hortifruti, Laticinios, Padaria, Limpeza, Higiene, Bebidas, Mercearia, Petshop, Outros.
+5. Categorize em: ${categoriesList}.
 6. IDENTIFIQUE a marca (Brand) se houver (ex: Nestlé, Brahma). Se não houver, use null.
 7. GERE um slug único simplificado (ex: arroz_tio_joao_5kg).
 
@@ -131,17 +133,6 @@ async function callOpenAI(
 // ==============================
 // PARSE HELPER
 // ==============================
-
-function _isAiNormalizationResult(value: unknown): value is AiNormalizationResult {
-  if (!value || typeof value !== "object") return false;
-
-  const candidate = value as Record<string, unknown>;
-  return (
-    typeof candidate.key === "string" &&
-    typeof candidate.normalized_name === "string" &&
-    typeof candidate.category === "string"
-  );
-}
 
 function parseJsonFromText(text: string): AiNormalizationResult[] {
   // Remove possible markdown ```json ... ``` wrapper

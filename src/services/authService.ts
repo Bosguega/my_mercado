@@ -13,6 +13,51 @@ export function requireSupabase() {
 }
 
 /**
+ * Realiza login com email e senha
+ */
+export async function login(email: string, password: string) {
+  const client = requireSupabase();
+  const { data, error } = await client.auth.signInWithPassword({
+    email,
+    password,
+  });
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Realiza cadastro com email e senha
+ */
+export async function register(email: string, password: string) {
+  const client = requireSupabase();
+  const { data, error } = await client.auth.signUp({
+    email,
+    password,
+  });
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Realiza logout do usuário
+ */
+export async function logout() {
+  const client = requireSupabase();
+  const { error } = await client.auth.signOut();
+  if (error) throw error;
+}
+
+/**
+ * Obtém o usuário autenticado ou null
+ */
+export async function getCurrentUser() {
+  const client = requireSupabase();
+  const { data: { session }, error } = await client.auth.getSession();
+  if (error) throw error;
+  return session?.user || null;
+}
+
+/**
  * Obtém o usuário autenticado ou lança erro
  */
 export async function getUserOrThrow() {
@@ -38,7 +83,7 @@ export async function isAuthenticated(): Promise<boolean> {
 }
 
 /**
- * Obtém o usuário autenticado ou null
+ * Obtém o usuário autenticado ou null (alias para getCurrentUser)
  */
 export async function getUserOrNull() {
   try {

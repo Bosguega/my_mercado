@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { parseBRL } from "../../utils/currency";
 import { parseToDate } from "../../utils/date";
-import { filterBySearch, sortItems } from "../../utils/analytics";
+import { filterBySearch, sortItems } from "../../utils/filters";
 import { filterItemsByPeriod } from "../../utils/filters";
 import type { PurchasedItem, SearchSortBy, SortDirection } from "../../types/ui";
 import type { SearchFilters } from "../../types/ui";

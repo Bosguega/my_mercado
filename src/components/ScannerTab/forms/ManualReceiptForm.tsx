@@ -153,7 +153,7 @@ export function ManualReceiptForm({
                   {it.name}
                 </span>
                 <span className="item-meta">
-                  {it.qty} x R$ {it.unitPrice}
+                  {it.quantity} x R$ {formatBRL(it.price)}
                 </span>
               </div>
               <div className="item-total" style={{ fontSize: "1.1rem" }}>

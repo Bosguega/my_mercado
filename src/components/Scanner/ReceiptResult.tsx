@@ -70,7 +70,7 @@ export function ReceiptResult({ receipt, onNewScan }: ReceiptResultProps) {
                                 }}
                             >
                                 <span className="item-meta">
-                                    R$ {item.unitPrice ?? formatBRL(item.price)} un x {item.qty ?? item.quantity}
+                                    R$ {formatBRL(item.price)} un x {item.quantity}
                                 </span>
                                 {item.category && (
                                     <span

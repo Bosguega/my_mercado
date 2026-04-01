@@ -88,7 +88,7 @@ export const SearchItemRow: React.FC<SearchItemRowProps> = ({ item }) => {
             fontSize: "1.2rem",
           }}
         >
-          R$ {parseBRL(item.unitPrice).toFixed(2).replace(".", ",")}
+          R$ {parseBRL(item.price).toFixed(2).replace(".", ",")}
         </div>
         <div style={{ fontSize: "0.7rem", color: "#475569" }}>
           por {item.unit || "un."}

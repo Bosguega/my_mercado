@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { toast } from "react-hot-toast";
 import { useReceiptScanner } from "../../hooks/useReceiptScanner";
 import { useReceiptsSessionStore } from "../../stores/useReceiptsSessionStore";
 import { useUiStore } from "../../stores/useUiStore";
@@ -9,7 +10,7 @@ import { LoadingScreen } from "./screens/LoadingScreen";
 import { ResultScreen } from "./screens/ResultScreen";
 import { ManualReceiptForm } from "./forms/ManualReceiptForm";
 import { DuplicateModal } from "./modals/DuplicateModal";
-import { useScannerState, useManualReceipt } from "./ScannerTab.hooks";
+import type { Receipt } from "../../types/domain";
 import type { SaveReceiptResponse } from "./ScannerTab.types";
 
 function ScannerTab() {
@@ -20,7 +21,7 @@ function ScannerTab() {
   // Wrapper para adaptar a interface da mutation do React Query
   const saveReceipt = useCallback(
     async (
-      receipt: Parameters<typeof saveReceiptMutation.mutateAsync>[0]["receipt"],
+      receipt: Receipt,
       forceReplace?: boolean
     ): Promise<SaveReceiptResponse> => {
       const result = await saveReceiptMutation.mutateAsync({
@@ -41,49 +42,93 @@ function ScannerTab() {
   );
 
   const {
-    manualMode,
-    setManualMode,
-    manualData,
-    setManualData,
-    manualItem,
-    setManualItem,
     currentReceipt,
-    duplicateReceipt,
-    handleReset,
-    handleSetDuplicateReceipt,
-  } = useScannerState({ _saveReceipt: saveReceipt, _tab: tab });
-
-  // Debug do currentReceipt
-  if (import.meta.env.DEV && currentReceipt) {
-    console.log('[ScannerTab] currentReceipt is SET:', currentReceipt.id);
-  }
-
-  const { calculateReceiptTotal, handleAddManualItem, handleSaveManualReceipt } = useManualReceipt({
-    manualData,
-    manualItem,
-    setManualData,
-    setManualItem,
-    saveReceipt,
-    onReset: handleReset,
-  });
-
-  const {
-    startCamera,
-    stopCamera,
-    handleFileUpload,
+    setCurrentReceipt,
     loading,
     scanning,
     error,
-    handleUrlSubmit,
+    duplicateReceipt,
+    setDuplicateReceipt,
+    manualMode,
+    setManualMode,
+    manualData,
+    manualItem,
+    setManualItem,
     torch,
     torchSupported,
+    startCamera,
+    stopCamera,
     applyTorch,
-    handleForceSaveDuplicate,
+    handleScanSuccess,
+    handleAddManualItem,
+    handleSaveManualReceipt,
+    handleCancelManualReceipt,
+    getDefaultManualData,
   } = useReceiptScanner({ saveReceipt, tab });
 
   // Estados derivados
   const isLoading = loading;
   const isScanning = scanning;
+
+  // Handler de upload de arquivo
+  const handleFileUpload = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      try {
+        const imageUrl = URL.createObjectURL(file);
+        // Processar arquivo como URL para o QR Code
+        await handleScanSuccess(imageUrl);
+        URL.revokeObjectURL(imageUrl);
+      } catch (err) {
+        console.error('Erro ao processar arquivo:', err);
+      }
+    },
+    [handleScanSuccess]
+  );
+
+  // Handler de URL
+  const handleUrlSubmit = useCallback(
+    async (url: string) => {
+      await handleScanSuccess(url);
+    },
+    [handleScanSuccess]
+  );
+
+  // Handler de reset
+  const handleReset = useCallback(() => {
+    setCurrentReceipt(null);
+    stopCamera();
+  }, [setCurrentReceipt, stopCamera]);
+
+  // Handler de duplicata
+  const handleSetDuplicateReceipt = useCallback(
+    (receipt: typeof duplicateReceipt) => {
+      setDuplicateReceipt(receipt);
+    },
+    [setDuplicateReceipt]
+  );
+
+  const handleForceSaveDuplicate = useCallback(async () => {
+    if (!duplicateReceipt) return;
+
+    // Re-salvar com forceReplace
+    const result = await saveReceipt(duplicateReceipt, true);
+    if ("success" in result && result.success) {
+      setCurrentReceipt(result.receipt);
+      setDuplicateReceipt(null);
+      toast.success('Nota atualizada com sucesso!');
+    }
+  }, [duplicateReceipt, saveReceipt, setCurrentReceipt, setDuplicateReceipt]);
+
+  // Calcular total do receipt
+  const calculateReceiptTotal = useCallback(
+    (items: typeof manualData.items) => {
+      return items.reduce((acc, item) => acc + (item.total || item.price * item.quantity), 0);
+    },
+    []
+  );
 
   return (
     <>
@@ -91,12 +136,12 @@ function ScannerTab() {
       {manualMode && (
         <ManualReceiptForm
           manualData={manualData}
-          setManualData={setManualData}
+          setManualData={getDefaultManualData}
           manualItem={manualItem}
           setManualItem={setManualItem}
           onAddManualItem={handleAddManualItem}
           onSaveManualReceipt={handleSaveManualReceipt}
-          onCancel={() => setManualMode(false)}
+          onCancel={handleCancelManualReceipt}
           calculateReceiptTotal={calculateReceiptTotal}
         />
       )}
@@ -113,7 +158,7 @@ function ScannerTab() {
       {/* Tela Inicial */}
       {!manualMode && !currentReceipt && !isScanning && !isLoading && (
         <IdleScreen
-          onStartCamera={startCamera}
+          onStartCamera={() => startCamera('environment', handleScanSuccess)}
           onFileUpload={handleFileUpload}
           onManualMode={() => setManualMode(true)}
           handleUrlSubmit={handleUrlSubmit}

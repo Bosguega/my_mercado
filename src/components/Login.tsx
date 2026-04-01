@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { login, register } from '../services/auth';
+import { login, register } from '../services/authService';
 import { toast } from 'react-hot-toast';
 import type { LoginProps } from '../types/ui';
 
