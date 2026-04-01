@@ -15,6 +15,21 @@ export interface ShoppingListItem {
   checked_at?: string;
 }
 
+export interface ShoppingListMeta {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ShoppingListsCloudSnapshot {
+  version: 1;
+  updated_at: string;
+  lists: ShoppingListMeta[];
+  active_list_id: string;
+  items_by_list: Record<string, ShoppingListItem[]>;
+}
+
 export interface HistoryFilters {
   period: "all" | "this-month" | "last-3-months" | "custom";
   sortBy: "date" | "value" | "store";

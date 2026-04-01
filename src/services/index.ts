@@ -53,3 +53,4 @@ export {
 
 // Sync
 export { syncLocalStorageWithSupabase } from "./syncService";
+export { syncShoppingListsWithCloud } from "./shoppingListCloudSyncService";

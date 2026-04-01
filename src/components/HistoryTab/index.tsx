@@ -15,6 +15,7 @@ import { EmptyState } from "./EmptyState";
 import { ReceiptList } from "./ReceiptList";
 import type { Receipt } from "../../types/domain";
 import type { HistoryFilters } from "../../types/ui";
+import { parseBackupJson } from "../../utils/validation/backupSchema";
 
 // =========================
 // HOOK: USE CONFIRM DIALOG
@@ -70,8 +71,11 @@ function HistoryTab() {
   // Hook unificado para filtros e dados de receipts
   const {
     receipts: savedReceipts,
-    items: filteredItems,
+    items: visibleItems,
+    allItems: filteredItems,
     totalCount,
+    hasMore,
+    loadMore,
     isLoading: loading,
     filters: historyFilters,
     setFilters: setHistoryFilters,
@@ -118,14 +122,13 @@ function HistoryTab() {
           throw new Error("Conteúdo de backup inválido");
         }
 
-        const backupData = JSON.parse(resultText);
-
-        if (!backupData.receipts || !Array.isArray(backupData.receipts)) {
-          toast.error("Arquivo de backup inválido ou corrompido");
+        const parsedBackup = parseBackupJson(resultText);
+        if (!parsedBackup.ok) {
+          toast.error(parsedBackup.error);
           return;
         }
 
-        const restoredReceipts = backupData.receipts as Receipt[];
+        const restoredReceipts = parsedBackup.data.receipts as Receipt[];
 
         open({
           title: "Restaurar backup?",
@@ -230,7 +233,7 @@ function HistoryTab() {
           />
 
           <ReceiptList
-            receipts={filteredItems}
+            receipts={visibleItems}
             expandedReceipts={expandedReceipts}
             isLoading={loading && savedReceipts.length === 0}
             onToggleExpand={handleToggleExpand}
@@ -238,6 +241,13 @@ function HistoryTab() {
             isEmpty={isEmpty}
             hasNoResults={hasNoResults}
           />
+          {hasMore && (
+            <div style={{ display: "flex", justifyContent: "center", marginTop: "1rem" }}>
+              <button className="btn" onClick={loadMore}>
+                Carregar mais
+              </button>
+            </div>
+          )}
         </>
       )}
 

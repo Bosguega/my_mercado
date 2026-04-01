@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, ReceiptText, Trash2 } from "lucide-react";
+import { ArrowRightLeft, CheckCircle2, Circle, Copy, ReceiptText, Trash2 } from "lucide-react";
 import { formatBRL } from "../utils/currency";
 import { formatToBR } from "../utils/date";
 import type { ShoppingListItem } from "../types/ui";
@@ -7,31 +7,28 @@ import type { PurchaseHistoryEntry } from "../hooks/queries/usePurchaseHistory";
 type ShoppingListItemProps = {
   item: ShoppingListItem;
   history: PurchaseHistoryEntry[];
+  historyMatchType?: "exact" | "approx" | "none";
   onToggle: () => void;
   onRemove: () => void;
+  transferOptions?: Array<{ id: string; name: string }>;
+  transferTargetId?: string;
+  onTransferTargetChange?: (targetListId: string) => void;
+  onMoveToList?: () => void;
+  onCopyToList?: () => void;
 };
 
-/**
- * ShoppingListItem - Item individual da lista de compras
- * 
- * Exibe:
- * - Nome do item e quantidade
- * - Checkbox para marcar/desmarcar
- * - Histórico de compras (últimos 3 preços)
- * - Preço médio recente
- * - Botão de remover
- * 
- * @example
- * ```tsx
- * <ShoppingListItem
- *   item={item}
- *   history={recentHistory}
- *   onToggle={() => toggleChecked(sessionUserId, item.id)}
- *   onRemove={() => removeItem(sessionUserId, item.id)}
- * />
- * ```
- */
-export function ShoppingListItem({ item, history, onToggle, onRemove }: ShoppingListItemProps) {
+export function ShoppingListItem({
+  item,
+  history,
+  historyMatchType = "none",
+  onToggle,
+  onRemove,
+  transferOptions = [],
+  transferTargetId = "",
+  onTransferTargetChange,
+  onMoveToList,
+  onCopyToList,
+}: ShoppingListItemProps) {
   const latest = history[0];
   const avgPrice =
     history.length > 0
@@ -51,7 +48,6 @@ export function ShoppingListItem({ item, history, onToggle, onRemove }: Shopping
       }}
     >
       <div style={{ display: "flex", gap: "0.8rem", alignItems: "flex-start" }}>
-        {/* Checkbox */}
         <button
           onClick={onToggle}
           style={{
@@ -67,9 +63,7 @@ export function ShoppingListItem({ item, history, onToggle, onRemove }: Shopping
           {item.checked ? <CheckCircle2 size={22} /> : <Circle size={22} />}
         </button>
 
-        {/* Conteúdo */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Header: Nome + Botão remover */}
           <div
             style={{
               display: "flex",
@@ -109,14 +103,74 @@ export function ShoppingListItem({ item, history, onToggle, onRemove }: Shopping
             </button>
           </div>
 
-          {/* Quantidade */}
           {item.quantity && (
             <p style={{ color: "#94a3b8", fontSize: "0.8rem", marginTop: "0.15rem" }}>
               Quantidade: {item.quantity}
             </p>
           )}
 
-          {/* Seção de Histórico */}
+          {transferOptions.length > 0 && (
+            <div
+              style={{
+                marginTop: "0.55rem",
+                display: "grid",
+                gridTemplateColumns: "1fr auto auto",
+                gap: "0.4rem",
+                alignItems: "center",
+              }}
+            >
+              <select
+                className="search-input"
+                value={transferTargetId}
+                onChange={(event) => onTransferTargetChange?.(event.target.value)}
+                aria-label="Selecionar lista destino"
+                style={{ minHeight: "34px", padding: "0.3rem 0.45rem" }}
+              >
+                {transferOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={onCopyToList}
+                style={{
+                  background: "rgba(59, 130, 246, 0.15)",
+                  border: "none",
+                  height: "32px",
+                  borderRadius: "8px",
+                  color: "#93c5fd",
+                  padding: "0 0.6rem",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.3rem",
+                  cursor: "pointer",
+                }}
+                title="Copiar para lista selecionada"
+              >
+                <Copy size={13} /> Copiar
+              </button>
+              <button
+                onClick={onMoveToList}
+                style={{
+                  background: "rgba(34, 197, 94, 0.14)",
+                  border: "none",
+                  height: "32px",
+                  borderRadius: "8px",
+                  color: "#86efac",
+                  padding: "0 0.6rem",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.3rem",
+                  cursor: "pointer",
+                }}
+                title="Mover para lista selecionada"
+              >
+                <ArrowRightLeft size={13} /> Mover
+              </button>
+            </div>
+          )}
+
           <div
             style={{
               marginTop: "0.65rem",
@@ -130,7 +184,8 @@ export function ShoppingListItem({ item, history, onToggle, onRemove }: Shopping
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "0.4rem",
+                justifyContent: "space-between",
+                gap: "0.6rem",
                 marginBottom: "0.35rem",
                 color: "#94a3b8",
                 fontSize: "0.76rem",
@@ -138,8 +193,36 @@ export function ShoppingListItem({ item, history, onToggle, onRemove }: Shopping
                 textTransform: "uppercase",
               }}
             >
-              <ReceiptText size={14} />
-              Últimas Compras
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+                <ReceiptText size={14} />
+                Ultimas Compras
+              </span>
+              {historyMatchType !== "none" && (
+                <span
+                  style={{
+                    fontSize: "0.68rem",
+                    textTransform: "none",
+                    borderRadius: "999px",
+                    padding: "0.12rem 0.45rem",
+                    border:
+                      historyMatchType === "exact"
+                        ? "1px solid rgba(34, 197, 94, 0.45)"
+                        : "1px solid rgba(250, 204, 21, 0.45)",
+                    background:
+                      historyMatchType === "exact"
+                        ? "rgba(34, 197, 94, 0.18)"
+                        : "rgba(250, 204, 21, 0.16)",
+                    color: historyMatchType === "exact" ? "#86efac" : "#fde68a",
+                  }}
+                  title={
+                    historyMatchType === "exact"
+                      ? "Historico encontrado por chave exata"
+                      : "Historico encontrado por aproximacao"
+                  }
+                >
+                  {historyMatchType === "exact" ? "Exato" : "Aproximado"}
+                </span>
+              )}
             </div>
 
             {latest ? (
@@ -150,10 +233,9 @@ export function ShoppingListItem({ item, history, onToggle, onRemove }: Shopping
                   /un
                 </p>
                 <p style={{ color: "#64748b", fontSize: "0.78rem", marginTop: "0.2rem" }}>
-                  Média recente: R$ {formatBRL(avgPrice)} / un
+                  Media recente: R$ {formatBRL(avgPrice)} / un
                 </p>
 
-                {/* Tags de histórico */}
                 <div
                   style={{
                     display: "flex",
@@ -181,7 +263,7 @@ export function ShoppingListItem({ item, history, onToggle, onRemove }: Shopping
               </>
             ) : (
               <p style={{ color: "#64748b", fontSize: "0.82rem" }}>
-                Ainda sem histórico de compra para este item.
+                Ainda sem historico de compra para este item.
               </p>
             )}
           </div>

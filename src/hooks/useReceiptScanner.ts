@@ -17,7 +17,7 @@ type SaveReceiptFn = (
 ) => Promise<SaveReceiptResponse>;
 
 /**
- * Hook principal do Scanner - orquestra os hooks menores
+ * Hook principal do Scanner - orquestra os hooks menores.
  */
 export function useReceiptScanner({
   saveReceipt,
@@ -27,7 +27,6 @@ export function useReceiptScanner({
   tab: AppTab;
 }) {
   const scanning = useScannerStore((state) => state.scanning);
-  const setScanning = useScannerStore((state) => state.setScanning);
   const manualMode = useScannerStore((state) => state.manualMode);
   const setManualMode = useScannerStore((state) => state.setManualMode);
   const currentReceipt = useScannerStore((state) => state.currentReceipt);
@@ -37,7 +36,6 @@ export function useReceiptScanner({
   const duplicateReceipt = useScannerStore((state) => state.duplicateReceipt);
   const setDuplicateReceipt = useScannerStore((state) => state.setDuplicateReceipt);
 
-  // Hooks especializados
   const {
     html5QrcodeRef,
     processingRef,
@@ -60,12 +58,11 @@ export function useReceiptScanner({
     getDefaultManualData,
   } = useManualReceipt(saveReceipt);
 
-  // Handler de scan sucesso (delega para o processador de QR Code)
   const handleScanSuccess = useCallback(
     async (decodedText: string) => {
       if (processingRef.current) {
         if (import.meta.env.DEV) {
-          console.log('⚠️ [Scanner] Processamento já em andamento, ignorando');
+          console.log('[Scanner] Processamento ja em andamento, ignorando');
         }
         return;
       }
@@ -76,21 +73,15 @@ export function useReceiptScanner({
     [processQRCode],
   );
 
-  // Iniciar câmera quando entrar na aba scan
+  // Nao iniciar camera automaticamente ao entrar na aba.
+  // Isso permite mostrar primeiro a tela de escolha de metodo.
   useEffect(() => {
-    if (tab === 'scan' && !manualMode && !scanning) {
-      setScanning(true);
-      // A câmera será iniciada pelo ScannerTab componente
+    if (tab !== 'scan') {
+      stopCamera();
+      setManualMode(false);
     }
+  }, [tab, stopCamera, setManualMode]);
 
-    return () => {
-      if (tab !== 'scan') {
-        stopCamera();
-      }
-    };
-  }, [tab, manualMode, scanning, setScanning, stopCamera]);
-
-  // Limpeza ao desmontar
   useEffect(() => {
     return () => {
       stopCamera();
@@ -98,7 +89,6 @@ export function useReceiptScanner({
   }, [stopCamera]);
 
   return {
-    // Estado
     currentReceipt,
     setCurrentReceipt,
     loading,
@@ -114,19 +104,15 @@ export function useReceiptScanner({
     torch,
     torchSupported,
 
-    // refs
     html5QrcodeRef,
     processingRef,
 
-    // Ações de câmera
     startCamera,
     stopCamera,
     applyTorch,
 
-    // Ações de scan
     handleScanSuccess,
 
-    // Ações manuais
     handleAddManualItem,
     handleSaveManualReceipt,
     handleCancelManualReceipt,

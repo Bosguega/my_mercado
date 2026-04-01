@@ -55,7 +55,7 @@ interface UsePurchaseHistoryReturn {
 export function usePurchaseHistory(savedReceipts: Receipt[]): UsePurchaseHistoryReturn {
   return useMemo(() => {
     const map = new Map<string, PurchaseHistoryEntry[]>();
-    const labels = new Map<string, { label: string; count: number }>();
+    const labels = new Map<string, { label: string; count: number; lastTimestamp: number }>();
 
     try {
       const safeReceipts = Array.isArray(savedReceipts) ? savedReceipts : [];
@@ -69,9 +69,9 @@ export function usePurchaseHistory(savedReceipts: Receipt[]): UsePurchaseHistory
         for (const item of receiptItems) {
           const current = item as ReceiptItem;
           const name = toText(current.normalized_name || current.name).trim();
-          const key = toText(
-            current.normalized_key || normalizeKey(name || toText(current.name))
-          ).trim();
+          const key = normalizeKey(
+            toText(current.normalized_key).trim() || name || toText(current.name),
+          );
 
           if (!key) continue;
 
@@ -96,8 +96,12 @@ export function usePurchaseHistory(savedReceipts: Receipt[]): UsePurchaseHistory
             const prev = labels.get(key);
             if (prev) {
               prev.count += 1;
+              if (timestamp > prev.lastTimestamp) {
+                prev.lastTimestamp = timestamp;
+                prev.label = name;
+              }
             } else {
-              labels.set(key, { label: name, count: 1 });
+              labels.set(key, { label: name, count: 1, lastTimestamp: timestamp });
             }
           }
         }
@@ -114,9 +118,16 @@ export function usePurchaseHistory(savedReceipts: Receipt[]): UsePurchaseHistory
           key,
           label: value.label,
           count: value.count,
+          lastTimestamp: value.lastTimestamp,
         }))
-        .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
-        .slice(0, 40);
+        .sort(
+          (a, b) =>
+            b.count - a.count ||
+            b.lastTimestamp - a.lastTimestamp ||
+            a.label.localeCompare(b.label),
+        )
+        .slice(0, 100)
+        .map(({ key, label, count }) => ({ key, label, count }));
 
       return { historyByKey: map, suggestions: suggestionItems };
     } catch (err) {

@@ -23,6 +23,11 @@ import {
 } from "../hooks/queries/useCanonicalProductsQuery";
 import type { CanonicalProduct, DictionaryEntry } from "../types/domain";
 import type { ConfirmDialogConfig } from "../types/ui";
+import {
+    parseCreateCanonicalProductInput,
+    parseUpdateCanonicalProductInput,
+    toCanonicalSlug,
+} from "../utils/validation/canonicalProduct";
 
 import { ProductSkeleton } from "./Skeleton";
 
@@ -90,43 +95,34 @@ function CanonicalProductsTab() {
     };
 
     const handleSaveEdit = async (id: string) => {
-        if (!editForm.name.trim()) {
-            toast.error("Nome é obrigatório");
-            return;
-        }
-
         try {
+            const parsed = parseUpdateCanonicalProductInput({
+                name: editForm.name,
+                category: editForm.category,
+                brand: editForm.brand,
+            });
+
             await updateProduct.mutateAsync({
                 id,
-                updates: {
-                    name: editForm.name.trim(),
-                    category: editForm.category.trim() || undefined,
-                    brand: editForm.brand.trim() || undefined,
-                },
+                updates: parsed,
             });
             setEditingId(null);
         } catch (err) {
             console.error("Erro ao atualizar:", err);
+            toast.error(err instanceof Error ? err.message : "Erro ao atualizar produto.");
         }
     };
 
     const handleCreate = async () => {
-        if (!createForm.slug.trim() || !createForm.name.trim()) {
-            toast.error("Slug e nome são obrigatórios");
-            return;
-        }
-
         try {
-            await createProduct.mutateAsync({
-                slug: createForm.slug.trim().toLowerCase().replace(/\s+/g, "_"),
-                name: createForm.name.trim(),
-                category: createForm.category.trim() || undefined,
-                brand: createForm.brand.trim() || undefined,
-            });
+            const parsed = parseCreateCanonicalProductInput(createForm);
+
+            await createProduct.mutateAsync(parsed);
             setCreateForm({ slug: "", name: "", category: "", brand: "" });
             setShowCreateForm(false);
         } catch (err) {
             console.error("Erro ao criar:", err);
+            toast.error(err instanceof Error ? err.message : "Erro ao criar produto.");
         }
     };
 
@@ -207,7 +203,7 @@ function CanonicalProductsTab() {
                             className="search-input"
                             placeholder="Slug (ex: coca_cola_2l)"
                             value={createForm.slug}
-                            onChange={(e) => setCreateForm({ ...createForm, slug: e.target.value })}
+                            onChange={(e) => setCreateForm({ ...createForm, slug: toCanonicalSlug(e.target.value) })}
                         />
                         <input
                             type="text"
@@ -513,3 +509,4 @@ function CanonicalProductsTab() {
 }
 
 export default CanonicalProductsTab;
+

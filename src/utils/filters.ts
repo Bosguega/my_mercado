@@ -206,7 +206,7 @@ export function applyReceiptFilters(
   filtered = filterByPeriod(filtered, filters.period, filters.startDate, filters.endDate);
   filtered = sortReceipts(filtered, filters.sortBy, filters.sortOrder);
   return {
-    items: filtered.slice(0, 50),
+    items: filtered,
     totalCount: filtered.length,
   };
 }

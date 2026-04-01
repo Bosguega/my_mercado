@@ -68,7 +68,7 @@ export async function applyDictionaryEntryToSavedItems(
   normalizedName: string | undefined,
   category: string | undefined
 ): Promise<{ updatedCount: number }> {
-  await getUserOrThrow();
+  const user = await getUserOrThrow();
   const client = requireSupabase();
 
   if (!key) return { updatedCount: 0 };
@@ -83,9 +83,19 @@ export async function applyDictionaryEntryToSavedItems(
 
   if (Object.keys(patch).length === 0) return { updatedCount: 0 };
 
+  const { data: receipts, error: receiptsError } = await client
+    .from("receipts")
+    .select("id")
+    .eq("user_id", user.id);
+  if (receiptsError) throw receiptsError;
+
+  const receiptIds = (receipts || []).map((entry: { id: string }) => entry.id);
+  if (receiptIds.length === 0) return { updatedCount: 0 };
+
   const { error, count } = await client
     .from("items")
     .update(patch, { count: "exact" })
+    .in("receipt_id", receiptIds)
     .eq("normalized_key", key);
 
   if (error) throw error;

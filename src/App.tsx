@@ -20,7 +20,9 @@ import type { AppTab } from "./types/ui";
 import { useReceiptsSessionStore } from "./stores/useReceiptsSessionStore";
 import { useScannerStore } from "./stores/useScannerStore";
 import { useUiStore } from "./stores/useUiStore";
+import { useShoppingListStore } from "./stores/useShoppingListStore";
 import { useAllReceiptsQuery } from "./hooks/queries/useReceiptsQuery";
+import { isShoppingListCloudSyncEnabled } from "./utils/shoppingListCloudSync";
 import "./index.css";
 
 const LAZY_RELOAD_KEY = "@MyMercado:lazy-reload-once";
@@ -95,9 +97,25 @@ function App() {
         try {
           const { syncLocalStorageWithSupabase } = await import('./services/syncService');
           const result = await syncLocalStorageWithSupabase();
+          const shouldSyncShoppingLists = isShoppingListCloudSyncEnabled();
           
           if (result.synced > 0) {
             toast.success(`${result.synced} nota(s) sincronizada(s) com a nuvem!`);
+          }
+
+          if (shouldSyncShoppingLists && sessionUser?.id) {
+            const { syncShoppingListsWithCloud } = await import(
+              "./services/shoppingListCloudSyncService"
+            );
+            const shoppingSync = await syncShoppingListsWithCloud(sessionUser.id);
+
+            if (shoppingSync.status === "pulled") {
+              toast.success("Listas de compras atualizadas com dados da nuvem.");
+            } else if (shoppingSync.status === "pushed") {
+              toast.success("Listas de compras enviadas para a nuvem.");
+            } else if (shoppingSync.status === "skipped" && import.meta.env.DEV) {
+              console.warn("Sincronizacao de listas ignorada:", shoppingSync.reason);
+            }
           }
           
           // Re-fetch para atualizar dados do Supabase
@@ -110,6 +128,65 @@ function App() {
       return () => clearTimeout(timer);
     }
   }, [sessionUser, refetch]);
+
+  useEffect(() => {
+    if (!sessionUser?.id) return;
+
+    let disposed = false;
+    let syncTimer: ReturnType<typeof setTimeout> | null = null;
+    let syncInFlight = false;
+    let syncPending = false;
+
+    const runSync = async () => {
+      if (disposed || !sessionUser?.id) return;
+      if (!isShoppingListCloudSyncEnabled()) return;
+
+      if (syncInFlight) {
+        syncPending = true;
+        return;
+      }
+
+      syncInFlight = true;
+      try {
+        const { syncShoppingListsWithCloud } = await import(
+          "./services/shoppingListCloudSyncService"
+        );
+        await syncShoppingListsWithCloud(sessionUser.id);
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.warn("Falha no autosync de listas:", error);
+        }
+      } finally {
+        syncInFlight = false;
+        if (syncPending && !disposed) {
+          syncPending = false;
+          if (syncTimer) clearTimeout(syncTimer);
+          syncTimer = setTimeout(() => {
+            void runSync();
+          }, 800);
+        }
+      }
+    };
+
+    const unsubscribe = useShoppingListStore.subscribe(
+      (state) => state.dataByUser[sessionUser.id]?.updatedAt ?? null,
+      (updatedAt, previousUpdatedAt) => {
+        if (!updatedAt || updatedAt === previousUpdatedAt) return;
+        if (!isShoppingListCloudSyncEnabled()) return;
+
+        if (syncTimer) clearTimeout(syncTimer);
+        syncTimer = setTimeout(async () => {
+          void runSync();
+        }, 2500);
+      },
+    );
+
+    return () => {
+      disposed = true;
+      if (syncTimer) clearTimeout(syncTimer);
+      unsubscribe();
+    };
+  }, [sessionUser]);
 
   useEffect(() => {
     if (receiptsError) {

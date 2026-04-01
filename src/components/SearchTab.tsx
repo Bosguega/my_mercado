@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from "react";
+import { useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { LineChart as LineChartIcon } from "lucide-react";
 import UniversalSearchBar from "./UniversalSearchBar";
 import { PeriodSelector, PeriodDatePickers } from "./PeriodSelector";
@@ -12,32 +12,27 @@ import { useSearchChartData } from "../hooks/queries/useSearchChartData";
 import { SearchItemRow } from "./SearchItemRow";
 import { SearchItemSkeleton } from "./SearchItemSkeleton";
 
-// Lazy loading do gráfico (recharts ~200KB)
 const PriceChart = lazy(() => import("./PriceChart"));
+const PAGE_SIZE = 100;
 
-// Componente de loading para Suspense
 const ChartSkeleton = () => (
   <div className="glass-card" style={{ padding: "1.25rem", textAlign: "center" }}>
-    <div className="skeleton-line" style={{ width: "100px", height: "36px", margin: "0 auto 1.5rem" }} />
-    <div className="skeleton-line" style={{ width: "200px", height: "24px", margin: "0 auto 1.5rem" }} />
+    <div
+      className="skeleton-line"
+      style={{ width: "100px", height: "36px", margin: "0 auto 1.5rem" }}
+    />
+    <div
+      className="skeleton-line"
+      style={{ width: "200px", height: "24px", margin: "0 auto 1.5rem" }}
+    />
     <div className="skeleton-line" style={{ width: "100%", height: "300px" }} />
   </div>
 );
 
-// =========================
-// COMPONENTE PRINCIPAL
-// =========================
-
 function SearchTab() {
-  // =========================
-  // 1. DADOS (React Query)
-  // =========================
   const { data: savedReceipts = [], isLoading: loading } = useAllReceiptsQuery();
   const { data: canonicalProducts = [] } = useCanonicalProductsQuery();
 
-  // =========================
-  // 2. ESTADO DE UI (Zustand)
-  // =========================
   const searchQuery = useUiStore((state) => state.searchQuery);
   const setSearchQuery = useUiStore((state) => state.setSearchQuery);
   const sortOrder = useUiStore((state) => state.sortOrder);
@@ -47,18 +42,11 @@ function SearchTab() {
   const searchFilters = useUiStore((state) => state.searchFilters);
   const setSearchFilters = useUiStore((state) => state.setSearchFilters);
 
-  // Estado local
   const [showChart, setShowChart] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const showSkeleton = loading && savedReceipts.length === 0;
 
-  // =========================
-  // 3. HOOKS DE DOMÍNIO
-  // =========================
-  
-  // Transformação: receipts → items
   const { items: allItems } = useSearchItems(savedReceipts, canonicalProducts);
-
-  // Filtros + ordenação
   const { items: filteredItems, totalCount } = useFilteredSearchItems({
     items: allItems,
     searchQuery,
@@ -67,16 +55,22 @@ function SearchTab() {
     searchFilters,
   });
 
-  // Dados do gráfico
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [searchQuery, sortOrder, sortDirection, searchFilters]);
+
+  const visibleItems = useMemo(
+    () => filteredItems.slice(0, visibleCount),
+    [filteredItems, visibleCount],
+  );
+  const hasMore = visibleItems.length < totalCount;
+
   const { groupedItems, chartData } = useSearchChartData(
     filteredItems,
     canonicalProducts,
-    showChart
+    showChart,
   );
 
-  // =========================
-  // 4. RENDER: GRÁFICO
-  // =========================
   if (showChart) {
     return (
       <Suspense fallback={<ChartSkeleton />}>
@@ -89,9 +83,6 @@ function SearchTab() {
     );
   }
 
-  // =========================
-  // 5. RENDER: LISTA
-  // =========================
   return (
     <div>
       <UniversalSearchBar
@@ -104,21 +95,16 @@ function SearchTab() {
         onSortOrderChange={setSortDirection}
         sortOptions={[
           { value: "recent", label: "Recentes" },
-          { value: "price", label: "Preço" }
+          { value: "price", label: "Preço" },
         ]}
         extraActions={
           <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
-            {/* Seletor de Período (componente reutilizável) */}
-            <PeriodSelector
-              filters={searchFilters}
-              onChange={setSearchFilters}
-            />
+            <PeriodSelector filters={searchFilters} onChange={setSearchFilters} />
 
-            {/* Contador e Botão de Gráfico */}
             {searchQuery && filteredItems.length > 0 && (
               <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
                 <span style={{ fontSize: "0.75rem", color: "#64748b" }}>
-                  {totalCount > 100 ? "Exibindo 100+" : `${totalCount} itens`}
+                  Exibindo {visibleItems.length} de {totalCount} itens
                 </span>
                 <button
                   onClick={() => setShowChart(true)}
@@ -131,7 +117,7 @@ function SearchTab() {
                     display: "flex",
                     alignItems: "center",
                     gap: "4px",
-                    cursor: "pointer"
+                    cursor: "pointer",
                   }}
                 >
                   <LineChartIcon size={16} /> Gráfico
@@ -142,36 +128,30 @@ function SearchTab() {
         }
       />
 
-      {/* Date Pickers para Período Personalizado (componente reutilizável) */}
-      <PeriodDatePickers
-        filters={searchFilters}
-        onChange={setSearchFilters}
-      />
+      <PeriodDatePickers filters={searchFilters} onChange={setSearchFilters} />
 
-      {/* Lista de Items */}
       <div className="items-list">
         {showSkeleton ? (
-          [...Array(6)].map((_, i) => (
-            <SearchItemSkeleton key={i} />
-          ))
+          [...Array(6)].map((_, i) => <SearchItemSkeleton key={i} />)
         ) : filteredItems.length === 0 ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "3rem 1rem",
-              color: "#64748b",
-            }}
-          >
+          <div style={{ textAlign: "center", padding: "3rem 1rem", color: "#64748b" }}>
             <p>Nenhum item encontrado.</p>
           </div>
         ) : (
           <>
-            {filteredItems.map((item, idx) => (
+            {visibleItems.map((item, idx) => (
               <SearchItemRow
                 key={`${item.normalized_name || item.name}-${item.purchasedAt}-${idx}`}
                 item={item}
               />
             ))}
+            {hasMore && (
+              <div style={{ display: "flex", justifyContent: "center", marginTop: "0.5rem" }}>
+                <button className="btn" onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}>
+                  Carregar mais
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -180,3 +160,4 @@ function SearchTab() {
 }
 
 export default SearchTab;
+

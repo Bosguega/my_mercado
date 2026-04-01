@@ -58,7 +58,7 @@ export function useCreateCanonicalProduct() {
         },
         onError: (err) => {
             console.error("Erro ao criar produto can么nico:", err);
-            toast.error("Erro ao criar produto can么nico.");
+            toast.error(err instanceof Error ? err.message : "Erro ao criar produto can鬾ico.");
         },
     });
 }
@@ -88,7 +88,7 @@ export function useUpdateCanonicalProduct() {
         },
         onError: (err) => {
             console.error("Erro ao atualizar produto can么nico:", err);
-            toast.error("Erro ao atualizar produto can么nico.");
+            toast.error(err instanceof Error ? err.message : "Erro ao atualizar produto can鬾ico.");
         },
     });
 }
