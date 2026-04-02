@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger";
 import { createReceiptsStorage } from "../utils/storage";
 import { saveReceiptToDB } from "./receiptService";
 import type { Receipt } from "../types/domain";
@@ -25,7 +26,8 @@ export async function syncLocalStorageWithSupabase(): Promise<{
         await saveReceiptToDB(receipt, items);
         synced++;
       } catch (error) {
-        console.error(
+        logger.error(
+          'Sync',
           `Erro ao sincronizar receipt ${receipt.id}:`,
           error
         );
@@ -34,12 +36,13 @@ export async function syncLocalStorageWithSupabase(): Promise<{
     }
 
     if (synced > 0) {
-      console.log(
+      logger.info(
+        'Sync',
         `Sincronização concluída: ${synced} itens, ${errors} erros`
       );
     }
   } catch (error) {
-    console.error("Erro ao sincronizar storage local:", error);
+    logger.error('Sync', 'Erro ao sincronizar storage local:', error);
     errors++;
   }
 

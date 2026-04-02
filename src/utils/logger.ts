@@ -1,8 +1,11 @@
+/* eslint-disable no-console */
 /**
  * Logger centralizado para a aplicação
  * Em produção, logs são desabilitados para melhor performance
  * Em desenvolvimento, logs são exibidos no console
  */
+
+import type { ErrorCode } from "./errorCodes";
 
 const isDev = import.meta.env.DEV;
 
@@ -12,11 +15,14 @@ export const logger = {
      * @param context - Contexto do erro (ex: "saveReceipt", "loadDictionary")
      * @param message - Mensagem de erro
      * @param error - Erro capturado
+     * @param code - Código de erro para rastreabilidade (opcional)
      */
-    error: (context: string, message: string, error?: unknown) => {
+    error: (context: string, message: string, error?: unknown, code?: ErrorCode) => {
         if (isDev) {
-            console.error(`[${context}] ${message}`, error);
+            const codeStr = code ? ` [${code}]` : "";
+            console.error(`[${context}] ${message}${codeStr}`, error ?? '');
         }
+        // TODO: Em produção, enviar para serviço de monitoring (Sentry, etc)
     },
 
     /**
@@ -24,14 +30,12 @@ export const logger = {
      * @param context - Contexto do warning
      * @param message - Mensagem de warning
      * @param data - Dados adicionais opcionais
+     * @param code - Código de erro para rastreabilidade (opcional)
      */
-    warn: (context: string, message: string, data?: unknown) => {
+    warn: (context: string, message: string, data?: unknown, code?: ErrorCode) => {
         if (isDev) {
-            if (data !== undefined) {
-                console.warn(`[${context}] ${message}`, data);
-            } else {
-                console.warn(`[${context}] ${message}`);
-            }
+            const codeStr = code ? ` [${code}]` : "";
+            console.warn(`[${context}] ${message}${codeStr}`, data ?? '');
         }
     },
 
@@ -43,11 +47,7 @@ export const logger = {
      */
     info: (context: string, message: string, data?: unknown) => {
         if (isDev) {
-            if (data !== undefined) {
-                console.log(`[${context}] ${message}`, data);
-            } else {
-                console.log(`[${context}] ${message}`);
-            }
+            console.info(`[${context}] ${message}`, data ?? '');
         }
     },
 
@@ -59,11 +59,7 @@ export const logger = {
      */
     debug: (context: string, message: string, data?: unknown) => {
         if (isDev) {
-            if (data !== undefined) {
-                console.debug(`[${context}] ${message}`, data);
-            } else {
-                console.debug(`[${context}] ${message}`);
-            }
+            console.debug(`[${context}] ${message}`, data ?? '');
         }
     },
 };

@@ -1,13 +1,34 @@
-import { toast } from "react-hot-toast";
 import {
   createReceiptsStorage,
   createDictionaryStorage,
   isIndexedDBAvailable,
   getStorageStatus,
 } from "../utils/storage";
+import { logger } from "../utils/logger";
+import { ErrorCodes } from "../utils/errorCodes";
 import { getAllReceiptsFromDB, saveReceiptToDB } from "./receiptService";
 import { getDictionary } from "./dictionaryService";
-import type { Receipt, ReceiptItem, DictionaryEntry, DictionaryMap } from "../types/domain";
+import type { Receipt, ReceiptItem, DictionaryEntry } from "../types/domain";
+
+// =========================
+// RESULT TYPES
+// =========================
+
+/**
+ * Resultado de operações de save com fallback
+ */
+export type SaveWithFallbackResult =
+  | { status: "supabase"; data: { id: string; date: string } }
+  | { status: "fallback"; data: { id: string; date: string } }
+  | { status: "error"; error: Error };
+
+/**
+ * Resultado de operações de get com fallback
+ */
+export type GetWithFallbackResult<T> =
+  | { status: "supabase"; data: T[] }
+  | { status: "fallback"; data: T[] }
+  | { status: "error"; error: Error };
 
 // =========================
 // RECEIPT FALLBACK
@@ -16,28 +37,28 @@ import type { Receipt, ReceiptItem, DictionaryEntry, DictionaryMap } from "../ty
 /**
  * Wrapper com fallback automático para getAllReceiptsFromDB
  * Tenta Supabase, fallback para IndexedDB/localStorage
+ * Retorna resultado estruturado sem efeitos colaterais (sem toast)
  */
-export async function getAllReceiptsFromDBWithFallback(): Promise<Receipt[]> {
+export async function getAllReceiptsFromDBWithFallback(): Promise<GetWithFallbackResult<Receipt>> {
   try {
     // Tenta Supabase primeiro
-    return await getAllReceiptsFromDB();
+    const receipts = await getAllReceiptsFromDB();
+    return { status: "supabase", data: receipts };
   } catch (error) {
-    console.warn("Supabase falhou, usando fallback local:", error);
+    logger.warn("getAllReceiptsFromDBWithFallback", "Supabase falhou, usando fallback local", error, ErrorCodes.STORAGE_SUPABASE_FAILED);
 
     try {
       const receiptsStorage = createReceiptsStorage();
       const receipts = await receiptsStorage.getAll<Receipt>();
 
       if (receipts.length > 0) {
-        console.log(
-          `[Fallback] ${receipts.length} receipts carregados do storage local`
-        );
+        logger.info("getAllReceiptsFromDBWithFallback", `${receipts.length} receipts carregados do storage local`);
       }
 
-      return receipts;
+      return { status: "fallback", data: receipts };
     } catch (fallbackError) {
-      console.error("Fallback também falhou:", fallbackError);
-      return [];
+      logger.error("getAllReceiptsFromDBWithFallback", "Fallback também falhou", fallbackError, ErrorCodes.STORAGE_FALLBACK_FAILED);
+      return { status: "error", error: fallbackError instanceof Error ? fallbackError : new Error("Falha ao carregar dados") };
     }
   }
 }
@@ -45,20 +66,21 @@ export async function getAllReceiptsFromDBWithFallback(): Promise<Receipt[]> {
 /**
  * Wrapper com fallback automático para saveReceiptToDB
  * Salva no Supabase e faz backup no storage local
+ * Retorna resultado estruturado sem efeitos colaterais (sem toast)
  */
 export async function saveReceiptToDBWithFallback(
   receiptData: Receipt,
   items: ReceiptItem[]
-): Promise<{ id: string; date: string } | null> {
-  let supabaseResult: { id: string; date: string } | null = null;
+): Promise<SaveWithFallbackResult> {
   let supabaseError: unknown = null;
 
   // Tenta salvar no Supabase
   try {
-    supabaseResult = await saveReceiptToDB(receiptData, items);
+    const result = await saveReceiptToDB(receiptData, items);
+    return { status: "supabase", data: result };
   } catch (error) {
     supabaseError = error;
-    console.warn("Supabase falhou ao salvar, usando fallback local:", error);
+    logger.warn("saveReceiptToDBWithFallback", "Supabase falhou ao salvar, usando fallback local", error, ErrorCodes.STORAGE_SUPABASE_FAILED);
   }
 
   // Sempre salva no storage local como backup
@@ -66,18 +88,22 @@ export async function saveReceiptToDBWithFallback(
     const receiptsStorage = createReceiptsStorage();
     await receiptsStorage.set(receiptData.id, { ...receiptData, items });
 
-    if (supabaseError) {
-      toast.success("Nota salva localmente (offline)");
-    }
+    return { status: "fallback", data: { id: receiptData.id, date: receiptData.date } };
   } catch (fallbackError) {
-    console.error("Fallback local falhou:", fallbackError);
+    logger.error("saveReceiptToDBWithFallback", "Fallback local falhou", fallbackError, ErrorCodes.STORAGE_FALLBACK_FAILED);
 
     if (supabaseError) {
-      throw new Error("Falha ao salvar no Supabase e no fallback local");
+      return {
+        status: "error",
+        error: supabaseError instanceof Error
+          ? supabaseError
+          : new Error("Falha ao salvar no Supabase e no fallback local")
+      };
     }
-  }
 
-  return supabaseResult;
+    // Se chegou aqui, fallback falhou mas supabase funcionou (caso raro)
+    return { status: "supabase", data: { id: receiptData.id, date: receiptData.date }! };
+  }
 }
 
 // =========================
@@ -86,36 +112,38 @@ export async function saveReceiptToDBWithFallback(
 
 /**
  * Wrapper com fallback para getDictionary
+ * Retorna resultado estruturado sem efeitos colaterais
  */
 export async function getDictionaryWithFallback(
   keys: string[]
-): Promise<DictionaryMap> {
+): Promise<GetWithFallbackResult<DictionaryEntry>> {
   try {
     // Tenta Supabase primeiro
-    return await getDictionary(keys);
+    const result = await getDictionary(keys);
+    // Converte Map para array de entries, garantindo que normalized_name seja sempre string
+    const entries: DictionaryEntry[] = Object.entries(result)
+      .filter(([_, value]) => value.normalized_name !== undefined)
+      .map(([key, value]) => ({
+        key,
+        normalized_name: value.normalized_name!,
+        category: value.category,
+        canonical_product_id: value.canonical_product_id,
+      }));
+    return { status: "supabase", data: entries };
   } catch (error) {
-    console.warn("Supabase falhou, usando fallback local:", error);
+    logger.warn("getDictionaryWithFallback", "Supabase falhou, usando fallback local", error, ErrorCodes.STORAGE_SUPABASE_FAILED);
 
     try {
       const dictStorage = createDictionaryStorage();
       const allEntries = await dictStorage.getAll<DictionaryEntry>();
 
       // Filtra apenas as chaves solicitadas
-      const result: DictionaryMap = {};
-      allEntries.forEach((entry) => {
-        if (keys.includes(entry.key)) {
-          result[entry.key] = {
-            normalized_name: entry.normalized_name,
-            category: entry.category,
-            canonical_product_id: entry.canonical_product_id,
-          };
-        }
-      });
+      const filteredEntries = allEntries.filter((entry) => keys.includes(entry.key));
 
-      return result;
+      return { status: "fallback", data: filteredEntries };
     } catch (fallbackError) {
-      console.error("Fallback também falhou:", fallbackError);
-      return {};
+      logger.error("getDictionaryWithFallback", "Fallback também falhou", fallbackError, ErrorCodes.STORAGE_FALLBACK_FAILED);
+      return { status: "error", error: fallbackError instanceof Error ? fallbackError : new Error("Falha ao carregar dicionário") };
     }
   }
 }

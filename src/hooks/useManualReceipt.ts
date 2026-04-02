@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
-import { toast } from 'react-hot-toast';
+import { notify } from '../utils/notifications';
 import { useScannerStore } from '../stores/useScannerStore';
-import { validateManualReceiptForm } from '../utils/validation';
+import { validateManualReceiptForm, validateManualItem } from '../utils/validation';
 import { generateManualReceiptId } from '../utils/receiptId';
 import type { Receipt } from '../types/domain';
 
@@ -39,17 +39,25 @@ export function useManualReceipt(saveReceipt: SaveReceiptFn) {
   }), []);
 
   const handleAddManualItem = useCallback(() => {
-    if (!manualItem.name?.trim() || !manualItem.unitPrice) {
-      toast.error('Preencha nome e preço do item');
+    // Validação centralizada com Zod
+    const validation = validateManualItem({
+      name: manualItem.name?.trim(),
+      qty: String(manualItem.qty || '1'),
+      unitPrice: String(manualItem.unitPrice),
+    });
+
+    if (!validation.success) {
+      notify.warning(validation.error);
       return;
     }
 
-    const qtyNum = parseFloat(String(manualItem.qty || '1').replace(',', '.')) || 1;
-    const priceNum = parseFloat(String(manualItem.unitPrice).replace(',', '.'));
+    const { name, qty, unitPrice } = validation.data;
+    const qtyNum = parseFloat(String(qty).replace(',', '.')) || 1;
+    const priceNum = parseFloat(String(unitPrice).replace(',', '.'));
     const totalNum = qtyNum * priceNum;
 
     const newItem = {
-      name: manualItem.name.trim(),
+      name: name.trim(),
       quantity: qtyNum,
       price: priceNum,
       total: totalNum,
@@ -57,14 +65,14 @@ export function useManualReceipt(saveReceipt: SaveReceiptFn) {
 
     setManualData({ ...manualData, items: [newItem, ...manualData.items] });
     setManualItem({ name: '', qty: '1', unitPrice: '' });
-    toast.success('Item adicionado!');
+    notify.itemAdded();
   }, [manualItem, manualData, setManualData, setManualItem]);
 
   const handleRemoveManualItem = useCallback(
     (index: number) => {
       const newItems = manualData.items.filter((_, i) => i !== index);
       setManualData({ ...manualData, items: newItems });
-      toast.success('Item removido');
+      notify.itemRemoved();
     },
     [manualData, setManualData],
   );
@@ -82,7 +90,7 @@ export function useManualReceipt(saveReceipt: SaveReceiptFn) {
     });
 
     if (!validation.success) {
-      validation.errors.forEach((error) => toast.error(error));
+      validation.errors.forEach((error) => notify.warning(error));
       return;
     }
 
@@ -110,13 +118,12 @@ export function useManualReceipt(saveReceipt: SaveReceiptFn) {
       const result = await saveReceipt(finalData);
       if (isSuccessResult(result)) {
         setCurrentReceipt(result.receipt);
-
         setManualMode(false);
         setManualData(getDefaultManualData());
-        toast.success('Nota manual salva com sucesso!');
+        notify.success('Nota manual salva com sucesso!');
       }
     } catch (err) {
-      toast.error('Erro ao salvar nota.');
+      notify.errorSaving();
       console.error(err);
     } finally {
       setLoading(false);
@@ -134,7 +141,7 @@ export function useManualReceipt(saveReceipt: SaveReceiptFn) {
   const handleCancelManualReceipt = useCallback(() => {
     setManualMode(false);
     setManualData(getDefaultManualData());
-    toast('Entrada manual cancelada');
+    notify.warning('Entrada manual cancelada');
   }, [setManualMode, setManualData, getDefaultManualData]);
 
   return {

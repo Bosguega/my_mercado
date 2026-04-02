@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * Storage Unificado com Fallback Automático
  *

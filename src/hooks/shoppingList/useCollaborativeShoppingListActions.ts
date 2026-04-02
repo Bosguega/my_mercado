@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { notify } from "../../utils/notifications";
+import { errorMessages } from "../../utils/errorMessages";
 import {
   useCreateCollaborativeList,
   useJoinCollaborativeListByCode,
@@ -39,10 +40,10 @@ export function useCollaborativeShoppingListActions(_sessionUserId: string | nul
   const handleCreateList = async (name: string) => {
     try {
       const created = await createCollaborativeList.mutateAsync(name);
-      notify.success("Lista colaborativa criada!");
+      notify.collabListCreated();
       return created;
     } catch {
-      notify.error("Não foi possível criar a lista colaborativa.");
+      notify.error(errorMessages.COLLAB_CREATE_FAILED);
       return null;
     }
   };
@@ -50,10 +51,10 @@ export function useCollaborativeShoppingListActions(_sessionUserId: string | nul
   const handleJoinByCode = async (code: string) => {
     try {
       const joined = await joinCollaborativeList.mutateAsync(code);
-      notify.success("Lista colaborativa conectada!");
+      notify.collabListJoined();
       return joined;
     } catch {
-      notify.error("Código inválido ou sem permissão para entrar na lista.");
+      notify.error(errorMessages.COLLAB_JOIN_FAILED);
       return null;
     }
   };
@@ -64,10 +65,10 @@ export function useCollaborativeShoppingListActions(_sessionUserId: string | nul
 
     try {
       await renameCollaborativeList.mutateAsync({ listId, name: rawName });
-      notify.success("Lista renomeada!");
+      notify.listRenamed();
       return true;
     } catch {
-      notify.error("Não foi possível renomear a lista colaborativa.");
+      notify.error(errorMessages.COLLAB_RENAME_FAILED);
       return false;
     }
   };
@@ -78,7 +79,7 @@ export function useCollaborativeShoppingListActions(_sessionUserId: string | nul
       notify.deleted();
       return true;
     } catch {
-      notify.error("Não foi possível excluir a lista colaborativa.");
+      notify.error(errorMessages.COLLAB_DELETE_FAILED);
       return false;
     }
   };
@@ -89,7 +90,7 @@ export function useCollaborativeShoppingListActions(_sessionUserId: string | nul
       notify.itemAdded();
       return true;
     } catch {
-      notify.error("Não foi possível adicionar item na lista colaborativa.");
+      notify.error(errorMessages.COLLAB_ADD_ITEM_FAILED);
       return false;
     }
   };
@@ -100,26 +101,26 @@ export function useCollaborativeShoppingListActions(_sessionUserId: string | nul
 
   const handleRemoveItem = async (listId: string, itemId: string) => {
     await removeCollaborativeItem.mutateAsync({ listId, itemId });
-    notify.deleted();
+    notify.itemRemoved();
   };
 
   const handleClearChecked = async (listId: string) => {
     await clearCollaborativeItems.mutateAsync({ listId, onlyChecked: true });
-    notify.success("Itens comprados removidos!");
+    notify.listClearChecked();
   };
 
   const handleClearAll = async (listId: string) => {
     await clearCollaborativeItems.mutateAsync({ listId, onlyChecked: false });
-    notify.success("Lista limpa!");
+    notify.listClearAll();
   };
 
   const handleCopyShareCode = async (shareCode: string) => {
     try {
       await navigator.clipboard.writeText(shareCode);
-      notify.success("Código copiado!");
+      notify.collabCodeCopied();
       return true;
     } catch {
-      notify.error("Não foi possível copiar o código.");
+      notify.error(errorMessages.COLLAB_COPY_CODE_FAILED);
       return false;
     }
   };
@@ -128,10 +129,10 @@ export function useCollaborativeShoppingListActions(_sessionUserId: string | nul
     try {
       const newCode = await regenerateCollaborativeCode.mutateAsync(listId);
       await navigator.clipboard.writeText(newCode);
-      notify.success("Novo código gerado e copiado!");
+      notify.collabCodeRegenerated();
       return newCode;
     } catch {
-      notify.error("Não foi possível gerar novo código.");
+      notify.error(errorMessages.COLLAB_REGENERATE_CODE_FAILED);
       return null;
     }
   };
@@ -139,10 +140,10 @@ export function useCollaborativeShoppingListActions(_sessionUserId: string | nul
   const handleChangeMemberRole = async (listId: string, userId: string, nextRole: "editor" | "viewer") => {
     try {
       await updateCollaborativeMemberRole.mutateAsync({ listId, userId, role: nextRole });
-      notify.success("Permissão atualizada.");
+      notify.collabMemberRoleUpdated();
       return true;
     } catch {
-      notify.error("Não foi possível atualizar permissão.");
+      notify.error(errorMessages.COLLAB_MEMBER_ROLE_FAILED);
       return false;
     }
   };
@@ -150,10 +151,10 @@ export function useCollaborativeShoppingListActions(_sessionUserId: string | nul
   const handleRemoveMember = async (listId: string, userId: string) => {
     try {
       await removeCollaborativeMember.mutateAsync({ listId, userId });
-      notify.success("Membro removido da lista.");
+      notify.collabMemberRemoved();
       return true;
     } catch {
-      notify.error("Não foi possível remover membro.");
+      notify.error(errorMessages.COLLAB_MEMBER_REMOVE_FAILED);
       return false;
     }
   };
@@ -161,10 +162,10 @@ export function useCollaborativeShoppingListActions(_sessionUserId: string | nul
   const handleLeaveList = async (listId: string, userId: string) => {
     try {
       await removeCollaborativeMember.mutateAsync({ listId, userId });
-      notify.success("Você saiu da lista colaborativa.");
+      notify.collabLeft();
       return true;
     } catch {
-      notify.error("Não foi possível sair da lista.");
+      notify.error(errorMessages.COLLAB_LEAVE_FAILED);
       return false;
     }
   };
@@ -172,10 +173,10 @@ export function useCollaborativeShoppingListActions(_sessionUserId: string | nul
   const handleTransferOwnership = async (listId: string, newOwnerUserId: string) => {
     try {
       await transferCollaborativeOwnership.mutateAsync({ listId, newOwnerUserId });
-      notify.success("Ownership transferido com sucesso.");
+      notify.collabOwnershipTransferred();
       return true;
     } catch {
-      notify.error("Não foi possível transferir ownership.");
+      notify.error(errorMessages.COLLAB_OWNERSHIP_TRANSFER_FAILED);
       return false;
     }
   };

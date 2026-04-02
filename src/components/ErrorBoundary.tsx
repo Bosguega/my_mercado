@@ -1,5 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
-import { toast } from "react-hot-toast";
+import { logger } from "../utils/logger";
+import { notify } from "../utils/notifications";
+import { ErrorCodes } from "../utils/errorCodes";
 
 interface Props {
   children: ReactNode;
@@ -26,24 +28,21 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("🔴 ErrorBoundary capturou um erro:", error, errorInfo);
+    logger.error(
+      "ErrorBoundary",
+      error.message,
+      { error, componentStack: errorInfo.componentStack },
+      ErrorCodes.UNKNOWN_ERROR
+    );
 
-    // Notificar usuário
-    toast.error("Ops! Algo deu errado. Tente recarregar a página.", {
-      duration: 5000,
-      style: {
-        background: "rgba(239, 68, 68, 0.95)",
-        color: "#fff",
-        borderRadius: "12px",
-      },
-    });
+    notify.error("Ops! Algo deu errado. Tente recarregar a página.");
 
     // Em desenvolvimento, log mais detalhado
     if (import.meta.env.DEV) {
-      console.group("🔴 Error Details");
-      console.error("Error:", error);
-      console.error("Component Stack:", errorInfo.componentStack);
-      console.groupEnd();
+      logger.debug("ErrorBoundary", "Detalhes do erro", {
+        error: error.toString(),
+        componentStack: errorInfo.componentStack,
+      });
     }
   }
 

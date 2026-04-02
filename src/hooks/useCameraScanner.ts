@@ -13,7 +13,7 @@ export function useCameraScanner() {
 
   const scanning = useScannerStore((state) => state.scanning);
   const setScanning = useScannerStore((state) => state.setScanning);
-  const zoom = useScannerStore((state) => state.zoom);
+  const zoom = useScannerStore((state) => state.setZoom);
   const setZoom = useScannerStore((state) => state.setZoom);
   const zoomSupported = useScannerStore((state) => state.zoomSupported);
   const setZoomSupported = useScannerStore((state) => state.setZoomSupported);
@@ -21,6 +21,34 @@ export function useCameraScanner() {
   const setTorch = useScannerStore((state) => state.setTorch);
   const torchSupported = useScannerStore((state) => state.torchSupported);
   const setTorchSupported = useScannerStore((state) => state.setTorchSupported);
+
+  // Ref para controle de processamento
+  const processingRef = useRef(false);
+
+  const stopCamera = useCallback(() => {
+    // Parar o torch track se existir
+    if (torchTrackRef.current) {
+      torchTrackRef.current.stop();
+      torchTrackRef.current = null;
+    }
+
+    if (html5QrcodeRef.current) {
+      html5QrcodeRef.current
+        .stop()
+        .then(() => {
+          html5QrcodeRef.current?.clear();
+          html5QrcodeRef.current = null;
+        })
+        .catch((err) => {
+          console.warn('Erro ao parar html5-qrcode:', err);
+          html5QrcodeRef.current = null;
+        });
+    }
+    setScanning(false);
+    setZoom(1);
+    setZoomSupported(false);
+    setTorch(false);
+  }, [setScanning, setTorch, setZoom, setZoomSupported]);
 
   const startCamera = useCallback(
     async (
@@ -89,33 +117,8 @@ export function useCameraScanner() {
         console.error('Camera fail:', err);
       }
     },
-    [setScanning, setTorchSupported, setZoomSupported],
+    [setScanning, setTorchSupported, setZoomSupported, stopCamera],
   );
-
-  const stopCamera = useCallback(() => {
-    // Parar o torch track se existir
-    if (torchTrackRef.current) {
-      torchTrackRef.current.stop();
-      torchTrackRef.current = null;
-    }
-
-    if (html5QrcodeRef.current) {
-      html5QrcodeRef.current
-        .stop()
-        .then(() => {
-          html5QrcodeRef.current?.clear();
-          html5QrcodeRef.current = null;
-        })
-        .catch((err) => {
-          console.warn('Erro ao parar html5-qrcode:', err);
-          html5QrcodeRef.current = null;
-        });
-    }
-    setScanning(false);
-    setZoom(1);
-    setZoomSupported(false);
-    setTorch(false);
-  }, [setScanning, setTorch, setZoom, setZoomSupported]);
 
   const applyTorch = useCallback(
     async (on: boolean) => {
@@ -164,9 +167,6 @@ export function useCameraScanner() {
     },
     [setTorch],
   );
-
-  // Ref para controle de processamento
-  const processingRef = useRef(false);
 
   return {
     html5QrcodeRef,

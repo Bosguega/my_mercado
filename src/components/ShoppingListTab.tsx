@@ -96,7 +96,10 @@ function ShoppingListTab() {
 
   const collaborativeMode = mode === "collab" && isAuthenticated;
   const collaborativeListsQuery = useCollaborativeListsQuery(collaborativeMode);
-  const collaborativeLists = collaborativeListsQuery.data || [];
+  const collaborativeLists = useMemo(
+    () => collaborativeListsQuery.data || [],
+    [collaborativeListsQuery.data]
+  );
   const [activeCollaborativeListId, setActiveCollaborativeListId] = useState<string | null>(null);
   const activeCollaborativeList = useMemo(
     () =>

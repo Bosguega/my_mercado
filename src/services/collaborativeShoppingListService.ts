@@ -47,7 +47,7 @@ export async function createCollaborativeListInDB(
   const client = requireSupabase();
   const user = await getUserOrThrow();
   const trimmed = name.trim();
-  if (!trimmed) throw new Error("Nome da lista e obrigatorio.");
+  if (!trimmed) throw new Error("Nome da lista é obrigatório.");
 
   const { data, error } = await client
     .from("shopping_lists")
@@ -67,7 +67,7 @@ export async function joinCollaborativeListByCodeInDB(
 ): Promise<CollaborativeShoppingList> {
   const client = requireSupabase();
   const trimmed = code.trim();
-  if (!trimmed) throw new Error("Codigo de compartilhamento invalido.");
+  if (!trimmed) throw new Error("Código de compartilhamento inválido.");
 
   const { data: listId, error: rpcError } = await client.rpc("join_shopping_list_by_code", {
     p_code: trimmed,
@@ -119,7 +119,7 @@ export async function addCollaborativeListItemToDB(
 ): Promise<CollaborativeShoppingListItem> {
   const client = requireSupabase();
   const trimmedName = name.trim();
-  if (!trimmedName) throw new Error("Nome do item e obrigatorio.");
+  if (!trimmedName) throw new Error("Nome do item é obrigatório.");
 
   const { data, error } = await client
     .from("shopping_list_items")
@@ -185,7 +185,7 @@ export async function renameCollaborativeListInDB(
 ): Promise<void> {
   const client = requireSupabase();
   const trimmed = name.trim();
-  if (!trimmed) throw new Error("Nome da lista e obrigatorio.");
+  if (!trimmed) throw new Error("Nome da lista é obrigatório.");
   const { error } = await client
     .from("shopping_lists")
     .update({ name: trimmed })

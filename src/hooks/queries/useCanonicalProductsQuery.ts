@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "react-hot-toast";
+import { useErrorHandler } from "../useErrorHandler";
 import {
     getCanonicalProducts,
     getCanonicalProduct,
@@ -43,6 +43,7 @@ export function useCanonicalProductQuery(id: string) {
 // Hook para criar produto canônico
 export function useCreateCanonicalProduct() {
     const queryClient = useQueryClient();
+    const { handleError } = useErrorHandler({ context: "useCreateCanonicalProduct" });
 
     return useMutation({
         mutationFn: (product: Pick<CanonicalProduct, "slug" | "name" | "category" | "brand">) =>
@@ -53,12 +54,10 @@ export function useCreateCanonicalProduct() {
                 if (!old) return [newProduct];
                 return [...old, newProduct].sort((a, b) => a.name.localeCompare(b.name));
             });
-
-            toast.success("Produto canônico criado com sucesso!");
+            // Toast movido para o caller (componente ou hook de ações)
         },
         onError: (err) => {
-            console.error("Erro ao criar produto canônico:", err);
-            toast.error(err instanceof Error ? err.message : "Erro ao criar produto can�nico.");
+            handleError(err, { messageKey: "PRODUCT_CREATE_FAILED" });
         },
     });
 }
@@ -66,6 +65,7 @@ export function useCreateCanonicalProduct() {
 // Hook para atualizar produto canônico
 export function useUpdateCanonicalProduct() {
     const queryClient = useQueryClient();
+    const { handleError } = useErrorHandler({ context: "useUpdateCanonicalProduct" });
 
     return useMutation({
         mutationFn: ({ id, updates }: { id: string; updates: Partial<Pick<CanonicalProduct, "name" | "category" | "brand">> }) =>
@@ -83,12 +83,10 @@ export function useUpdateCanonicalProduct() {
                 if (!old) return old;
                 return { ...old, ...updates };
             });
-
-            toast.success("Produto canônico atualizado!");
+            // Toast movido para o caller (componente ou hook de ações)
         },
         onError: (err) => {
-            console.error("Erro ao atualizar produto canônico:", err);
-            toast.error(err instanceof Error ? err.message : "Erro ao atualizar produto can�nico.");
+            handleError(err, { messageKey: "PRODUCT_UPDATE_FAILED" });
         },
     });
 }
@@ -96,6 +94,7 @@ export function useUpdateCanonicalProduct() {
 // Hook para deletar produto canônico
 export function useDeleteCanonicalProduct() {
     const queryClient = useQueryClient();
+    const { handleError } = useErrorHandler({ context: "useDeleteCanonicalProduct" });
 
     return useMutation({
         mutationFn: (id: string) => deleteCanonicalProduct(id),
@@ -107,12 +106,10 @@ export function useDeleteCanonicalProduct() {
             });
 
             queryClient.removeQueries({ queryKey: canonicalProductKeys.detail(deletedId) });
-
-            toast.success("Produto canônico removido!");
+            // Toast movido para o caller (componente ou hook de ações)
         },
         onError: (err) => {
-            console.error("Erro ao deletar produto canônico:", err);
-            toast.error(err instanceof Error ? err.message : "Erro ao deletar produto canônico.");
+            handleError(err, { messageKey: "PRODUCT_DELETE_FAILED" });
         },
     });
 }
@@ -120,11 +117,12 @@ export function useDeleteCanonicalProduct() {
 // Hook para merge de produtos canônicos
 export function useMergeCanonicalProducts() {
     const queryClient = useQueryClient();
+    const { handleError } = useErrorHandler({ context: "useMergeCanonicalProducts" });
 
     return useMutation({
         mutationFn: ({ primaryId, secondaryId }: { primaryId: string; secondaryId: string }) =>
             mergeCanonicalProducts(primaryId, secondaryId),
-        onSuccess: (_, { primaryId: _primaryId, secondaryId }) => {
+        onSuccess: (_, { secondaryId }) => {
             // Remover secundário do cache
             queryClient.setQueryData(canonicalProductKeys.list(), (old: CanonicalProduct[] | undefined) => {
                 if (!old) return old;
@@ -136,12 +134,10 @@ export function useMergeCanonicalProducts() {
             // Invalidar queries de items e dicionário para atualizar associações
             queryClient.invalidateQueries({ queryKey: ["receipts"] });
             queryClient.invalidateQueries({ queryKey: ["dictionary"] });
-
-            toast.success("Produtos mesclados com sucesso!");
+            // Toast movido para o caller (componente ou hook de ações)
         },
         onError: (err) => {
-            console.error("Erro ao mesclar produtos:", err);
-            toast.error("Erro ao mesclar produtos.");
+            handleError(err, { messageKey: "PRODUCT_MERGE_FAILED" });
         },
     });
 }
@@ -149,6 +145,7 @@ export function useMergeCanonicalProducts() {
 // Hook para associar item a produto canônico
 export function useAssociateItemToCanonicalProduct() {
     const queryClient = useQueryClient();
+    const { handleError } = useErrorHandler({ context: "useAssociateItemToCanonicalProduct" });
 
     return useMutation({
         mutationFn: ({ itemId, canonicalProductId }: { itemId: string; canonicalProductId: string | null }) =>
@@ -156,12 +153,10 @@ export function useAssociateItemToCanonicalProduct() {
         onSuccess: () => {
             // Invalidar queries de receipts para atualizar dados
             queryClient.invalidateQueries({ queryKey: ["receipts"] });
-
-            toast.success("Item associado com sucesso!");
+            // Toast movido para o caller (componente ou hook de ações)
         },
         onError: (err) => {
-            console.error("Erro ao associar item:", err);
-            toast.error("Erro ao associar item.");
+            handleError(err, { messageKey: "PRODUCT_UPDATE_FAILED" });
         },
     });
 }
@@ -169,6 +164,7 @@ export function useAssociateItemToCanonicalProduct() {
 // Hook para associar dicionário a produto canônico
 export function useAssociateDictionaryToCanonicalProduct() {
     const queryClient = useQueryClient();
+    const { handleError } = useErrorHandler({ context: "useAssociateDictionaryToCanonicalProduct" });
 
     return useMutation({
         mutationFn: ({ key, canonicalProductId }: { key: string; canonicalProductId: string | null }) =>
@@ -176,12 +172,10 @@ export function useAssociateDictionaryToCanonicalProduct() {
         onSuccess: () => {
             // Invalidar queries de dicionário
             queryClient.invalidateQueries({ queryKey: ["dictionary"] });
-
-            toast.success("Dicionário associado com sucesso!");
+            // Toast movido para o caller (componente ou hook de ações)
         },
         onError: (err) => {
-            console.error("Erro ao associar dicionário:", err);
-            toast.error("Erro ao associar dicionário.");
+            handleError(err, { messageKey: "PRODUCT_UPDATE_FAILED" });
         },
     });
 }

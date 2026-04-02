@@ -123,11 +123,12 @@ function ScannerTab() {
   }, [duplicateReceipt, saveReceipt, setCurrentReceipt, setDuplicateReceipt]);
 
   // Calcular total do receipt
+  // A função é pura e não depende de manualData, apenas do tipo
   const calculateReceiptTotal = useCallback(
     (items: typeof manualData.items) => {
       return items.reduce((acc, item) => acc + (item.total || item.price * item.quantity), 0);
     },
-    []
+    [manualData]
   );
 
   return (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../services/supabaseClient';
+import { logger } from '../utils/logger';
 import type { SessionUser } from '../types/domain';
 
 export function useSupabaseSession() {
@@ -8,12 +9,12 @@ export function useSupabaseSession() {
 
   useEffect(() => {
     if (import.meta.env.DEV) {
-      console.log('🔑 [Auth] Iniciando useSupabaseSession...');
+      logger.info('Auth', '🔑 Iniciando useSupabaseSession...');
     }
 
     if (!supabase) {
       if (import.meta.env.DEV) {
-        console.warn('⚠️ [Auth] Supabase não configurado');
+        logger.warn('Auth', '⚠️ Supabase não configurado');
       }
       setAuthLoading(false);
       return;
@@ -23,23 +24,23 @@ export function useSupabaseSession() {
       .getSession()
       .then(({ data: { session } }) => {
         if (import.meta.env.DEV) {
-          console.log('🔑 [Auth] Sessão obtida:', session ? 'COM sessão' : 'SEM sessão');
+          logger.info('Auth', '🔑 Sessão obtida:', session ? 'COM sessão' : 'SEM sessão');
           if (session) {
-            console.log('🔑 [Auth] User ID:', session.user.id);
-            console.log('🔑 [Auth] Email:', session.user.email);
+            logger.info('Auth', '🔑 User ID:', session.user.id);
+            logger.info('Auth', '🔑 Email:', session.user.email);
           }
         }
         setSessionUser(session?.user ?? null);
       })
       .catch((err) => {
         if (import.meta.env.DEV) {
-          console.error('❌ [Auth] Erro ao obter sessão:', err);
+          logger.error('Auth', '❌ Erro ao obter sessão:', err);
         }
         setSessionUser(null);
       })
       .finally(() => {
         if (import.meta.env.DEV) {
-          console.log('🔑 [Auth] Loading = false');
+          logger.info('Auth', '🔑 Loading = false');
         }
         setAuthLoading(false);
       });
@@ -48,14 +49,14 @@ export function useSupabaseSession() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (import.meta.env.DEV) {
-        console.log('🔄 [Auth] Mudança de estado:', _event, session ? 'COM sessão' : 'SEM sessão');
+        logger.info('Auth', '🔄 Mudança de estado:', { event: _event, hasSession: !!session });
       }
       setSessionUser(session?.user ?? null);
     });
 
     return () => {
       if (import.meta.env.DEV) {
-        console.log('🔑 [Auth] Limpando subscription');
+        logger.info('Auth', '🔑 Limpando subscription');
       }
       subscription.unsubscribe();
     };

@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { login, register } from '../services/authService';
-import { toast } from 'react-hot-toast';
+import { notify } from '../utils/notifications';
+import { errorMessages } from '../utils/errorMessages';
+import { logger } from '../utils/logger';
+import { ErrorCodes } from '../utils/errorCodes';
 import type { LoginProps } from '../types/ui';
 
 export default function Login({ setSessionUser }: LoginProps) {
@@ -17,20 +20,20 @@ export default function Login({ setSessionUser }: LoginProps) {
       if (isRegistering) {
         const data = await register(email, password);
         if (data.user && !data.session) {
-          // Usuário criado mas precisa confirmar email
-          toast.success('Conta criada! Verifique seu email para confirmar o cadastro.');
+          notify.success('Conta criada! Verifique seu email para confirmar o cadastro.');
         } else if (data.user && data.session) {
-          toast.success('Conta criada com sucesso!');
+          notify.success('Conta criada com sucesso!');
           setSessionUser(data.user);
         }
       } else {
         const data = await login(email, password);
-        toast.success('Login efetuado com sucesso!');
+        notify.success('Login efetuado com sucesso!');
         setSessionUser(data.user);
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Erro ao autenticar';
-      toast.error(message);
+      logger.error("Login", "Authentication failed", err, ErrorCodes.AUTH_LOGIN_FAILED);
+      const message = err instanceof Error ? err.message : errorMessages.AUTH_LOGIN_FAILED;
+      notify.error(message);
     } finally {
       setLoading(false);
     }

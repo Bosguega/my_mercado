@@ -46,7 +46,10 @@ export function CollaborativeShoppingListTab({ onSwitchToLocal }: CollaborativeS
   const [activeListId, setActiveListId] = useState<string | null>(null);
 
   const collaborativeListsQuery = useCollaborativeListsQuery(true);
-  const collaborativeLists = collaborativeListsQuery.data || [];
+  const collaborativeLists = useMemo(
+    () => collaborativeListsQuery.data || [],
+    [collaborativeListsQuery.data]
+  );
 
   const activeList = useMemo(
     () =>

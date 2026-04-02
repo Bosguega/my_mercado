@@ -3,6 +3,7 @@ import { useScannerStore } from '../stores/useScannerStore';
 import { useCameraScanner } from './useCameraScanner';
 import { useManualReceipt } from './useManualReceipt';
 import { useQRCodeProcessor } from './useQRCodeProcessor';
+import { logger } from '../utils/logger';
 import type { Receipt } from '../types/domain';
 import type { AppTab } from '../types/ui';
 
@@ -62,7 +63,7 @@ export function useReceiptScanner({
     async (decodedText: string) => {
       if (processingRef.current) {
         if (import.meta.env.DEV) {
-          console.log('[Scanner] Processamento ja em andamento, ignorando');
+          logger.info('Scanner', 'Processamento ja em andamento, ignorando');
         }
         return;
       }
@@ -70,7 +71,7 @@ export function useReceiptScanner({
       await processQRCode(decodedText);
       processingRef.current = false;
     },
-    [processQRCode],
+    [processQRCode, processingRef],
   );
 
   // Nao iniciar camera automaticamente ao entrar na aba.

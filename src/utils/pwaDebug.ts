@@ -3,6 +3,8 @@
  * Ajuda a diagnosticar problemas de fetch e service worker
  */
 
+import { logger } from './logger';
+
 interface DebugInfo {
   userAgent: string;
   isPWA: boolean;
@@ -58,18 +60,17 @@ export async function getPWADebugInfo(): Promise<DebugInfo> {
 
 export function logPWADebugInfo() {
   getPWADebugInfo().then(debug => {
-    console.group('🔍 PWA Debug Info');
-    console.log('User Agent:', debug.userAgent);
-    console.log('É PWA:', debug.isPWA);
-    console.log('Online:', debug.isOnline);
-    console.log('Service Worker:', debug.serviceWorkerStatus);
-    console.log('Cache:', debug.cacheStatus);
-    console.log('Supabase URL:', debug.supabaseUrl);
+    logger.info('PWA', '🔍 PWA Debug Info');
+    logger.info('PWA', 'User Agent:', debug.userAgent);
+    logger.info('PWA', 'É PWA:', debug.isPWA);
+    logger.info('PWA', 'Online:', debug.isOnline);
+    logger.info('PWA', 'Service Worker:', debug.serviceWorkerStatus);
+    logger.info('PWA', 'Cache:', debug.cacheStatus);
+    logger.info('PWA', 'Supabase URL:', debug.supabaseUrl);
 
     if (debug.errors.length > 0) {
-      console.error('Erros encontrados:', debug.errors);
+      logger.error('PWA', 'Erros encontrados:', debug.errors);
     }
-    console.groupEnd();
   });
 }
 
@@ -79,7 +80,7 @@ export async function testSupabaseConnection(): Promise<boolean> {
     const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseKey || supabaseUrl === 'COLE_SUA_URL_AQUI') {
-      console.error('❌ Supabase não configurado');
+      logger.error('PWA', '❌ Supabase não configurado');
       return false;
     }
 
@@ -92,10 +93,10 @@ export async function testSupabaseConnection(): Promise<boolean> {
       }
     });
 
-    console.log('✅ Teste de conexão Supabase:', response.status);
+    logger.info('PWA', '✅ Teste de conexão Supabase:', response.status);
     return response.ok;
   } catch (error) {
-    console.error('❌ Erro no teste de conexão:', error);
+    logger.error('PWA', '❌ Erro no teste de conexão:', error);
     return false;
   }
 }

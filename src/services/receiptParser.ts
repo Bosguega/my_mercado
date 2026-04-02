@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger";
 import type { RawReceiptItem, Receipt } from "../types/domain";
 
 const PROXIES = [
@@ -66,23 +67,23 @@ function validateNfceSpUrl(rawUrl: string): string {
   try {
     parsed = new URL(rawUrl);
   } catch {
-    throw new Error("QR Code invalido: URL nao reconhecida.");
+    throw new Error("QR Code inválido: URL não reconhecida.");
   }
 
   if (!["http:", "https:"].includes(parsed.protocol)) {
-    throw new Error("URL invalida para consulta da NFC-e.");
+    throw new Error("URL inválida para consulta da NFC-e.");
   }
 
   const host = parsed.hostname.toLowerCase();
   if (!host.endsWith(SUPPORTED_HOST_SUFFIX)) {
     throw new Error(
-      "Somente URLs da NFC-e de Sao Paulo (fazenda.sp.gov.br) sao suportadas.",
+      "Somente URLs da NFC-e de São Paulo (fazenda.sp.gov.br) são suportadas.",
     );
   }
 
   const hasKnownQuery = parsed.searchParams.has("p") || parsed.searchParams.has("chNFe");
   if (!hasKnownQuery) {
-    throw new Error("Link da NFC-e sem parametros esperados (p/chNFe).");
+    throw new Error("Link da NFC-e sem parâmetros esperados (p/chNFe).");
   }
 
   return parsed.toString();
@@ -135,14 +136,14 @@ function cleanProductName(name: string | null | undefined): string {
 
 export async function parseNFCeSP(url: string): Promise<Receipt> {
   if (import.meta.env.DEV) {
-    console.log('🔍 [Parser] parseNFCeSP chamado com URL:', url);
+    logger.info('Parser', '🔍 parseNFCeSP chamado com URL:', url);
   }
   const targetUrl = validateNfceSpUrl(url);
   let html: string | null = null;
   const attemptErrors: string[] = [];
 
   if (import.meta.env.DEV) {
-    console.log('🔍 [Parser] Tentando buscar via proxies...');
+    logger.info('Parser', '🔍 Tentando buscar via proxies...');
   }
 
   for (let index = 0; index < PROXIES.length; index += 1) {
@@ -151,7 +152,7 @@ export async function parseNFCeSP(url: string): Promise<Receipt> {
       const proxyUrl = getProxyUrl(targetUrl);
 
       if (import.meta.env.DEV) {
-        console.log(`🔍 [Parser] Tentativa ${index + 1}/${PROXIES.length}: ${proxyUrl.substring(0, 80)}...`);
+        logger.info('Parser', `🔍 Tentativa ${index + 1}/${PROXIES.length}: ${proxyUrl.substring(0, 80)}...`);
       }
 
       const response = await fetchWithTimeout(proxyUrl, PROXY_TIMEOUT_MS);
@@ -172,23 +173,23 @@ export async function parseNFCeSP(url: string): Promise<Receipt> {
       const errorName = err instanceof Error ? err.name : "";
       const errorMessage = err instanceof Error ? err.message : "falha desconhecida";
       if (errorName === "AbortError") {
-        attemptErrors.push(`Proxy ${index + 1}: timeout apos ${PROXY_TIMEOUT_MS}ms.`);
+        attemptErrors.push(`Proxy ${index + 1}: timeout após ${PROXY_TIMEOUT_MS}ms.`);
       } else {
         attemptErrors.push(`Proxy ${index + 1}: ${errorMessage}.`);
       }
-      console.warn("Proxy falhou:", err);
+      logger.warn('Parser', 'Proxy falhou', err);
     }
   }
 
   if (!html) {
     if (import.meta.env.DEV) {
-      console.error('❌ [Parser] Todos os proxies falharam:', attemptErrors);
+      logger.error('Parser', '❌ Todos os proxies falharam:', attemptErrors);
     }
     throw new Error(`Falha ao acessar Sefaz via proxies. ${attemptErrors.join(" ")}`.trim());
   }
 
   if (import.meta.env.DEV) {
-    console.log('✅ [Parser] HTML obtido com sucesso, parseando...');
+    logger.info('Parser', '✅ HTML obtido com sucesso, parseando...');
   }
 
   try {
@@ -220,7 +221,7 @@ export async function parseNFCeSP(url: string): Promise<Receipt> {
 
     if (!date) {
       date = getFallbackDateAtMidnight();
-      console.warn("Nao foi possivel extrair data/hora da emissao. Usando fallback com meia-noite.");
+      logger.warn('Parser', 'Nao foi possivel extrair data/hora da emissao. Usando fallback com meia-noite.');
     }
 
     const rows = doc.querySelectorAll("table#tabResult tr");
@@ -281,7 +282,7 @@ export async function parseNFCeSP(url: string): Promise<Receipt> {
       })),
     };
   } catch (error) {
-    console.error("Erro ao parsear NFC-e:", error);
+    logger.error('Parser', 'Erro ao parsear NFC-e:', error);
     throw error;
   }
 }

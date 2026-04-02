@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { notify } from "../../utils/notifications";
+import { errorMessages } from "../../utils/errorMessages";
 import { useShoppingListStore } from "../../stores/useShoppingListStore";
 import type { ConfirmDialogConfig } from "../../types/ui";
 
@@ -27,7 +28,7 @@ export function useLocalShoppingListActions(sessionUserId: string | null | undef
       if (result.reason === "duplicate") {
         notify.alreadyExists();
       } else {
-        notify.error("Informe um nome válido para a lista.");
+        notify.error(errorMessages.LIST_EMPTY_NAME);
       }
       return false;
     }
@@ -44,23 +45,23 @@ export function useLocalShoppingListActions(sessionUserId: string | null | undef
       if (result.reason === "duplicate") {
         notify.alreadyExists();
       } else {
-        notify.error("Não foi possível renomear a lista.");
+        notify.error(errorMessages.LIST_RENAME_FAILED);
       }
       return false;
     }
-    notify.success("Lista renomeada!");
+    notify.listRenamed();
     return true;
   };
 
   const handleDeleteList = (listId: string, listName: string, listsCount: number) => {
     if (listsCount <= 1) {
-      notify.error("Não é possível excluir a última lista.");
+      notify.error(errorMessages.LIST_DELETE_LAST);
       return false;
     }
 
     const result = deleteList(sessionUserId, listId);
     if (!result.ok) {
-      notify.error("Não foi possível excluir a lista.");
+      notify.error(errorMessages.LIST_DELETE_FAILED);
       return false;
     }
     notify.deleted();
@@ -73,7 +74,7 @@ export function useLocalShoppingListActions(sessionUserId: string | null | undef
       if (result.reason === "duplicate") {
         notify.alreadyExists();
       } else {
-        notify.error("Digite o nome do item para adicionar.");
+        notify.error(errorMessages.ITEM_EMPTY_NAME);
       }
       return false;
     }
@@ -87,17 +88,17 @@ export function useLocalShoppingListActions(sessionUserId: string | null | undef
 
   const handleRemoveItem = (itemId: string) => {
     removeItem(sessionUserId, itemId);
-    notify.deleted();
+    notify.itemRemoved();
   };
 
   const handleClearChecked = () => {
     clearChecked(sessionUserId);
-    notify.success("Itens comprados removidos!");
+    notify.listClearChecked();
   };
 
   const handleClearAll = () => {
     clearAll(sessionUserId);
-    notify.success("Lista limpa!");
+    notify.listClearAll();
   };
 
   const handleMoveItem = (itemId: string, targetListId: string, sourceListId: string) => {
@@ -106,9 +107,9 @@ export function useLocalShoppingListActions(sessionUserId: string | null | undef
       if (result.reason === "duplicate") {
         notify.alreadyExists();
       } else if (result.reason === "same_list") {
-        notify.error("Selecione uma lista de destino diferente.");
+        notify.error(errorMessages.LIST_MOVE_SAME_LIST);
       } else {
-        notify.error("Não foi possível mover o item.");
+        notify.error(errorMessages.LIST_MOVE_FAILED);
       }
       return false;
     }
@@ -121,9 +122,9 @@ export function useLocalShoppingListActions(sessionUserId: string | null | undef
       if (result.reason === "duplicate") {
         notify.alreadyExists();
       } else if (result.reason === "same_list") {
-        notify.error("Selecione uma lista de destino diferente.");
+        notify.error(errorMessages.LIST_COPY_SAME_LIST);
       } else {
-        notify.error("Não foi possível copiar o item.");
+        notify.error(errorMessages.LIST_COPY_FAILED);
       }
       return false;
     }

@@ -205,7 +205,7 @@ export const notify = {
     /**
      * Item adicionado
      */
-    itemAdded: () => notify.success(errorMessages.ITEM_ADD_FAILED.replace("Não foi possível", "Item")),
+    itemAdded: () => notify.success(errorMessages.ITEM_ADD_SUCCESS),
 
     /**
      * Lista criada
@@ -216,6 +216,26 @@ export const notify = {
      * Erro ao criar lista
      */
     listCreateFailed: () => notify.error(errorMessages.LIST_CREATE_FAILED),
+
+    /**
+     * Item removido
+     */
+    itemRemoved: () => notify.success(errorMessages.ITEM_REMOVE_SUCCESS),
+
+    /**
+     * Lista renomeada
+     */
+    listRenamed: () => notify.success(errorMessages.LIST_RENAME_SUCCESS),
+
+    /**
+     * Itens comprados removidos
+     */
+    listClearChecked: () => notify.success(errorMessages.LIST_CLEAR_CHECKED),
+
+    /**
+     * Lista limpa
+     */
+    listClearAll: () => notify.success(errorMessages.LIST_CLEAR_ALL),
 
     // =========================
     // Notificações Específicas - IA
@@ -244,4 +264,48 @@ export const notify = {
      * Sessão encerrada
      */
     sessionEnded: () => notify.success("Sessão encerrada."),
+
+    // =========================
+    // Notificações Específicas - Collaborative List
+    // =========================
+
+    /**
+     * Lista colaborativa criada
+     */
+    collabListCreated: () => notify.success(errorMessages.COLLAB_CREATE_SUCCESS),
+
+    /**
+     * Lista colaborativa conectada
+     */
+    collabListJoined: () => notify.success(errorMessages.COLLAB_JOIN_SUCCESS),
+
+    /**
+     * Código copiado
+     */
+    collabCodeCopied: () => notify.success(errorMessages.COLLAB_COPY_CODE_SUCCESS),
+
+    /**
+     * Novo código gerado
+     */
+    collabCodeRegenerated: () => notify.success(errorMessages.COLLAB_REGENERATE_CODE_SUCCESS),
+
+    /**
+     * Permissão atualizada
+     */
+    collabMemberRoleUpdated: () => notify.success(errorMessages.COLLAB_MEMBER_ROLE_SUCCESS),
+
+    /**
+     * Membro removido
+     */
+    collabMemberRemoved: () => notify.success(errorMessages.COLLAB_MEMBER_REMOVE_SUCCESS),
+
+    /**
+     * Ownership transferido
+     */
+    collabOwnershipTransferred: () => notify.success(errorMessages.COLLAB_OWNERSHIP_TRANSFER_SUCCESS),
+
+    /**
+     * Saiu da lista
+     */
+    collabLeft: () => notify.success(errorMessages.COLLAB_LEAVE_SUCCESS),
 };
