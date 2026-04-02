@@ -13,6 +13,7 @@ export interface ShoppingListItem {
   checked: boolean;
   created_at: string;
   checked_at?: string;
+  checked_by_user_id?: string;
 }
 
 export interface ShoppingListMeta {

@@ -23,7 +23,7 @@ Pontos fortes:
 
 Limitações relevantes:
 
-- lista não sincroniza com Supabase (fica no dispositivo/navegador);
+- coexistencia de dois modelos (local-first legado e colaborativo relacional) aumenta complexidade operacional;
 - fallback de matching de histórico por `includes` pode gerar ruído;
 - store e componente duplicam parte da lógica de robustez/sanitização;
 - ausência de testes específicos para regras críticas da lista.
@@ -60,7 +60,7 @@ Arquivos principais analisados:
 Impacto prático:
 
 - rápido e resiliente offline;
-- não compartilha lista entre dispositivos/sessões diferentes do navegador.
+- no modo local-first, ainda não compartilha entre dispositivos/sessões diferentes do navegador.
 
 ### 3.2 Isolamento por Usuário
 
@@ -200,9 +200,9 @@ Na `ShoppingListTab`:
 
 ## 5) Riscos e Lacunas
 
-1. Persistência local apenas
-- Lista não sobe para nuvem.
-- Perda em troca de dispositivo/navegador/limpeza de storage.
+1. Coexistencia de modelo local e colaborativo
+- modo local continua sujeito a perda em troca de dispositivo/navegador/limpeza de storage;
+- modo colaborativo resolve compartilhamento/tempo real, mas adiciona governanca de membros e RLS.
 
 2. Matching parcial no fallback de histórico
 - `includes` pode aproximar itens diferentes com chaves semelhantes.
@@ -332,12 +332,21 @@ Com o pacote P0 + P1, a feature evolui de "boa e pratica" para "confiavel em esc
 - [x] Autosync em background com debounce e protecao contra concorrencia.
 - [x] Resolucao de conflito em sync evoluida para merge estrutural por lista.
 - [x] Matching de historico melhorado (token-score) com badge de confianca (`Exato`/`Aproximado`).
+- [x] Lista colaborativa com tabelas dedicadas no Supabase (`shopping_lists`, `shopping_list_members`, `shopping_list_items`).
+- [x] Entrada em lista colaborativa por codigo de compartilhamento.
+- [x] Realtime de itens da lista colaborativa (marcar/desmarcar/adicionar/remover entre contas).
+- [x] Gestao de membros pelo owner (papel `editor`/`viewer` e remocao).
+- [x] Acao "Sair da lista" para membros nao-owner.
+- [x] Transferencia de ownership para outro membro.
+- [x] Exibicao de "quem marcou" item comprado (`checked_by_user_id`).
 
 ### Pontos ainda pendentes
 
 - [ ] Estrategia de merge por item dentro da mesma lista (quando dois dispositivos alteram a mesma lista em paralelo).
 - [ ] Quantidade estruturada (`valor` + `unidade`) em vez de string livre.
-- [ ] Lista compartilhavel e sugestao automatica de recompra.
+- [ ] Perfil publico de membro (nome/email) para exibir colaborador sem mostrar ID tecnico.
+- [ ] Convite por link com expiracao/revogacao (alem do codigo simples).
+- [ ] Sugestao automatica de recompra.
 
 ### Observacao de arquitetura
 
@@ -348,4 +357,11 @@ Hoje o modelo persistido e por usuario com:
 - lista ativa (`activeListId`),
 - itens por lista (`itemsByList`),
 - carimbo de atualizacao (`updatedAt`) para suporte ao sync.
+
+Para colaboracao em tempo real, agora existe tambem o modelo relacional no Supabase:
+
+- `shopping_lists`,
+- `shopping_list_members`,
+- `shopping_list_items`,
+- RLS por membro/papel e RPCs para entrada por codigo e transferencia de ownership.
 

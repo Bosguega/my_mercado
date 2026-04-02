@@ -15,6 +15,7 @@ type ShoppingListItemProps = {
   onTransferTargetChange?: (targetListId: string) => void;
   onMoveToList?: () => void;
   onCopyToList?: () => void;
+  currentUserId?: string | null;
 };
 
 export function ShoppingListItem({
@@ -28,6 +29,7 @@ export function ShoppingListItem({
   onTransferTargetChange,
   onMoveToList,
   onCopyToList,
+  currentUserId,
 }: ShoppingListItemProps) {
   const latest = history[0];
   const avgPrice =
@@ -106,6 +108,15 @@ export function ShoppingListItem({
           {item.quantity && (
             <p style={{ color: "#94a3b8", fontSize: "0.8rem", marginTop: "0.15rem" }}>
               Quantidade: {item.quantity}
+            </p>
+          )}
+
+          {item.checked && item.checked_by_user_id && (
+            <p style={{ color: "#94a3b8", fontSize: "0.76rem", marginTop: "0.2rem" }}>
+              Marcado por{" "}
+              {item.checked_by_user_id === currentUserId
+                ? "voce"
+                : `${item.checked_by_user_id.slice(0, 8)}...`}
             </p>
           )}
 

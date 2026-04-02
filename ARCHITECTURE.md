@@ -1947,13 +1947,14 @@ Estado atual da arquitetura:
 - Zustand para estado de UI/sessão/scanner e domínio local-first da lista de compras;
 - pipeline de processamento de itens com normalização, dicionário e produtos canônicos;
 - scanner modular com fluxo idle-first e fechamento explícito;
-- sincronização opcional de listas de compras com nuvem.
+- sincronização opcional de listas locais com nuvem;
+- listas colaborativas relacionais no Supabase com realtime por item.
 
 ### Qualidade Técnica Atual
 
 | Métrica | Status atual |
 |---------|--------------|
-| Testes automatizados | **51 testes passando** |
+| Testes automatizados | **54 testes passando** |
 | Build de produção | **OK** |
 | Arquitetura de estado | **Consolidada (React Query + Zustand)** |
 | Sync de listas | **Ativo (opcional, com merge estrutural)** |
@@ -2008,6 +2009,14 @@ Estado atual da arquitetura:
   - sync no login;
   - autosync com debounce e proteção contra concorrência;
   - merge estrutural por lista entre local e nuvem.
+- modo colaborativo relacional:
+  - tabelas `shopping_lists`, `shopping_list_members`, `shopping_list_items`;
+  - entrada por código (`join_shopping_list_by_code`);
+  - gestão de membros com papéis (`owner`/`editor`/`viewer`);
+  - saída voluntária da lista para não-owner;
+  - transferência de ownership (`transfer_shopping_list_ownership`);
+  - atualização em tempo real dos itens compartilhados;
+  - exibição de `checked_by_user_id` para indicar quem marcou o item.
 
 ### Arquivos-Chave de Referência (Estado Vigente)
 
@@ -2016,15 +2025,19 @@ Estado atual da arquitetura:
 - `src/hooks/queries/useDictionaryQuery.ts`
 - `src/stores/useShoppingListStore.ts`
 - `src/services/shoppingListCloudSyncService.ts`
+- `src/services/collaborativeShoppingListService.ts`
 - `src/utils/shoppingListCloudMerge.ts`
+- `src/hooks/queries/useCollaborativeShoppingListsQuery.ts`
+- `src/components/ShoppingListTab.tsx`
 - `src/components/ScannerTab/index.tsx`
 - `src/hooks/useReceiptScanner.ts`
 
 ### Próximas Evoluções Arquiteturais (Pendentes)
 
 1. Agregação diária no gráfico de preços (média/mediana por produto-dia).
-2. Política de merge por item dentro da mesma lista no sync.
-3. Governança avançada de catálogo canônico (revisão de auto-criados e prevenção de duplicatas).
+2. Política de merge por item dentro da mesma lista no sync local-cloud.
+3. Perfil público de colaborador (nome/email) para UI de membros.
+4. Governança avançada de catálogo canônico (revisão de auto-criados e prevenção de duplicatas).
 
 ---
 

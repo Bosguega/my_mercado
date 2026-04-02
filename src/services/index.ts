@@ -54,3 +54,20 @@ export {
 // Sync
 export { syncLocalStorageWithSupabase } from "./syncService";
 export { syncShoppingListsWithCloud } from "./shoppingListCloudSyncService";
+export {
+  getCollaborativeListsFromDB,
+  createCollaborativeListInDB,
+  joinCollaborativeListByCodeInDB,
+  getCollaborativeListItemsFromDB,
+  addCollaborativeListItemToDB,
+  toggleCollaborativeListItemInDB,
+  removeCollaborativeListItemFromDB,
+  clearCollaborativeListItemsInDB,
+  renameCollaborativeListInDB,
+  deleteCollaborativeListInDB,
+  regenerateCollaborativeListCodeInDB,
+  getCollaborativeListMembersFromDB,
+  updateCollaborativeListMemberRoleInDB,
+  removeCollaborativeListMemberFromDB,
+  transferCollaborativeListOwnershipInDB,
+} from "./collaborativeShoppingListService";
