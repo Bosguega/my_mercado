@@ -21,7 +21,16 @@ export async function login(email: string, password: string) {
     email,
     password,
   });
-  if (error) throw error;
+  if (error) {
+    // Traduzir mensagens de erro comuns do Supabase
+    if (error.message?.includes('Invalid login credentials') || error.message?.includes('invalid_credentials')) {
+      throw new Error('Email ou senha incorretos. Verifique suas credenciais.');
+    }
+    if (error.message?.includes('Email not confirmed') || error.message?.includes('email_not_confirmed')) {
+      throw new Error('Email não confirmado. Verifique sua caixa de entrada.');
+    }
+    throw error;
+  }
   return data;
 }
 
@@ -34,7 +43,19 @@ export async function register(email: string, password: string) {
     email,
     password,
   });
-  if (error) throw error;
+  if (error) {
+    // Traduzir mensagens de erro comuns do Supabase
+    if (error.message?.includes('User already registered') || error.message?.includes('already_registered')) {
+      throw new Error('Este email já está cadastrado. Faça login ou use outro email.');
+    }
+    if (error.message?.includes('Password should be at least') || error.message?.includes('weak_password')) {
+      throw new Error('A senha deve ter pelo menos 6 caracteres.');
+    }
+    if (error.message?.includes('Invalid email') || error.message?.includes('invalid_email')) {
+      throw new Error('Email inválido. Verifique o formato.');
+    }
+    throw error;
+  }
   return data;
 }
 

@@ -16,8 +16,13 @@ export default function Login({ setSessionUser }: LoginProps) {
     try {
       if (isRegistering) {
         const data = await register(email, password);
-        toast.success('Conta criada com sucesso!');
-        setSessionUser(data.user);
+        if (data.user && !data.session) {
+          // Usuário criado mas precisa confirmar email
+          toast.success('Conta criada! Verifique seu email para confirmar o cadastro.');
+        } else if (data.user && data.session) {
+          toast.success('Conta criada com sucesso!');
+          setSessionUser(data.user);
+        }
       } else {
         const data = await login(email, password);
         toast.success('Login efetuado com sucesso!');
