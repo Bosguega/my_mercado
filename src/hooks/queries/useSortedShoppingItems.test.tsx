@@ -4,6 +4,10 @@ import { describe, expect, it } from "vitest";
 import { useSortedShoppingItems } from "./useSortedShoppingItems";
 import type { ShoppingListItem } from "../../types/ui";
 
+// Declarar variável global para testes React
+declare global {
+  var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
+}
 // Required by React 18 to silence act-environment warnings in jsdom tests.
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 

@@ -3,6 +3,7 @@ import { calc } from "../utils/currency";
 import { startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { toUserScopedReceiptId } from "../utils/receiptId";
 import { getUserOrThrow, requireSupabase } from "./authService";
+import { logger } from "../utils/logger";
 import type { Receipt, ReceiptItem } from "../types/domain";
 
 interface DbItemRow {
@@ -176,7 +177,7 @@ export async function getReceiptsPaginated(
   const { data, error, count } = await query;
 
   if (error) {
-    console.error("Erro ao buscar notas:", error);
+    logger.error('ReceiptService', 'Erro ao buscar notas', error as unknown);
     throw error;
   }
 
@@ -199,25 +200,19 @@ export async function getAllReceiptsFromDB(): Promise<Receipt[]> {
     return result.data;
   } catch (error: any) {
     if (import.meta.env.DEV) {
-      console.error('❌ [getAllReceiptsFromDB] Erro:', error);
+      logger.error('getAllReceiptsFromDB', 'Erro ao buscar todos os receipts', error);
     }
-    
+
     // Se for erro de autenticação, lança erro específico
     if (error?.code === 'PGRST205') {
-      if (import.meta.env.DEV) {
-        console.warn('⚠️ [getAllReceiptsFromDB] Tabela não encontrada ou RLS bloqueou');
-        console.warn('⚠️ [getAllReceiptsFromDB] Verifique se:');
-        console.warn('  1. Usuário está logado');
-        console.warn('  2. Tabelas existem no Supabase');
-        console.warn('  3. RLS policies estão configuradas');
-      }
+      logger.warn('getAllReceiptsFromDB', 'Tabela não encontrada ou RLS bloqueou. Verifique: 1) Usuário logado, 2) Tabelas existem, 3) RLS policies configuradas');
       throw new Error('Erro de autenticação ou tabela não existe');
     }
-    
+
     if (error?.message?.includes('autenticado')) {
       throw new Error('Usuário não autenticado');
     }
-    
+
     // Outros erros, relança
     throw error;
   }
@@ -287,7 +282,7 @@ export async function saveReceiptToDB(
     .single();
 
   if (receiptError) {
-    console.error("Erro ao salvar nota:", receiptError);
+    logger.error('ReceiptService', 'Erro ao salvar nota', receiptError as unknown);
     throw receiptError;
   }
 
@@ -299,7 +294,7 @@ export async function saveReceiptToDB(
     );
 
     if (itemsError) {
-      console.error("Erro ao salvar itens:", itemsError);
+      logger.error('ReceiptService', 'Erro ao salvar itens', itemsError as unknown);
       throw itemsError;
     }
   }

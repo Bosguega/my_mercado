@@ -168,22 +168,33 @@ function App() {
       }
     };
 
+    let previousUpdatedAt: string | null = null;
+
     const unsubscribe = useShoppingListStore.subscribe(
       (state) => state.dataByUser[sessionUser.id]?.updatedAt ?? null,
-      (updatedAt, previousUpdatedAt) => {
-        if (!updatedAt || updatedAt === previousUpdatedAt) return;
-        if (!isShoppingListCloudSyncEnabled()) return;
-
-        if (syncTimer) clearTimeout(syncTimer);
-        syncTimer = setTimeout(async () => {
-          void runSync();
-        }, 2500);
-      },
     );
+
+    // Criar observer manual para detectar mudancas
+    const checkForUpdates = () => {
+      const currentUpdatedAt = useShoppingListStore.getState().dataByUser[sessionUser.id]?.updatedAt ?? null;
+      if (currentUpdatedAt && currentUpdatedAt !== previousUpdatedAt) {
+        previousUpdatedAt = currentUpdatedAt;
+        if (isShoppingListCloudSyncEnabled()) {
+          if (syncTimer) clearTimeout(syncTimer);
+          syncTimer = setTimeout(async () => {
+            void runSync();
+          }, 2500);
+        }
+      }
+    };
+
+    // Checar atualizacoes periodicamente
+    const updateInterval = setInterval(checkForUpdates, 1000);
 
     return () => {
       disposed = true;
       if (syncTimer) clearTimeout(syncTimer);
+      if (updateInterval) clearInterval(updateInterval);
       unsubscribe();
     };
   }, [sessionUser]);

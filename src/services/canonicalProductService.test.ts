@@ -137,7 +137,13 @@ describe("mergeCanonicalProducts", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getUserOrThrow).mockResolvedValue({ id: userId });
+    vi.mocked(getUserOrThrow).mockResolvedValue({ 
+      id: userId,
+      app_metadata: {},
+      user_metadata: {},
+      aud: "authenticated",
+      created_at: new Date().toISOString(),
+    } as any);
   });
 
   it("moves associations, updates merge_count and deletes secondary product", async () => {

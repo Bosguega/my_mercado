@@ -1,0 +1,336 @@
+import { useMemo, useState, type FormEvent } from "react";
+import { ListChecks, Plus, Eraser, Trash2, Pencil } from "lucide-react";
+import { toast } from "react-hot-toast";
+import { useAllReceiptsQuery } from "../../hooks/queries/useReceiptsQuery";
+import { useReceiptsSessionStore } from "../../stores/useReceiptsSessionStore";
+import { useShoppingListStore } from "../../stores/useShoppingListStore";
+import { useLocalShoppingListActions } from "../../hooks/shoppingList/useLocalShoppingListActions";
+import { useSortedShoppingItems } from "../../hooks/queries/useSortedShoppingItems";
+import { usePurchaseHistory, type PurchaseHistoryEntry } from "../../hooks/queries/usePurchaseHistory";
+import { sanitizeShoppingList, toText } from "../../utils/shoppingList";
+import { normalizeKey } from "../../utils/normalize";
+import { scoreHistoryKeyMatch } from "../../utils/shoppingHistoryMatch";
+import { ShoppingListItem } from "../ShoppingListItem";
+import ConfirmDialog from "../ConfirmDialog";
+import type {
+  ConfirmDialogConfig,
+  ShoppingListItem as ShoppingListItemType,
+} from "../../types/ui";
+
+const EMPTY_SHOPPING_ITEMS: ShoppingListItemType[] = [];
+type HistoryMatchType = "exact" | "approx" | "none";
+
+interface LocalShoppingListTabProps {
+  onSwitchToCollab?: () => void;
+}
+
+/**
+ * Componente de Lista de Compras Local
+ * Gerencia listas de compras armazenadas localmente no dispositivo
+ */
+export function LocalShoppingListTab({ onSwitchToCollab }: LocalShoppingListTabProps) {
+  const sessionUserId = useReceiptsSessionStore((state) => state.sessionUserId);
+  const { data: savedReceipts = [] } = useAllReceiptsQuery();
+
+  const lists = useShoppingListStore((state) => state.getLists(sessionUserId));
+  const activeListId = useShoppingListStore((state) => state.getActiveListId(sessionUserId));
+  const rawShoppingItems = useShoppingListStore((state) =>
+    state.getItems(sessionUserId, activeListId),
+  );
+
+  const shoppingItems = useMemo(
+    () => sanitizeShoppingList(rawShoppingItems || EMPTY_SHOPPING_ITEMS),
+    [rawShoppingItems],
+  );
+
+  const setActiveList = useShoppingListStore((state) => state.setActiveList);
+  const orderedItems = useSortedShoppingItems(shoppingItems);
+  const { historyByKey, suggestions } = usePurchaseHistory(savedReceipts);
+
+  const [itemName, setItemName] = useState("");
+  const [itemQty, setItemQty] = useState("");
+  const [transferTargetByItem, setTransferTargetByItem] = useState<Record<string, string>>({});
+
+  const actions = useLocalShoppingListActions(sessionUserId);
+
+  const activeLocalList = lists.find((list) => list.id === activeListId) || lists[0];
+  const checkedCount = shoppingItems.filter((item) => item.checked).length;
+  const pendingCount = shoppingItems.length - checkedCount;
+  const listTransferOptions = lists.filter((list) => list.id !== activeListId);
+
+  const getTransferTargetId = (itemId: string): string => {
+    const selected = transferTargetByItem[itemId];
+    if (selected && listTransferOptions.some((list) => list.id === selected)) {
+      return selected;
+    }
+    return listTransferOptions[0]?.id || "";
+  };
+
+  const handleAddItem = async (event: FormEvent) => {
+    event.preventDefault();
+    const success = actions.handleAddItem(itemName, itemQty);
+    if (success) {
+      setItemName("");
+      setItemQty("");
+    }
+  };
+
+  const handleCreateList = () => {
+    const rawName = window.prompt("Nome da nova lista:");
+    if (rawName === null) return;
+    actions.handleCreateList(rawName);
+  };
+
+  const handleRenameList = () => {
+    if (!activeLocalList) return;
+    actions.handleRenameList(activeLocalList.id, activeLocalList.name);
+  };
+
+  const getRecentHistory = (
+    item: ShoppingListItemType,
+  ): { entries: PurchaseHistoryEntry[]; matchType: HistoryMatchType } => {
+    const safeKey = normalizeKey(toText(item.normalized_key).trim() || item.name);
+    if (!safeKey) return { entries: [], matchType: "none" };
+
+    const exact = historyByKey.get(safeKey);
+    if (exact && exact.length > 0) return { entries: exact.slice(0, 3), matchType: "exact" };
+
+    const fallback: Array<{ entry: PurchaseHistoryEntry; score: number }> = [];
+    for (const [key, entries] of historyByKey.entries()) {
+      const match = scoreHistoryKeyMatch(safeKey, key);
+      if (match.score > 0) {
+        for (const entry of entries.slice(0, 2)) {
+          fallback.push({ entry, score: match.score });
+        }
+      }
+    }
+
+    fallback.sort((a, b) => b.score - a.score || b.entry.timestamp - a.entry.timestamp);
+    const entries = fallback.slice(0, 3).map((candidate) => candidate.entry);
+    return {
+      entries,
+      matchType: entries.length > 0 ? "approx" : "none",
+    };
+  };
+
+  return (
+    <div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          marginBottom: "1rem",
+          gap: "1rem",
+        }}
+      >
+        <div>
+          <h2 className="section-title" style={{ marginBottom: "0.2rem" }}>
+            <ListChecks size={20} color="var(--primary)" />
+            Lista de Compras Local
+          </h2>
+          <p style={{ color: "#64748b", fontSize: "0.8rem", marginLeft: "1.8rem" }}>
+            {pendingCount} pendente(s) de {shoppingItems.length}
+          </p>
+        </div>
+
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <button
+            className="btn"
+            style={{
+              padding: "0.45rem 0.6rem",
+              background: "rgba(245, 158, 11, 0.15)",
+              boxShadow: "none",
+              color: "#f59e0b",
+            }}
+            title="Limpar marcados"
+            onClick={() => actions.confirmClearChecked(actions.handleClearChecked)}
+            disabled={checkedCount === 0}
+          >
+            <Eraser size={16} />
+          </button>
+          <button
+            className="btn"
+            style={{
+              padding: "0.45rem 0.6rem",
+              background: "rgba(239, 68, 68, 0.15)",
+              boxShadow: "none",
+              color: "#ef4444",
+            }}
+            title="Limpar lista"
+            onClick={() => actions.confirmClearAll(actions.handleClearAll)}
+            disabled={shoppingItems.length === 0}
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div className="glass-card" style={{ marginBottom: "1rem", padding: "0.75rem" }}>
+        <div
+          style={{
+            marginBottom: "0.7rem",
+            display: "grid",
+            gridTemplateColumns: "1fr auto auto auto",
+            gap: "0.5rem",
+            alignItems: "center",
+          }}
+        >
+          <select
+            className="search-input"
+            value={activeListId}
+            onChange={(e) => setActiveList(sessionUserId, e.target.value)}
+            aria-label="Selecionar lista ativa"
+          >
+            {lists.map((list) => (
+              <option key={list.id} value={list.id}>
+                {list.name}
+              </option>
+            ))}
+          </select>
+          <button className="btn" style={{ padding: "0.5rem 0.7rem" }} onClick={handleCreateList}>
+            <Plus size={15} /> Nova
+          </button>
+          <button
+            className="btn"
+            style={{ padding: "0.5rem 0.7rem", background: "rgba(255,255,255,0.08)", boxShadow: "none" }}
+            onClick={handleRenameList}
+            disabled={!activeLocalList}
+          >
+            <Pencil size={15} /> Renomear
+          </button>
+          <button
+            className="btn"
+            style={{
+              padding: "0.5rem 0.7rem",
+              background: "rgba(239, 68, 68, 0.12)",
+              boxShadow: "none",
+              color: "#f87171",
+            }}
+            onClick={() =>
+              activeLocalList && actions.confirmDeleteList(
+                activeLocalList.id,
+                activeLocalList.name,
+                lists.length,
+              )
+            }
+            disabled={!activeLocalList || lists.length <= 1}
+          >
+            <Trash2 size={15} /> Excluir
+          </button>
+        </div>
+      </div>
+
+      <form className="glass-card" onSubmit={handleAddItem} style={{ marginBottom: "1rem" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 110px",
+            gap: "0.5rem",
+            marginBottom: "0.75rem",
+          }}
+        >
+          <input
+            list="suggestion-list-local"
+            className="search-input"
+            placeholder="Ex: Arroz, Leite, Cafe..."
+            value={itemName}
+            onChange={(e) => setItemName(e.target.value)}
+          />
+          <input
+            className="search-input"
+            placeholder="Qtd"
+            value={itemQty}
+            onChange={(e) => setItemQty(e.target.value)}
+          />
+        </div>
+
+        <datalist id="suggestion-list-local">
+          {suggestions.map((suggestion) => (
+            <option key={suggestion.key} value={suggestion.label} />
+          ))}
+        </datalist>
+
+        <button
+          className="btn"
+          style={{ width: "100%" }}
+          type="submit"
+        >
+          <Plus size={18} />
+          Adicionar Item
+        </button>
+      </form>
+
+      <div className="items-list" style={{ gap: "0.85rem" }}>
+        {orderedItems.length === 0 ? (
+          <div className="glass-card" style={{ textAlign: "center", padding: "3rem 1rem" }}>
+            <ListChecks size={44} color="#334155" />
+            <h3 style={{ color: "#e2e8f0", marginTop: "0.8rem" }}>Sua lista esta vazia</h3>
+            <p style={{ color: "#94a3b8", fontSize: "0.9rem", marginTop: "0.3rem" }}>
+              Adicione itens para acompanhar o que falta pegar no mercado.
+            </p>
+          </div>
+        ) : (
+          orderedItems.map((item) => {
+            const historyContext = getRecentHistory(item);
+            return (
+              <ShoppingListItem
+                key={item.id}
+                item={item}
+                history={historyContext.entries}
+                historyMatchType={historyContext.matchType}
+                onToggle={() => actions.handleToggleItem(item.id)}
+                onRemove={() => actions.handleRemoveItem(item.id)}
+                transferOptions={listTransferOptions}
+                transferTargetId={getTransferTargetId(item.id)}
+                onTransferTargetChange={(targetListId) =>
+                  setTransferTargetByItem((prev) => ({ ...prev, [item.id]: targetListId }))
+                }
+                onMoveToList={() => {
+                  const targetListId = getTransferTargetId(item.id);
+                  if (!targetListId) {
+                    toast.error("Crie outra lista para mover itens.");
+                    return;
+                  }
+                  const success = actions.handleMoveItem(item.id, targetListId, activeListId);
+                  if (success) {
+                    const destinationName = lists.find((list) => list.id === targetListId)?.name || "outra lista";
+                    toast.success(`Item movido para "${destinationName}".`);
+                  }
+                }}
+                onCopyToList={() => {
+                  const targetListId = getTransferTargetId(item.id);
+                  if (!targetListId) {
+                    toast.error("Crie outra lista para copiar itens.");
+                    return;
+                  }
+                  const success = actions.handleCopyItem(item.id, targetListId, activeListId);
+                  if (success) {
+                    const destinationName = lists.find((list) => list.id === targetListId)?.name || "outra lista";
+                    toast.success(`Item copiado para "${destinationName}".`);
+                  }
+                }}
+                currentUserId={sessionUserId}
+              />
+            );
+          })
+        )}
+      </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(actions.confirmDialog)}
+        title={actions.confirmDialog?.title || ""}
+        message={actions.confirmDialog?.message || ""}
+        confirmText={actions.confirmDialog?.confirmText}
+        cancelText={actions.confirmDialog?.cancelText}
+        danger={actions.confirmDialog?.danger}
+        busy={false}
+        onCancel={actions.closeConfirm}
+        onConfirm={async () => {
+          await actions.confirmDialog?.onConfirm?.();
+          actions.closeConfirm();
+        }}
+      />
+    </div>
+  );
+}

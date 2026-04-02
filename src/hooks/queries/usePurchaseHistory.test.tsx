@@ -4,6 +4,10 @@ import { describe, expect, it } from "vitest";
 import { usePurchaseHistory } from "./usePurchaseHistory";
 import type { Receipt } from "../../types/domain";
 
+// Declarar variável global para testes React
+declare global {
+  var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
+}
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 function runHook(savedReceipts: Receipt[]) {

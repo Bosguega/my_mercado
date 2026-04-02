@@ -203,7 +203,7 @@ export async function regenerateCollaborativeListCodeInDB(
   listId: string,
 ): Promise<string> {
   const client = requireSupabase();
-  const nextCode = crypto.randomUUID().replaceAll("-", "").slice(0, 10).toUpperCase();
+  const nextCode = crypto.randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase();
   const { data, error } = await client
     .from("shopping_lists")
     .update({ share_code: nextCode })

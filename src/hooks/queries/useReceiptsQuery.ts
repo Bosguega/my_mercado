@@ -1,19 +1,6 @@
-import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "react-hot-toast";
-import {
-    getReceiptsPaginated,
-    getAllReceiptsFromDB,
-    saveReceiptToDB,
-    deleteReceiptFromDB,
-    restoreReceiptsToDB
-} from "../../services";
-import { processItemsPipeline } from "../../services/productService";
-import { getReceiptIdCandidates, toUserScopedReceiptId } from "../../utils/receiptId";
-import { canonicalProductKeys } from "./useCanonicalProductsQuery";
-import type { Receipt } from "../../types/domain";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import { getReceiptsPaginated } from "../../services";
 import type { HistoryFilters } from "../../types/ui";
-
-const LOCAL_STORAGE_KEY = "@MyMercado:receipts";
 
 // Query keys para cache
 export const receiptKeys = {
@@ -22,12 +9,13 @@ export const receiptKeys = {
     list: (filters: HistoryFilters, search?: string) => [...receiptKeys.lists(), filters, search] as const,
     infinites: () => [...receiptKeys.all, "infinite"] as const,
     infinite: (filters: HistoryFilters, search?: string) => [...receiptKeys.infinites(), filters, search] as const,
-    allReceipts: () => [...receiptKeys.all, "all"] as const,
     details: () => [...receiptKeys.all, "detail"] as const,
     detail: (id: string) => [...receiptKeys.details(), id] as const,
 };
 
-// Hook para query simples com paginação
+/**
+ * Hook para query simples com paginação
+ */
 export function useReceiptsQuery(
     page: number = 1,
     pageSize: number = 20,
@@ -48,7 +36,9 @@ export function useReceiptsQuery(
     });
 }
 
-// Hook para query infinita (paginação automática)
+/**
+ * Hook para query infinita (paginação automática)
+ */
 export function useInfiniteReceiptsQuery(
     pageSize: number = 20,
     filters?: HistoryFilters,
@@ -72,213 +62,8 @@ export function useInfiniteReceiptsQuery(
     });
 }
 
-// Hook para salvar receipt com detecção de duplicatas
-export function useSaveReceipt() {
-    const queryClient = useQueryClient();
-
-    return useMutation({
-        mutationFn: async ({
-            receipt,
-            sessionUserId,
-            forceReplace = false
-        }: {
-            receipt: Receipt;
-            sessionUserId: string | null;
-            forceReplace?: boolean;
-        }) => {
-            if (import.meta.env.DEV) {
-              console.log('💾 [SaveReceipt] Iniciando salvamento...');
-              console.log('💾 [SaveReceipt] SessionUserId:', sessionUserId);
-              console.log('💾 [SaveReceipt] Receipt:', receipt);
-            }
-            
-            // Buscar receipts atuais do cache ou localStorage
-            const currentReceipts = queryClient.getQueryData<Receipt[]>(receiptKeys.allReceipts()) ||
-                JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || "[]") as Receipt[];
-
-            const rawReceiptId = receipt.id || Date.now().toString();
-            const receiptId = toUserScopedReceiptId(rawReceiptId, sessionUserId ?? undefined);
-            
-            if (import.meta.env.DEV) {
-              console.log('💾 [SaveReceipt] ReceiptId:', receiptId);
-            }
-            
-            const idCandidates = new Set(
-                getReceiptIdCandidates(rawReceiptId, sessionUserId ?? undefined),
-            );
-            const existing = currentReceipts.find((r: Receipt) => idCandidates.has(String(r.id)));
-
-            if (existing && !forceReplace) {
-              if (import.meta.env.DEV) {
-                console.log('⚠️ [SaveReceipt] Nota duplicada detectada');
-              }
-                return { duplicate: true, existingReceipt: existing };
-            }
-
-            // Se existe e forceReplace, deletar o antigo primeiro
-            if (existing && forceReplace && existing.id !== receiptId) {
-              if (import.meta.env.DEV) {
-                console.log('💾 [SaveReceipt] Deletando nota antiga para substituir');
-              }
-                await deleteReceiptFromDB(existing.id);
-            }
-
-            // Processar items
-            if (import.meta.env.DEV) {
-              console.log('💾 [SaveReceipt] Processando items...');
-            }
-            // Converter ReceiptItem para RawReceiptItem para o pipeline
-            const rawItems = (receipt.items || []).map((item) => ({
-              name: item.name,
-              qty: item.quantity.toString().replace('.', ','),
-              unit: item.unit || 'UN',
-              unitPrice: item.price.toString().replace('.', ','),
-              total: (item.total ?? item.price * item.quantity).toString().replace('.', ','),
-            }));
-            const processedItems = await processItemsPipeline(rawItems);
-            const fullReceipt = { ...receipt, id: receiptId, items: processedItems };
-
-            // Salvar no banco
-            if (import.meta.env.DEV) {
-              console.log('💾 [SaveReceipt] Salvando no DB...');
-            }
-            const persistedReceipt = await saveReceiptToDB(fullReceipt, processedItems);
-            
-            if (import.meta.env.DEV) {
-              console.log('💾 [SaveReceipt] Salvo com sucesso!', persistedReceipt);
-            }
-
-            const receiptForUi: Receipt = {
-                ...fullReceipt,
-                date: persistedReceipt?.date || fullReceipt.date,
-            };
-
-            return { success: true, receipt: receiptForUi, existingId: existing?.id };
-        },
-        onSuccess: (result) => {
-            if ('duplicate' in result && result.duplicate) {
-                // Não invalidar cache se for duplicata
-                return;
-            }
-
-            if ('success' in result && result.success) {
-                // Atualizar cache otimisticamente
-                queryClient.setQueryData(receiptKeys.allReceipts(), (old: Receipt[] | undefined) => {
-                    if (!old) return [result.receipt];
-
-                    const idsToReplace = new Set<string>();
-                    if (result.existingId) idsToReplace.add(String(result.existingId));
-
-                    const filtered = old.filter((r: Receipt) => !idsToReplace.has(String(r.id)));
-                    const newList = [result.receipt, ...filtered];
-                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newList));
-                    return newList;
-                });
-
-                // Invalidar queries paginadas
-                queryClient.invalidateQueries({ queryKey: receiptKeys.lists() });
-                queryClient.invalidateQueries({ queryKey: receiptKeys.infinites() });
-                // Invalidar cache de produtos canônicos (caso tenham sido auto-criados)
-                queryClient.invalidateQueries({ queryKey: canonicalProductKeys.all });
-            }
-        },
-        onError: (err) => {
-            console.error("Erro ao salvar nota:", err);
-            toast.error("Erro técnico ao salvar a nota.");
-        },
-    });
-}
-
-// Hook para buscar TODOS os receipts (para analytics e backup)
-export function useAllReceiptsQuery(enabled: boolean = true) {
-    return useQuery({
-        queryKey: receiptKeys.allReceipts(),
-        queryFn: async () => {
-            // Sempre tentar Supabase primeiro se enabled for true
-            if (enabled) {
-                try {
-                    const data = await getAllReceiptsFromDB();
-                    // Sincronizar com localStorage como fallback
-                    if (Array.isArray(data) && data.length > 0) {
-                        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
-                    }
-                    return data;
-                } catch (error) {
-                    // Erro esperado: usuário não autenticado ou Supabase indisponível
-                    console.warn('Supabase indisponível, usando dados locais:', error);
-                }
-            }
-            
-            // Fallback para localStorage (sempre disponível)
-            const localData = localStorage.getItem(LOCAL_STORAGE_KEY);
-            if (localData) {
-                try {
-                    return JSON.parse(localData) as Receipt[];
-                } catch (parseError) {
-                    console.error('Erro ao parsear dados locais:', parseError);
-                    return [];
-                }
-            }
-            return [];
-        },
-        staleTime: 5 * 60 * 1000, // 5 minutos
-        enabled: true, // Sempre enabled para pelo menos buscar do localStorage
-        retry: false, // Não retry se falhar (provavelmente é auth error)
-    });
-}
-
-// Hook para deletar receipt
-export function useDeleteReceipt() {
-    const queryClient = useQueryClient();
-
-    return useMutation({
-        mutationFn: async (id: string) => {
-            await deleteReceiptFromDB(id);
-            return id;
-        },
-        onSuccess: (deletedId) => {
-            // Atualizar cache otimisticamente
-            queryClient.setQueryData(receiptKeys.allReceipts(), (old: Receipt[] | undefined) => {
-                if (!old) return old;
-                const newList = old.filter((r: Receipt) => r.id !== deletedId);
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newList));
-                return newList;
-            });
-
-            // Invalidar todas as queries de receipts
-            queryClient.invalidateQueries({ queryKey: receiptKeys.all });
-
-            toast.success("Nota removida com sucesso!");
-        },
-        onError: (err) => {
-            console.error("Erro ao remover nota:", err);
-            toast.error("Erro ao remover nota no banco remoto.");
-        },
-    });
-}
-
-// Hook para restaurar backup
-export function useRestoreReceipts() {
-    const queryClient = useQueryClient();
-
-    return useMutation({
-        mutationFn: async (receipts: Receipt[]) => {
-            await restoreReceiptsToDB(receipts);
-            return receipts;
-        },
-        onSuccess: (restoredReceipts) => {
-            // Atualizar cache
-            queryClient.setQueryData(receiptKeys.allReceipts(), restoredReceipts);
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(restoredReceipts));
-
-            // Invalidar todas as queries
-            queryClient.invalidateQueries({ queryKey: receiptKeys.all });
-
-            toast.success(`Backup restaurado com ${restoredReceipts.length} notas!`);
-        },
-        onError: (err) => {
-            console.error("Erro ao restaurar backup:", err);
-            toast.error("Erro ao restaurar backup.");
-        },
-    });
-}
+// Re-export dos hooks de mutation para backward compatibility
+export { useSaveReceiptMutation as useSaveReceipt } from "./useSaveReceiptMutation";
+export { useAllReceiptsQuery } from "./useAllReceiptsQuery";
+export { useDeleteReceiptMutation as useDeleteReceipt } from "./useDeleteReceiptMutation";
+export { useRestoreReceiptsMutation as useRestoreReceipts } from "./useRestoreReceiptsMutation";

@@ -10,15 +10,12 @@ export const logger = {
     /**
      * Log de erro - sempre visível em desenvolvimento
      * @param context - Contexto do erro (ex: "saveReceipt", "loadDictionary")
+     * @param message - Mensagem de erro
      * @param error - Erro capturado
-     * @param additionalInfo - Informações adicionais opcionais
      */
-    error: (context: string, error: unknown, additionalInfo?: string) => {
+    error: (context: string, message: string, error?: unknown) => {
         if (isDev) {
-            const message = additionalInfo
-                ? `[${context}] ${additionalInfo}`
-                : `[${context}]`;
-            console.error(message, error);
+            console.error(`[${context}] ${message}`, error);
         }
     },
 
@@ -26,10 +23,15 @@ export const logger = {
      * Log de warning - sempre visível em desenvolvimento
      * @param context - Contexto do warning
      * @param message - Mensagem de warning
+     * @param data - Dados adicionais opcionais
      */
-    warn: (context: string, message: string) => {
+    warn: (context: string, message: string, data?: unknown) => {
         if (isDev) {
-            console.warn(`[${context}] ${message}`);
+            if (data !== undefined) {
+                console.warn(`[${context}] ${message}`, data);
+            } else {
+                console.warn(`[${context}] ${message}`);
+            }
         }
     },
 

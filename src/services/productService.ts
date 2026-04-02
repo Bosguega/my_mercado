@@ -3,6 +3,7 @@ import { callAI } from "../utils/aiClient";
 import { normalizeKey } from "../utils/normalize";
 import { stripVariableInfo, cleanAIName } from "../utils/stringUtils";
 import { toNumber } from "../utils/shoppingList";
+import { logger } from "../utils/logger";
 import type { AiNormalizationResult } from "../types/ai";
 import type { DictionaryMap, RawReceiptItem, ReceiptItem } from "../types/domain";
 
@@ -42,7 +43,7 @@ export async function processItemsPipeline(rawItems: RawReceiptItem[] = []): Pro
     const key = normalizeKey(nameForKey);
 
     if (isDev) {
-      console.log(`[Pipeline] Input: "${item.name}" -> Key: "${key}" (from: "${nameForKey}")`);
+      logger.debug('ProductPipeline', `Input: "${item.name}" -> Key: "${key}"`);
     }
     return {
       ...item,
@@ -65,9 +66,7 @@ export async function processItemsPipeline(rawItems: RawReceiptItem[] = []): Pro
       if (fallbackEntry) {
         dictEntry = fallbackEntry;
         if (isDev) {
-          console.log(
-            `[Pipeline] Fallback find for "${item.name}": matched by normalized_name "${dictEntry.normalized_name}"`,
-          );
+          logger.debug('ProductPipeline', `Fallback match: "${item.name}" -> "${dictEntry.normalized_name}"`);
         }
       }
     }
@@ -98,7 +97,7 @@ export async function processItemsPipeline(rawItems: RawReceiptItem[] = []): Pro
 
       aiResults = [...aiResults, ...cleaned];
     } catch (err) {
-      console.warn("Erro na IA, usando fallback:", err);
+      logger.warn('ProductPipeline', 'Erro na IA, usando fallback', err);
 
       const fallback: AiNormalizationResult[] = chunk.map((item) => ({
         key: item.key,
@@ -126,7 +125,7 @@ export async function processItemsPipeline(rawItems: RawReceiptItem[] = []): Pro
         } else if (r.slug && r.normalized_name) {
           // 2. Senão existir, criar automaticamente
           try {
-            if (isDev) console.log(`[LazyMode] Criando Produto VIP: ${r.normalized_name}`);
+            if (isDev) logger.debug('ProductPipeline', `Criando Produto VIP: ${r.normalized_name}`);
             const newCp = await createCanonicalProduct({
               slug: r.slug,
               name: r.normalized_name,
@@ -137,7 +136,7 @@ export async function processItemsPipeline(rawItems: RawReceiptItem[] = []): Pro
             // Adicionar à lista local para não criar duplicados na mesma nota
             canonicalProducts.push(newCp);
           } catch (err) {
-            console.error("Erro ao criar produto VIP automático:", err);
+            logger.error('ProductPipeline', 'Erro ao criar produto VIP automático', err);
           }
         }
       }

@@ -1,10 +1,74 @@
+/**
+ * Tipos de UI e estado da aplicação
+ * 
+ * @fileoverview Este arquivo contém tipos relacionados à interface do usuário,
+ * filtros e configurações de UI
+ */
+
 import type { SessionUser } from "./domain";
 import type { ReceiptItem } from "./domain";
 
+// Re-export de tipos consolidados
+export type {
+  // History types
+  FilteredReceipts,
+  ConfirmDialogState,
+  UseConfirmDialogReturn,
+  HeaderSectionProps,
+  SummaryCardProps,
+  EmptyStateProps,
+  ReceiptListProps,
+  SortByOption,
+  SortOption,
+  SORT_OPTIONS,
+  PeriodOption,
+  PeriodSelectOption,
+  PERIOD_OPTIONS,
+} from "./history";
+
+export type {
+  // Scanner types
+  ScannerScreen,
+  SaveReceiptResponse,
+  ManualReceiptData,
+  ManualReceiptItemInput,
+  ScannerControls,
+  ManualReceiptFormProps,
+  InitialScannerScreenProps,
+  ScannerViewProps,
+  ReceiptResultProps,
+  DuplicateModalProps,
+  LoadingScreenProps,
+  ScanningScreenProps,
+  ScannerStyles,
+} from "./scanner";
+
+// =========================
+// APP NAVIGATION
+// =========================
+
+/**
+ * Abas principais da aplicação
+ */
 export type AppTab = "scan" | "shopping" | "history" | "search" | "settings";
+
+/**
+ * Direção de ordenação
+ */
 export type SortDirection = "asc" | "desc";
+
+/**
+ * Critérios de ordenação para busca
+ */
 export type SearchSortBy = "recent" | "price";
 
+// =========================
+// SHOPPING LIST
+// =========================
+
+/**
+ * Item de lista de compras na UI
+ */
 export interface ShoppingListItem {
   id: string;
   name: string;
@@ -16,6 +80,9 @@ export interface ShoppingListItem {
   checked_by_user_id?: string;
 }
 
+/**
+ * Metadados de uma lista de compras
+ */
 export interface ShoppingListMeta {
   id: string;
   name: string;
@@ -23,6 +90,9 @@ export interface ShoppingListMeta {
   updated_at: string;
 }
 
+/**
+ * Snapshot para sincronização de listas com cloud
+ */
 export interface ShoppingListsCloudSnapshot {
   version: 1;
   updated_at: string;
@@ -31,6 +101,13 @@ export interface ShoppingListsCloudSnapshot {
   items_by_list: Record<string, ShoppingListItem[]>;
 }
 
+// =========================
+// FILTERS
+// =========================
+
+/**
+ * Filtros para histórico de compras
+ */
 export interface HistoryFilters {
   period: "all" | "this-month" | "last-3-months" | "custom";
   sortBy: "date" | "value" | "store";
@@ -39,16 +116,29 @@ export interface HistoryFilters {
   endDate: string;
 }
 
+/**
+ * Filtros para busca de preços
+ */
 export interface SearchFilters {
   period: "all" | "this-month" | "last-3-months" | "custom";
   startDate: string;
   endDate: string;
 }
 
+// =========================
+// COMPONENT PROPS
+// =========================
+
+/**
+ * Props para componente de Login
+ */
 export interface LoginProps {
   setSessionUser: (user: SessionUser | null) => void;
 }
 
+/**
+ * Props para modal de API Key
+ */
 export interface ApiKeyModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -56,6 +146,10 @@ export interface ApiKeyModalProps {
   onSave: (key: string) => void;
 }
 
+/**
+ * Props para ConfirmDialog (versão antiga, usar ConfirmDialogConfig)
+ * @deprecated Usar ConfirmDialogConfig
+ */
 export interface ConfirmDialogProps {
   isOpen: boolean;
   title: string;
@@ -68,6 +162,9 @@ export interface ConfirmDialogProps {
   onCancel: () => void;
 }
 
+/**
+ * Configuração para diálogo de confirmação
+ */
 export interface ConfirmDialogConfig {
   title: string;
   message: string;
@@ -78,17 +175,36 @@ export interface ConfirmDialogConfig {
   onCancel?: () => void;
 }
 
+// =========================
+// PURCHASE HISTORY
+// =========================
+
+/**
+ * Item comprado com informações adicionais
+ */
 export interface PurchasedItem extends ReceiptItem {
   purchasedAt?: string;
   store?: string;
 }
 
+// =========================
+// SCANNER (LEGACY)
+// =========================
+
+/**
+ * Dados de scanner manual (legacy, usar types/scanner.ts)
+ * @deprecated Usar ManualReceiptData de types/scanner.ts
+ */
 export interface ScannerManualData {
   establishment: string;
   date: string;
   items: ReceiptItem[];
 }
 
+/**
+ * Item de scanner manual (legacy, usar types/scanner.ts)
+ * @deprecated Usar ManualReceiptItemInput de types/scanner.ts
+ */
 export interface ScannerManualItem {
   name: string;
   qty: string;

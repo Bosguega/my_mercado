@@ -4,6 +4,10 @@ import { describe, expect, it } from "vitest";
 import { useFilteredSearchItems } from "./useFilteredSearchItems";
 import type { PurchasedItem, SearchFilters } from "../../types/ui";
 
+// Declarar variável global para testes React
+declare global {
+  var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
+}
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 function runHook(items: PurchasedItem[]) {
