@@ -1,6 +1,6 @@
 /**
  * PWA Update Notification Hook
- * 
+ *
  * Detecta quando há nova versão do app e notifica o usuário.
  * @see https://vite-pwa-org.netlify.app/guide/register-mode.html#prompt
  */
@@ -57,7 +57,7 @@ export function usePWAUpdate(): PWAUpdateState {
       // Listener para mudanças no worker
       if (registration?.installing) {
         setInstalling(true);
-        
+
         registration.installing.addEventListener("statechange", (e) => {
           const target = e.target as ServiceWorker;
           if (target.state === "installed") {

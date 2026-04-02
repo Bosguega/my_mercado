@@ -60,10 +60,10 @@ export function generateShareCode(): string {
   let code = "";
   const randomValues = new Uint8Array(6);
   globalThis.crypto?.getRandomValues(randomValues);
-  
+
   for (let i = 0; i < 6; i++) {
     code += chars[randomValues[i] % chars.length];
   }
-  
+
   return code;
 }

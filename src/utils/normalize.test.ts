@@ -27,7 +27,9 @@ describe('normalize utils', () => {
     it('should handle empty or invalid values', () => {
       expect(normalizeKey('')).toBe('');
       expect(normalizeKey('   ')).toBe('');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect(normalizeKey(null as any)).toBe('');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect(normalizeKey(undefined as any)).toBe('');
     });
 

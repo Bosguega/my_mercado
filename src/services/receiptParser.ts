@@ -144,16 +144,16 @@ export async function parseNFCeSP(url: string): Promise<Receipt> {
   if (import.meta.env.DEV) {
     console.log('🔍 [Parser] Tentando buscar via proxies...');
   }
-  
+
   for (let index = 0; index < PROXIES.length; index += 1) {
     const getProxyUrl = PROXIES[index];
     try {
       const proxyUrl = getProxyUrl(targetUrl);
-      
+
       if (import.meta.env.DEV) {
         console.log(`🔍 [Parser] Tentativa ${index + 1}/${PROXIES.length}: ${proxyUrl.substring(0, 80)}...`);
       }
-      
+
       const response = await fetchWithTimeout(proxyUrl, PROXY_TIMEOUT_MS);
 
       if (response.ok) {

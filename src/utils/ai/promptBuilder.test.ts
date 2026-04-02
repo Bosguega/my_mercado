@@ -8,9 +8,9 @@ describe("promptBuilder", () => {
         { key: "item1", raw: "ARROZ BRANCO 5KG" },
         { key: "item2", raw: "LEITE INTEGRAL 1L" },
       ];
-      
+
       const prompt = buildNormalizationPrompt(items);
-      
+
       expect(prompt).toContain("ARROZ BRANCO 5KG");
       expect(prompt).toContain("LEITE INTEGRAL 1L");
       expect(prompt).toContain("key: \"item1\"");
@@ -20,14 +20,14 @@ describe("promptBuilder", () => {
     it("deve incluir categorias no prompt", () => {
       const items = [{ key: "test", raw: "TEST" }];
       const prompt = buildNormalizationPrompt(items);
-      
+
       expect(prompt).toContain("Categorize em:");
     });
 
     it("deve incluir exemplos no prompt", () => {
       const items = [{ key: "test", raw: "TEST" }];
       const prompt = buildNormalizationPrompt(items);
-      
+
       expect(prompt).toContain("EXEMPLOS:");
       expect(prompt).toContain("CERV BRAHMA LTA 350ML");
     });
@@ -35,7 +35,7 @@ describe("promptBuilder", () => {
     it("deve incluir regras no prompt", () => {
       const items = [{ key: "test", raw: "TEST" }];
       const prompt = buildNormalizationPrompt(items);
-      
+
       expect(prompt).toContain("REGRAS:");
       expect(prompt).toContain("MANTENHA volumes e pesos");
     });
@@ -52,9 +52,9 @@ describe("promptBuilder", () => {
           slug: "arroz_branco_5kg",
         },
       ]);
-      
+
       const result = parseAiJsonResponse(jsonText);
-      
+
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual({
         key: "item1",
@@ -67,9 +67,9 @@ describe("promptBuilder", () => {
 
     it("deve remover markdown wrapper do JSON", () => {
       const jsonText = "```json\n[{\"key\": \"item1\", \"normalized_name\": \"Test\", \"category\": \"Outros\"}]\n```";
-      
+
       const result = parseAiJsonResponse(jsonText);
-      
+
       expect(result).toHaveLength(1);
       expect(result[0].key).toBe("item1");
     });
@@ -78,9 +78,9 @@ describe("promptBuilder", () => {
       const jsonText = JSON.stringify([
         { key: "item1" },
       ]);
-      
+
       const result = parseAiJsonResponse(jsonText);
-      
+
       expect(result[0]).toEqual({
         key: "item1",
         normalized_name: "",
@@ -92,7 +92,7 @@ describe("promptBuilder", () => {
 
     it("deve lancar erro para JSON invalido", () => {
       const invalidJson = "not a json";
-      
+
       expect(() => parseAiJsonResponse(invalidJson)).toThrow("Resposta da IA nao e um JSON valido.");
     });
 
@@ -104,7 +104,7 @@ describe("promptBuilder", () => {
 
     it("deve lancar erro se nao for array", () => {
       const jsonText = JSON.stringify({ key: "item1" });
-      
+
       // O erro ocorre no parse do JSON antes da validacao do array
       expect(() => parseAiJsonResponse(jsonText)).toThrow("Resposta da IA nao e um JSON valido.");
     });
@@ -113,9 +113,9 @@ describe("promptBuilder", () => {
       const jsonText = JSON.stringify([
         { key: "item1", normalized_name: "Test", category: "Outros", brand: null },
       ]);
-      
+
       const result = parseAiJsonResponse(jsonText);
-      
+
       expect(result[0].brand).toBeUndefined();
     });
   });

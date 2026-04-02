@@ -39,7 +39,7 @@ export async function testSupabaseConnection(): Promise<ConnectionStatus> {
   // 2. Verificar autenticação
   try {
     const { data: { session } } = await supabase.auth.getSession();
-    
+
     if (session?.user) {
       result.authenticated = true;
       result.userId = session.user.id;
@@ -91,7 +91,7 @@ export async function checkAuthentication(): Promise<{
   }
 
   const { data: { session } } = await supabase.auth.getSession();
-  
+
   return {
     authenticated: !!session?.user,
     userId: session?.user?.id ?? null,

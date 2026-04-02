@@ -26,7 +26,7 @@ export function useAllReceiptsQuery(enabled: boolean = true) {
                         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
                     }
                     return data;
-                } catch (error) {
+                } catch (_error) {
                     // Erro esperado: usuário não autenticado ou Supabase indisponível
                     logger.warn('AllReceiptsQuery', 'Supabase indisponível, usando dados locais');
                 }

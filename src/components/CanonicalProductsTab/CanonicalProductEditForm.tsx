@@ -35,7 +35,7 @@ export function CanonicalProductEditForm({ product, onSave, onCancel }: Canonica
             const parsed = parseUpdateCanonicalProductInput(formData);
             await updateProduct.mutateAsync({ id: product.id, updates: parsed });
             onSave();
-        } catch (err) {
+        } catch (_err) {
             // Erro já é tratado pelo hook
         } finally {
             setBusy(false);
@@ -69,17 +69,17 @@ export function CanonicalProductEditForm({ product, onSave, onCancel }: Canonica
                 placeholder="Marca"
             />
             <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button 
-                    className="btn btn-success" 
-                    style={{ flex: 1 }} 
+                <button
+                    className="btn btn-success"
+                    style={{ flex: 1 }}
                     onClick={handleSubmit}
                     disabled={busy}
                 >
                     <Save size={18} /> {busy ? "Salvando..." : "Salvar"}
                 </button>
-                <button 
-                    className="btn" 
-                    style={{ flex: 1 }} 
+                <button
+                    className="btn"
+                    style={{ flex: 1 }}
                     onClick={onCancel}
                     disabled={busy}
                 >

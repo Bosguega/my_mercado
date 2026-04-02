@@ -20,6 +20,7 @@ export async function syncLocalStorageWithSupabase(): Promise<{
     for (const receipt of localReceipts) {
       try {
         // Verifica se já existe no Supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const items = (receipt as any).items || [];
         await saveReceiptToDB(receipt, items);
         synced++;

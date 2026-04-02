@@ -5,7 +5,7 @@
  * - Padroniza separadores (hifen, barra, ponto, virgula -> espaço)
  * - Mantém apenas letras A-Z, números e espaços
  * - Normaliza espaços duplicados e faz trim
- * 
+ *
  * @param {string} name - O nome original do produto
  * @returns {string} - A chave normalizada
  */

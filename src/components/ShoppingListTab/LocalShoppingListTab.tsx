@@ -13,7 +13,6 @@ import { scoreHistoryKeyMatch } from "../../utils/shoppingHistoryMatch";
 import { ShoppingListItem } from "../ShoppingListItem";
 import ConfirmDialog from "../ConfirmDialog";
 import type {
-  ConfirmDialogConfig,
   ShoppingListItem as ShoppingListItemType,
 } from "../../types/ui";
 
@@ -28,7 +27,7 @@ interface LocalShoppingListTabProps {
  * Componente de Lista de Compras Local
  * Gerencia listas de compras armazenadas localmente no dispositivo
  */
-export function LocalShoppingListTab({ onSwitchToCollab }: LocalShoppingListTabProps) {
+export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: LocalShoppingListTabProps) {
   const sessionUserId = useReceiptsSessionStore((state) => state.sessionUserId);
   const { data: savedReceipts = [] } = useAllReceiptsQuery();
 

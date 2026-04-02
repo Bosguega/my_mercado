@@ -52,4 +52,3 @@ export function parseBackupJson(rawJson: string): ParseBackupResult {
 
   return { ok: true, data: result.data };
 }
-

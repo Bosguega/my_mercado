@@ -10,13 +10,13 @@ interface MergeModeBannerProps {
  */
 export function MergeModeBanner({ primaryName, onCancel }: MergeModeBannerProps) {
     return (
-        <div 
-            className="glass-card" 
-            style={{ 
-                padding: "1.25rem", 
-                marginBottom: "1rem", 
-                background: "rgba(245, 158, 11, 0.1)", 
-                border: "1px solid rgba(245, 158, 11, 0.2)" 
+        <div
+            className="glass-card"
+            style={{
+                padding: "1.25rem",
+                marginBottom: "1rem",
+                background: "rgba(245, 158, 11, 0.1)",
+                border: "1px solid rgba(245, 158, 11, 0.2)"
             }}
         >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

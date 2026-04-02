@@ -27,6 +27,7 @@ import "./index.css";
 
 const LAZY_RELOAD_KEY = "@MyMercado:lazy-reload-once";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function lazyWithRetry<T extends { default: React.ComponentType<any> }>(
   importer: () => Promise<T>,
 ) {
@@ -98,7 +99,7 @@ function App() {
           const { syncLocalStorageWithSupabase } = await import('./services/syncService');
           const result = await syncLocalStorageWithSupabase();
           const shouldSyncShoppingLists = isShoppingListCloudSyncEnabled();
-          
+
           if (result.synced > 0) {
             toast.success(`${result.synced} nota(s) sincronizada(s) com a nuvem!`);
           }
@@ -117,14 +118,14 @@ function App() {
               console.warn("Sincronizacao de listas ignorada:", shoppingSync.reason);
             }
           }
-          
+
           // Re-fetch para atualizar dados do Supabase
           await refetch();
         } catch (error) {
           console.warn('Erro ao sincronizar dados locais:', error);
         }
       }, 1000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [sessionUser, refetch]);
@@ -202,26 +203,25 @@ function App() {
   useEffect(() => {
     if (receiptsError) {
       setError(receiptsError);
-      
+
       // Verificar se é erro de autenticação (esperado em alguns casos)
-      const isAuthError = 
+      const isAuthError =
         receiptsError.message?.includes('autenticado') ||
         receiptsError.message?.includes('Unauthorized') ||
         receiptsError.message?.includes('401');
-      
+
       // Só mostrar toast se NÃO for erro de autenticação
       if (!isAuthError) {
         toast.error("Erro ao sincronizar dados com o servidor. Exibindo dados locais.");
 
         // Debug automático quando há erro
         if (import.meta.env.DEV) {
-          console.log('🔍 Executando debug de database devido a erro...');
           debugDatabaseConnection();
         }
       } else {
         // Erro de autenticação é normal - apenas log em dev
         if (import.meta.env.DEV) {
-          console.log('ℹ️ Usuário não autenticado, usando dados locais se disponíveis');
+          // Usuário não autenticado, usando dados locais se disponíveis
         }
       }
     } else {
@@ -236,7 +236,7 @@ function App() {
     if (!hasKey) {
       setShowApiKeyModal(true);
     }
-    
+
     // Debug PWA em desenvolvimento
     if (import.meta.env.DEV) {
       logPWADebugInfo();

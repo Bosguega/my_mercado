@@ -4,17 +4,17 @@ import type { ShoppingListItem } from "../../types/ui";
 
 /**
  * Hook que ordena items da lista de compras.
- * 
+ *
  * Critérios de ordenação:
  * 1. Não verificados primeiro (checked = false)
  * 2. Por data de criação (mais recente primeiro)
- * 
+ *
  * @param shoppingItems - Lista de items
- * 
+ *
  * @example
  * ```tsx
  * const orderedItems = useSortedShoppingItems(shoppingItems);
- * 
+ *
  * // Items não verificados aparecem primeiro
  * // Dentro de cada grupo, ordenados por created_at (desc)
  * ```

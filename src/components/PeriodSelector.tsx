@@ -20,11 +20,11 @@ const PERIOD_OPTIONS = [
 
 /**
  * PeriodSelector - Seletor de período reutilizável
- * 
+ *
  * Componente visual para seleção de período (all, this-month, last-3-months, custom)
  * Funciona com HistoryFilters ou SearchFilters.
  * Não gerencia estado interno - estado controlado via props.
- * 
+ *
  * @example
  * // Com HistoryFilters
  * <PeriodSelector
@@ -32,7 +32,7 @@ const PERIOD_OPTIONS = [
  *   onChange={setHistoryFilters}
  *   label="PERÍODO:"
  * />
- * 
+ *
  * @example
  * // Com SearchFilters
  * <PeriodSelector
@@ -101,11 +101,11 @@ type PeriodDatePickersProps<T extends HistoryFilters | SearchFilters> = {
 
 /**
  * PeriodDatePickers - Date pickers para período personalizado
- * 
+ *
  * Renderiza inputs de data para início e fim quando o período é "custom".
  * Funciona com HistoryFilters ou SearchFilters.
  * Deve ser renderizado condicionalmente pelo componente pai.
- * 
+ *
  * @example
  * // Com HistoryFilters
  * {historyFilters.period === "custom" && (

@@ -1,8 +1,8 @@
 import { useState, useCallback, useMemo } from 'react';
-import { 
-  getApiKey, 
-  setApiKey as setApiKeyStorage, 
-  getApiModel, 
+import {
+  getApiKey,
+  setApiKey as setApiKeyStorage,
+  getApiModel,
   setApiModel as setApiModelStorage,
   detectProvider
 } from '../utils/aiConfig';

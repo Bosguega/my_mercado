@@ -1,6 +1,6 @@
 /**
  * Tipos para funcionalidades de Scanner
- * 
+ *
  * @fileoverview Este arquivo contém tipos relacionados ao scanner de NFC-e
  */
 

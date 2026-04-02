@@ -14,7 +14,7 @@ import type { CanonicalProduct, DictionaryEntry } from "../../types/domain";
 
 /**
  * Componente principal de Produtos Canônicos
- * 
+ *
  * Gerencia CRUD e merge de produtos canônicos
  */
 export function CanonicalProductsTab() {

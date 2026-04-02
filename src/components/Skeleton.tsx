@@ -8,28 +8,28 @@ interface SkeletonProps {
   style?: React.CSSProperties;
 }
 
-export const Skeleton: React.FC<SkeletonProps> = ({ 
-  width, 
-  height, 
-  borderRadius, 
-  className = "", 
-  style 
+export const Skeleton: React.FC<SkeletonProps> = ({
+  width,
+  height,
+  borderRadius,
+  className = "",
+  style
 }) => {
   return (
-    <div 
-      className={`skeleton-line ${className}`} 
-      style={{ 
-        width: width || "100%", 
-        height: height || "20px", 
+    <div
+      className={`skeleton-line ${className}`}
+      style={{
+        width: width || "100%",
+        height: height || "20px",
         borderRadius: borderRadius || "6px",
-        ...style 
-      }} 
+        ...style
+      }}
     />
   );
 };
 
-export const SkeletonCard: React.FC<{ children: React.ReactNode; className?: string; style?: React.CSSProperties }> = ({ 
-  children, 
+export const SkeletonCard: React.FC<{ children: React.ReactNode; className?: string; style?: React.CSSProperties }> = ({
+  children,
   className = "",
   style
 }) => (

@@ -139,6 +139,7 @@ export function useCameraScanner() {
         };
 
         if (capabilities.torch) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await track.applyConstraints({ advanced: [{ torch: on }] as any });
           setTorch(on);
 

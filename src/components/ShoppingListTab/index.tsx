@@ -7,10 +7,10 @@ import type { ShoppingMode } from "./ShoppingListTab.types";
 
 /**
  * Componente principal da Lista de Compras
- * 
+ *
  * Orquestra os modos local e colaborativo,
  * permitindo que o usuário alterne entre eles.
- * 
+ *
  * @example
  * ```tsx
  * <ShoppingListTab />

@@ -1,6 +1,6 @@
 /**
  * PWA Update Notification Component
- * 
+ *
  * Mostra toast quando há nova versão disponível.
  */
 

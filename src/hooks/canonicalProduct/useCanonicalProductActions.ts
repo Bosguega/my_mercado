@@ -10,7 +10,6 @@ import {
     parseCreateCanonicalProductInput,
     parseUpdateCanonicalProductInput,
 } from "../../utils/validation/canonicalProduct";
-import type { CanonicalProduct } from "../../types/domain";
 import type { ConfirmDialogConfig } from "../../types/ui";
 
 interface CreateFormData {

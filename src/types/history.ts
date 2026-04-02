@@ -1,6 +1,6 @@
 /**
  * Tipos para funcionalidades de History Tab
- * 
+ *
  * @fileoverview Este arquivo contém tipos relacionados ao histórico de compras
  */
 

@@ -23,13 +23,13 @@ export function parseBRL(value: string | number | null | undefined): number {
   // Se a string já estiver no formato decimal "clean" (ex: "123.45"), o currency.js lida bem.
   // Se contiver vírgula, precisamos garantir que o currency.js entenda que é decimal.
   const stringValue = String(value).trim();
-  
+
   // Detecção de formato brasileiro: tem vírgula e se tiver ponto, o ponto vem antes da vírgula.
   if (stringValue.includes(',') && !stringValue.includes('.')) {
     // Caso simples: "12,34"
     return currency(stringValue.replace(',', '.')).value;
   }
-  
+
   if (stringValue.includes(',') && stringValue.includes('.')) {
     // Caso complexo: "1.234,56"
     return currency(stringValue, { separator: '.', decimal: ',' }).value;

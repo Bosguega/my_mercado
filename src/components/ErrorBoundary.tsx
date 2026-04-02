@@ -27,7 +27,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("🔴 ErrorBoundary capturou um erro:", error, errorInfo);
-    
+
     // Notificar usuário
     toast.error("Ops! Algo deu errado. Tente recarregar a página.", {
       duration: 5000,

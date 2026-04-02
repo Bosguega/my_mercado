@@ -1,10 +1,10 @@
 /**
  * Barrel exports para hooks de queries
- * 
+ *
  * @example
  * // Importar hooks individuais
  * import { useReceiptsQuery, useSaveReceipt } from '@/hooks/queries';
- * 
+ *
  * // Ou importar hooks específicos de arquivos individuais
  * import { useAllReceiptsQuery } from '@/hooks/queries/useAllReceiptsQuery';
  */

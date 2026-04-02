@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Save, X } from "lucide-react";
 import { toCanonicalSlug } from "../../utils/validation/canonicalProduct";
-import { useCanonicalProductActions } from "../../hooks/canonicalProduct/useCanonicalProductActions";
 
 interface CreateFormData {
     slug: string;
@@ -75,9 +74,9 @@ export function CanonicalProductForm({ onCreate, onCancel }: CanonicalProductFor
                     onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                 />
                 <div style={{ display: "flex", gap: "0.5rem" }}>
-                    <button 
-                        className="btn btn-success" 
-                        style={{ flex: 1 }} 
+                    <button
+                        className="btn btn-success"
+                        style={{ flex: 1 }}
                         onClick={handleSubmit}
                         disabled={busy}
                     >

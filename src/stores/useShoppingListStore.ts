@@ -10,16 +10,16 @@ import type {
 
 /**
  * Shopping List Store - Gerencia o estado das listas de compras
- * 
+ *
  * Arquitetura:
  * - Armazena dados por usuário (ownerKey) para suportar múltiplos usuários
  * - Persiste em localStorage com migrate automático de versão
  * - Fornece operações CRUD completas para listas e itens
- * 
+ *
  * @example
  * // Obter listas de um usuário
  * const lists = useShoppingListStore((state) => state.getLists(userId));
- * 
+ *
  * // Adicionar item
  * const result = addItem(userId, "Arroz", "5kg");
  * if (result.ok) { /* result.item * / }
@@ -281,7 +281,7 @@ type MoveOrCopyResult =
 
 /**
  * Estado e operações do Shopping List Store
- * 
+ *
  * @remarks
  * Todas as operações são scoped por userId para suportar múltiplos usuários
  * Operações retornam resultados tipados com discriminated unions
@@ -289,29 +289,29 @@ type MoveOrCopyResult =
 type ShoppingListState = {
   /** Dados brutos por usuário - não usar diretamente */
   dataByUser: Record<string, UserShoppingLists>;
-  
+
   /** @returns Lista de metadados das listas do usuário */
   getLists: (userId: string | null | undefined) => ShoppingListMeta[];
-  
+
   /** @returns ID da lista ativa do usuário */
   getActiveListId: (userId: string | null | undefined) => string;
-  
-  /** 
+
+  /**
    * @returns Itens de uma lista específica ou da lista ativa
    * @param listId - ID da lista (opcional, usa ativa se não fornecido)
    */
   getItems: (userId: string | null | undefined, listId?: string) => ShoppingListItem[];
-  
+
   /** Define a lista ativa do usuário */
   setActiveList: (userId: string | null | undefined, listId: string) => void;
-  
-  /** 
+
+  /**
    * Cria nova lista
    * @returns Falha se nome vazio ou duplicado
    */
   createList: (userId: string | null | undefined, name: string) => ListOperationResult;
-  
-  /** 
+
+  /**
    * Renomeia lista existente
    * @returns Falha se nome vazio, duplicado ou lista não encontrada
    */
@@ -320,14 +320,14 @@ type ShoppingListState = {
     listId: string,
     name: string,
   ) => ListOperationResult;
-  
-  /** 
+
+  /**
    * Exclui lista
    * @returns Falha se for a última lista ou não encontrada
    */
   deleteList: (userId: string | null | undefined, listId: string) => ListOperationResult;
-  
-  /** 
+
+  /**
    * Adiciona item à lista
    * @returns Falha se nome vazio ou item duplicado (mesma key normalizada)
    */
@@ -337,28 +337,28 @@ type ShoppingListState = {
     quantity?: string,
     listId?: string,
   ) => AddItemResult;
-  
+
   /** Alterna status checked/unchecked de um item */
   toggleChecked: (
     userId: string | null | undefined,
     itemId: string,
     listId?: string,
   ) => void;
-  
+
   /** Remove um item da lista */
   removeItem: (
     userId: string | null | undefined,
     itemId: string,
     listId?: string,
   ) => void;
-  
+
   /** Remove todos os itens marcados como comprados */
   clearChecked: (userId: string | null | undefined, listId?: string) => void;
-  
+
   /** Remove todos os itens da lista */
   clearAll: (userId: string | null | undefined, listId?: string) => void;
-  
-  /** 
+
+  /**
    * Move item para outra lista
    * @returns Falha se mesma lista, item não encontrado ou duplicado na destino
    */
@@ -368,8 +368,8 @@ type ShoppingListState = {
     targetListId: string,
     sourceListId?: string,
   ) => MoveOrCopyResult;
-  
-  /** 
+
+  /**
    * Copia item para outra lista (cria novo item com novo ID)
    * @returns Falha se mesma lista, item não encontrado ou duplicado na destino
    */
@@ -379,15 +379,15 @@ type ShoppingListState = {
     targetListId: string,
     sourceListId?: string,
   ) => MoveOrCopyResult;
-  
-  /** 
+
+  /**
    * @returns Snapshot para sincronização com cloud (ou null se sem dados)
    */
   getCloudSnapshot: (
     userId: string | null | undefined,
   ) => ShoppingListsCloudSnapshot | null;
-  
-  /** 
+
+  /**
    * Aplica snapshot vindo da cloud
    * @returns false se snapshot inválido
    */

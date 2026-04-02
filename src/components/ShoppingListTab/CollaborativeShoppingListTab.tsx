@@ -15,6 +15,7 @@ import ConfirmDialog from "../ConfirmDialog";
 import type { ShoppingListItem as ShoppingListItemType } from "../../types/ui";
 import type { CollaborativeShoppingListItem } from "../../types/domain";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const EMPTY_SHOPPING_ITEMS: ShoppingListItemType[] = [];
 
 interface CollaborativeShoppingListTabProps {

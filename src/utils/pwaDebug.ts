@@ -65,7 +65,7 @@ export function logPWADebugInfo() {
     console.log('Service Worker:', debug.serviceWorkerStatus);
     console.log('Cache:', debug.cacheStatus);
     console.log('Supabase URL:', debug.supabaseUrl);
-    
+
     if (debug.errors.length > 0) {
       console.error('Erros encontrados:', debug.errors);
     }
@@ -77,7 +77,7 @@ export async function testSupabaseConnection(): Promise<boolean> {
   try {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    
+
     if (!supabaseUrl || !supabaseKey || supabaseUrl === 'COLE_SUA_URL_AQUI') {
       console.error('❌ Supabase não configurado');
       return false;

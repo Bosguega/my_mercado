@@ -97,4 +97,3 @@ export function parseCreateCanonicalProductInput(input: CreateCanonicalInput) {
 export function parseUpdateCanonicalProductInput(input: UpdateCanonicalInput) {
   return updateCanonicalProductSchema.parse(input);
 }
-

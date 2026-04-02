@@ -1,6 +1,6 @@
 /**
  * AI Client - Unified Entry Point
- * 
+ *
  * Ponto de entrada unificado para chamadas de IA.
  * Orquestra entre Gemini e OpenAI baseado no provider.
  */

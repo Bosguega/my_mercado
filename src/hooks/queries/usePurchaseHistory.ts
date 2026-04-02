@@ -30,22 +30,22 @@ interface UsePurchaseHistoryReturn {
 
 /**
  * Hook que monta histórico de compras a partir dos receipts.
- * 
+ *
  * Responsabilidade:
  * - Extrair items de todos os receipts
  * - Agrupar por chave normalizada
  * - Ordenar por data (mais recente primeiro)
  * - Gerar sugestões baseadas na frequência
- * 
+ *
  * @param savedReceipts - Lista de receipts
- * 
+ *
  * @example
  * ```tsx
  * const { historyByKey, suggestions } = usePurchaseHistory(savedReceipts);
- * 
+ *
  * // Buscar histórico de um item
  * const history = historyByKey.get(normalizedKey);
- * 
+ *
  * // Sugestões para autocomplete
  * <datalist>
  *   {suggestions.map(s => <option key={s.key} value={s.label} />)}

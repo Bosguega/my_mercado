@@ -1,6 +1,6 @@
 /**
  * Google AI Studio (Gemini) Client
- * 
+ *
  * Cliente para integração com API do Google Gemini
  */
 
@@ -58,7 +58,7 @@ export async function testGeminiConnection(
   model: string,
 ): Promise<boolean> {
   const testItems: AiNormalizationInput[] = [{ key: "TEST", raw: "ARROZ BRANCO 5KG" }];
-  
+
   try {
     await callGemini(testItems, apiKey, model);
     return true;

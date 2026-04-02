@@ -1,6 +1,6 @@
 /**
  * AI Prompt Builder
- * 
+ *
  * Constrói prompts para normalização de produtos de supermercado
  */
 

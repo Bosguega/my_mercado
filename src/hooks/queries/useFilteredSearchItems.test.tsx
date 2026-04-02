@@ -60,4 +60,3 @@ describe("useFilteredSearchItems", () => {
     expect(result.items).toHaveLength(120);
   });
 });
-

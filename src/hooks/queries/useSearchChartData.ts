@@ -14,16 +14,16 @@ interface UseSearchChartDataReturn {
 
 /**
  * Hook que prepara dados para o gráfico de tendência de preços.
- * 
+ *
  * Responsabilidade:
  * - Agrupar items por produto (canonical ou nome)
  * - Calcular datas únicas
  * - Mapear preços por data
- * 
+ *
  * @param filteredItems - Items já filtrados e ordenados
  * @param canonicalProducts - Produtos canônicos para nomeação
  * @param showChart - Controle de exibição do gráfico
- * 
+ *
  * @example
  * ```tsx
  * const { groupedItems, chartData } = useSearchChartData(

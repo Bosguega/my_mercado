@@ -198,6 +198,7 @@ export async function getAllReceiptsFromDB(): Promise<Receipt[]> {
   try {
     const result = await getReceiptsPaginated(1, 2000);
     return result.data;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     if (import.meta.env.DEV) {
       logger.error('getAllReceiptsFromDB', 'Erro ao buscar todos os receipts', error);

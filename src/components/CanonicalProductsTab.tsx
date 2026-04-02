@@ -54,7 +54,6 @@ function CanonicalProductsTab() {
         });
     }, [products]); // Re-carregar se produtos mudarem
 
-
     const closeConfirm = () => {
         confirmDialog?.onCancel?.();
         setConfirmDialog(null);
@@ -381,10 +380,10 @@ function CanonicalProductsTab() {
                                                 const aliases = dictionary.filter(d => d.canonical_product_id === product.id);
                                                 if (!aliases.length) return null;
                                                 return (
-                                                    <div style={{ 
-                                                        display: "flex", 
-                                                        flexWrap: "wrap", 
-                                                        gap: "4px", 
+                                                    <div style={{
+                                                        display: "flex",
+                                                        flexWrap: "wrap",
+                                                        gap: "4px",
                                                         marginTop: "8px",
                                                         padding: "4px 8px",
                                                         background: "rgba(255,255,255,0.03)",
@@ -395,12 +394,12 @@ function CanonicalProductsTab() {
                                                             <Tag size={10} /> Reconhecido como:
                                                         </span>
                                                         {aliases.slice(0, 10).map(a => (
-                                                            <span key={a.key} style={{ 
-                                                                fontSize: "0.7rem", 
-                                                                color: "#e2e8f0", 
-                                                                background: "rgba(255,255,255,0.05)", 
-                                                                padding: "1px 6px", 
-                                                                borderRadius: "4px" 
+                                                            <span key={a.key} style={{
+                                                                fontSize: "0.7rem",
+                                                                color: "#e2e8f0",
+                                                                background: "rgba(255,255,255,0.05)",
+                                                                padding: "1px 6px",
+                                                                borderRadius: "4px"
                                                             }}>
                                                                 {a.normalized_name}
                                                             </span>
@@ -509,4 +508,3 @@ function CanonicalProductsTab() {
 }
 
 export default CanonicalProductsTab;
-

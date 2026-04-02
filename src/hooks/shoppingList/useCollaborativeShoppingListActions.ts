@@ -20,7 +20,7 @@ import type { ConfirmDialogConfig } from "../../types/ui";
  * Hook para ações de lista de compras colaborativa
  * Gerencia operações CRUD e membros em listas colaborativas
  */
-export function useCollaborativeShoppingListActions(sessionUserId: string | null | undefined) {
+export function useCollaborativeShoppingListActions(_sessionUserId: string | null | undefined) {
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
 
   const createCollaborativeList = useCreateCollaborativeList();

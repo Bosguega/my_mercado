@@ -51,4 +51,3 @@ describe("canonicalProduct validation", () => {
     expect(() => parseUpdateCanonicalProductInput({})).toThrow();
   });
 });
-

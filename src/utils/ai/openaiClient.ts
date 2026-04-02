@@ -1,6 +1,6 @@
 /**
  * OpenAI Client
- * 
+ *
  * Cliente para integração com API OpenAI-compatible
  */
 
@@ -63,7 +63,7 @@ export async function testOpenAIConnection(
   model: string,
 ): Promise<boolean> {
   const testItems: AiNormalizationInput[] = [{ key: "TEST", raw: "ARROZ BRANCO 5KG" }];
-  
+
   try {
     await callOpenAI(testItems, apiKey, model);
     return true;

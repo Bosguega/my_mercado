@@ -1,6 +1,6 @@
 /**
  * Tipos de UI e estado da aplicação
- * 
+ *
  * @fileoverview Este arquivo contém tipos relacionados à interface do usuário,
  * filtros e configurações de UI
  */

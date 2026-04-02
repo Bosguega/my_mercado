@@ -35,7 +35,7 @@ const UniversalSearchBar = ({
   containerStyle = {},
   inputStyle = {}
 }: UniversalSearchBarProps) => {
-  
+
   const defaultContainerStyle: CSSProperties = {
     padding: "1.25rem",
     display: "flex",

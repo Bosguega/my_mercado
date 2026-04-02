@@ -11,15 +11,15 @@ interface UseSearchItemsReturn {
 
 /**
  * Hook que transforma receipts em items de busca.
- * 
+ *
  * Responsabilidade:
  * - Fazer flatten de receipts → items
  * - Fazer merge com canonical products
  * - Adicionar metadados (purchasedAt, store)
- * 
+ *
  * @param receipts - Lista de receipts
  * @param canonicalProducts - Lista de produtos canônicos
- * 
+ *
  * @example
  * ```tsx
  * const { items: allItems, isLoading } = useSearchItems(savedReceipts, canonicalProducts);

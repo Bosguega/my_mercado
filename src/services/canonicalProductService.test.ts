@@ -137,17 +137,19 @@ describe("mergeCanonicalProducts", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getUserOrThrow).mockResolvedValue({ 
+    vi.mocked(getUserOrThrow).mockResolvedValue({
       id: userId,
       app_metadata: {},
       user_metadata: {},
       aud: "authenticated",
       created_at: new Date().toISOString(),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
   });
 
   it("moves associations, updates merge_count and deletes secondary product", async () => {
     const mock = createSupabaseMock(primaryId, secondaryId, userId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(requireSupabase).mockReturnValue(mock.client as any);
 
     await mergeCanonicalProducts(primaryId, secondaryId);

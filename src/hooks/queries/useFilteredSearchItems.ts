@@ -61,4 +61,3 @@ export function useFilteredSearchItems({
     };
   }, [items, searchQuery, sortOrder, sortDirection, searchFilters]);
 }
-

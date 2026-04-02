@@ -237,4 +237,3 @@ export async function associateItemToCanonicalProduct(
 
   if (error) throw error;
 }
-

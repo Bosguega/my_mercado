@@ -1,11 +1,11 @@
 /**
  * Storage Unificado com Fallback Automático
- * 
+ *
  * Estratégia em camadas:
  * 1. IndexedDB (preferencial - suporta grandes volumes)
  * 2. localStorage (fallback - limitado a ~5MB)
  * 3. sessionStorage (último recurso - limpa ao fechar)
- * 
+ *
  * @see https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API
  */
 
@@ -15,7 +15,7 @@ const STORAGE_PREFIX = "@MyMercado:";
 // TYPE DEFINITIONS
 // ==============================
 
-export type StorageKey = 
+export type StorageKey =
   | "receipts"
   | "dictionary"
   | "canonical_products"
@@ -114,11 +114,11 @@ export async function indexedDBSet<T>(
 ): Promise<void> {
   try {
     const db = await getDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(store, "readwrite");
       const objectStore = transaction.objectStore(store);
-      
+
       const request = objectStore.put({
         id: key,
         value,
@@ -143,11 +143,11 @@ export async function indexedDBGet<T>(
 ): Promise<T | null> {
   try {
     const db = await getDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(store, "readonly");
       const objectStore = transaction.objectStore(store);
-      
+
       const request = objectStore.get(key);
 
       request.onsuccess = () => {
@@ -171,11 +171,11 @@ export async function indexedDBDelete(
 ): Promise<void> {
   try {
     const db = await getDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(store, "readwrite");
       const objectStore = transaction.objectStore(store);
-      
+
       const request = objectStore.delete(key);
 
       request.onsuccess = () => resolve();
@@ -193,11 +193,11 @@ export async function indexedDBDelete(
 export async function indexedDBClear(store: keyof DBSchema): Promise<void> {
   try {
     const db = await getDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(store, "readwrite");
       const objectStore = transaction.objectStore(store);
-      
+
       const request = objectStore.clear();
 
       request.onsuccess = () => resolve();
@@ -217,11 +217,11 @@ export async function indexedDBGetAll<T>(
 ): Promise<T[]> {
   try {
     const db = await getDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(store, "readonly");
       const objectStore = transaction.objectStore(store);
-      
+
       const request = objectStore.getAll();
 
       request.onsuccess = () => {
@@ -415,7 +415,7 @@ export class UnifiedStorage {
     if (this.useFallback) {
       const prefix = `${STORAGE_PREFIX}${this.store}:`;
       const results: T[] = [];
-      
+
       try {
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
@@ -429,7 +429,7 @@ export class UnifiedStorage {
       } catch (error) {
         console.warn(`Erro ao ler localStorage:`, error);
       }
-      
+
       return results;
     }
 
@@ -547,7 +547,7 @@ export async function getStorageStatus(): Promise<{
     try {
       const db = await getDB();
       const stores = db.objectStoreNames;
-      
+
       for (let i = 0; i < stores.length; i++) {
         const store = stores.item(i);
         if (store) {
@@ -561,7 +561,7 @@ export async function getStorageStatus(): Promise<{
           totalItems += count;
         }
       }
-      
+
       if (totalItems > 0) {
         storageUsed = "indexeddb";
       }

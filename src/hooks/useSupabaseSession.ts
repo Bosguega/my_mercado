@@ -10,7 +10,7 @@ export function useSupabaseSession() {
     if (import.meta.env.DEV) {
       console.log('🔑 [Auth] Iniciando useSupabaseSession...');
     }
-    
+
     if (!supabase) {
       if (import.meta.env.DEV) {
         console.warn('⚠️ [Auth] Supabase não configurado');

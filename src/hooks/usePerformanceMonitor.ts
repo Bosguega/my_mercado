@@ -109,6 +109,7 @@ export function usePerformanceMonitor() {
             // CLS
             let clsValue = 0;
             const clsObserver = new PerformanceObserver((list) => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 list.getEntries().forEach((entry: any) => {
                     if (!entry.hadRecentInput) {
                         clsValue += entry.value;
@@ -125,6 +126,7 @@ export function usePerformanceMonitor() {
     const updateRuntimeMetrics = () => {
         // Memory usage (se disponível)
         if ("memory" in performance) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const memory = (performance as any).memory;
             setMetrics((prev) => ({
                 ...prev,
