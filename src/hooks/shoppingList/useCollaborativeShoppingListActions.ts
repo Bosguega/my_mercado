@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { toast } from "react-hot-toast";
+import { notify } from "../../utils/notifications";
 import {
   useCreateCollaborativeList,
   useJoinCollaborativeListByCode,
@@ -39,10 +39,10 @@ export function useCollaborativeShoppingListActions(sessionUserId: string | null
   const handleCreateList = async (name: string) => {
     try {
       const created = await createCollaborativeList.mutateAsync(name);
-      toast.success("Lista colaborativa criada!");
+      notify.success("Lista colaborativa criada!");
       return created;
     } catch {
-      toast.error("Nao foi possivel criar a lista colaborativa.");
+      notify.error("Não foi possível criar a lista colaborativa.");
       return null;
     }
   };
@@ -50,10 +50,10 @@ export function useCollaborativeShoppingListActions(sessionUserId: string | null
   const handleJoinByCode = async (code: string) => {
     try {
       const joined = await joinCollaborativeList.mutateAsync(code);
-      toast.success("Lista colaborativa conectada!");
+      notify.success("Lista colaborativa conectada!");
       return joined;
     } catch {
-      toast.error("Codigo invalido ou sem permissao para entrar na lista.");
+      notify.error("Código inválido ou sem permissão para entrar na lista.");
       return null;
     }
   };
@@ -64,10 +64,10 @@ export function useCollaborativeShoppingListActions(sessionUserId: string | null
 
     try {
       await renameCollaborativeList.mutateAsync({ listId, name: rawName });
-      toast.success("Lista renomeada!");
+      notify.success("Lista renomeada!");
       return true;
     } catch {
-      toast.error("Nao foi possivel renomear a lista colaborativa.");
+      notify.error("Não foi possível renomear a lista colaborativa.");
       return false;
     }
   };
@@ -75,10 +75,10 @@ export function useCollaborativeShoppingListActions(sessionUserId: string | null
   const handleDeleteList = async (listId: string) => {
     try {
       await deleteCollaborativeList.mutateAsync(listId);
-      toast.success("Lista colaborativa excluida!");
+      notify.deleted();
       return true;
     } catch {
-      toast.error("Nao foi possivel excluir a lista colaborativa.");
+      notify.error("Não foi possível excluir a lista colaborativa.");
       return false;
     }
   };
@@ -86,10 +86,10 @@ export function useCollaborativeShoppingListActions(sessionUserId: string | null
   const handleAddItem = async (listId: string, name: string, quantity?: string) => {
     try {
       await addCollaborativeItem.mutateAsync({ listId, name, quantity });
-      toast.success("Item adicionado na lista colaborativa.");
+      notify.itemAdded();
       return true;
     } catch {
-      toast.error("Nao foi possivel adicionar item na lista colaborativa.");
+      notify.error("Não foi possível adicionar item na lista colaborativa.");
       return false;
     }
   };
@@ -100,25 +100,26 @@ export function useCollaborativeShoppingListActions(sessionUserId: string | null
 
   const handleRemoveItem = async (listId: string, itemId: string) => {
     await removeCollaborativeItem.mutateAsync({ listId, itemId });
+    notify.deleted();
   };
 
   const handleClearChecked = async (listId: string) => {
     await clearCollaborativeItems.mutateAsync({ listId, onlyChecked: true });
-    toast.success("Itens comprados removidos!");
+    notify.success("Itens comprados removidos!");
   };
 
   const handleClearAll = async (listId: string) => {
     await clearCollaborativeItems.mutateAsync({ listId, onlyChecked: false });
-    toast.success("Lista limpa!");
+    notify.success("Lista limpa!");
   };
 
   const handleCopyShareCode = async (shareCode: string) => {
     try {
       await navigator.clipboard.writeText(shareCode);
-      toast.success("Codigo copiado!");
+      notify.success("Código copiado!");
       return true;
     } catch {
-      toast.error("Nao foi possivel copiar o codigo.");
+      notify.error("Não foi possível copiar o código.");
       return false;
     }
   };
@@ -127,10 +128,10 @@ export function useCollaborativeShoppingListActions(sessionUserId: string | null
     try {
       const newCode = await regenerateCollaborativeCode.mutateAsync(listId);
       await navigator.clipboard.writeText(newCode);
-      toast.success("Novo codigo gerado e copiado!");
+      notify.success("Novo código gerado e copiado!");
       return newCode;
     } catch {
-      toast.error("Nao foi possivel gerar novo codigo.");
+      notify.error("Não foi possível gerar novo código.");
       return null;
     }
   };
@@ -138,10 +139,10 @@ export function useCollaborativeShoppingListActions(sessionUserId: string | null
   const handleChangeMemberRole = async (listId: string, userId: string, nextRole: "editor" | "viewer") => {
     try {
       await updateCollaborativeMemberRole.mutateAsync({ listId, userId, role: nextRole });
-      toast.success("Permissao atualizada.");
+      notify.success("Permissão atualizada.");
       return true;
     } catch {
-      toast.error("Nao foi possivel atualizar permissao.");
+      notify.error("Não foi possível atualizar permissão.");
       return false;
     }
   };
@@ -149,10 +150,10 @@ export function useCollaborativeShoppingListActions(sessionUserId: string | null
   const handleRemoveMember = async (listId: string, userId: string) => {
     try {
       await removeCollaborativeMember.mutateAsync({ listId, userId });
-      toast.success("Membro removido da lista.");
+      notify.success("Membro removido da lista.");
       return true;
     } catch {
-      toast.error("Nao foi possivel remover membro.");
+      notify.error("Não foi possível remover membro.");
       return false;
     }
   };
@@ -160,10 +161,10 @@ export function useCollaborativeShoppingListActions(sessionUserId: string | null
   const handleLeaveList = async (listId: string, userId: string) => {
     try {
       await removeCollaborativeMember.mutateAsync({ listId, userId });
-      toast.success("Voce saiu da lista colaborativa.");
+      notify.success("Você saiu da lista colaborativa.");
       return true;
     } catch {
-      toast.error("Nao foi possivel sair da lista.");
+      notify.error("Não foi possível sair da lista.");
       return false;
     }
   };
@@ -171,10 +172,10 @@ export function useCollaborativeShoppingListActions(sessionUserId: string | null
   const handleTransferOwnership = async (listId: string, newOwnerUserId: string) => {
     try {
       await transferCollaborativeOwnership.mutateAsync({ listId, newOwnerUserId });
-      toast.success("Ownership transferido com sucesso.");
+      notify.success("Ownership transferido com sucesso.");
       return true;
     } catch {
-      toast.error("Nao foi possivel transferir ownership.");
+      notify.error("Não foi possível transferir ownership.");
       return false;
     }
   };

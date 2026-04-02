@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { toast } from "react-hot-toast";
+import { notify } from "../../utils/notifications";
 import {
     useCreateCanonicalProduct,
     useUpdateCanonicalProduct,
@@ -60,10 +60,10 @@ export function useCanonicalProductActions() {
         try {
             const parsed = parseCreateCanonicalProductInput(formData);
             await createProduct.mutateAsync(parsed);
-            toast.success("Produto criado com sucesso!");
+            notify.success("Produto criado com sucesso!");
             return { success: true };
         } catch (err) {
-            toast.error(err instanceof Error ? err.message : "Erro ao criar produto.");
+            notify.error(err instanceof Error ? err.message : "Erro ao criar produto.");
             return { success: false, error: err };
         }
     };
@@ -72,10 +72,10 @@ export function useCanonicalProductActions() {
         try {
             const parsed = parseUpdateCanonicalProductInput(formData);
             await updateProduct.mutateAsync({ id, updates: parsed });
-            toast.success("Produto atualizado!");
+            notify.updated();
             return { success: true };
         } catch (err) {
-            toast.error(err instanceof Error ? err.message : "Erro ao atualizar produto.");
+            notify.error(err instanceof Error ? err.message : "Erro ao atualizar produto.");
             return { success: false, error: err };
         }
     };
@@ -88,7 +88,7 @@ export function useCanonicalProductActions() {
             danger: true,
             onConfirm: async () => {
                 await deleteProduct.mutateAsync(id);
-                toast.success("Produto removido!");
+                notify.deleted();
             },
         });
     };
@@ -101,7 +101,7 @@ export function useCanonicalProductActions() {
             danger: true,
             onConfirm: async () => {
                 await mergeProducts.mutateAsync({ primaryId, secondaryId });
-                toast.success("Produtos mesclados!");
+                notify.success("Produtos mesclados!");
             },
         });
     };

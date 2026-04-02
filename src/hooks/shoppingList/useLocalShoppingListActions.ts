@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { toast } from "react-hot-toast";
+import { notify } from "../../utils/notifications";
 import { useShoppingListStore } from "../../stores/useShoppingListStore";
 import type { ConfirmDialogConfig } from "../../types/ui";
 
@@ -25,13 +25,13 @@ export function useLocalShoppingListActions(sessionUserId: string | null | undef
     const result = createList(sessionUserId, name);
     if (!result.ok) {
       if (result.reason === "duplicate") {
-        toast.error("Ja existe uma lista com esse nome.");
+        notify.alreadyExists();
       } else {
-        toast.error("Informe um nome valido para a lista.");
+        notify.error("Informe um nome válido para a lista.");
       }
       return false;
     }
-    toast.success("Lista criada!");
+    notify.listCreated();
     return true;
   };
 
@@ -42,28 +42,28 @@ export function useLocalShoppingListActions(sessionUserId: string | null | undef
     const result = renameList(sessionUserId, listId, rawName);
     if (!result.ok) {
       if (result.reason === "duplicate") {
-        toast.error("Ja existe uma lista com esse nome.");
+        notify.alreadyExists();
       } else {
-        toast.error("Nao foi possivel renomear a lista.");
+        notify.error("Não foi possível renomear a lista.");
       }
       return false;
     }
-    toast.success("Lista renomeada!");
+    notify.success("Lista renomeada!");
     return true;
   };
 
   const handleDeleteList = (listId: string, listName: string, listsCount: number) => {
     if (listsCount <= 1) {
-      toast.error("Nao e possivel excluir a ultima lista.");
+      notify.error("Não é possível excluir a última lista.");
       return false;
     }
 
     const result = deleteList(sessionUserId, listId);
     if (!result.ok) {
-      toast.error("Nao foi possivel excluir a lista.");
+      notify.error("Não foi possível excluir a lista.");
       return false;
     }
-    toast.success("Lista excluida!");
+    notify.deleted();
     return true;
   };
 
@@ -71,13 +71,13 @@ export function useLocalShoppingListActions(sessionUserId: string | null | undef
     const result = addItem(sessionUserId, name, quantity);
     if (!result.ok) {
       if (result.reason === "duplicate") {
-        toast.error("Esse item ja esta pendente na lista.");
+        notify.alreadyExists();
       } else {
-        toast.error("Digite o nome do item para adicionar.");
+        notify.error("Digite o nome do item para adicionar.");
       }
       return false;
     }
-    toast.success("Item adicionado na lista.");
+    notify.itemAdded();
     return true;
   };
 
@@ -87,27 +87,28 @@ export function useLocalShoppingListActions(sessionUserId: string | null | undef
 
   const handleRemoveItem = (itemId: string) => {
     removeItem(sessionUserId, itemId);
+    notify.deleted();
   };
 
   const handleClearChecked = () => {
     clearChecked(sessionUserId);
-    toast.success("Itens comprados removidos!");
+    notify.success("Itens comprados removidos!");
   };
 
   const handleClearAll = () => {
     clearAll(sessionUserId);
-    toast.success("Lista limpa!");
+    notify.success("Lista limpa!");
   };
 
   const handleMoveItem = (itemId: string, targetListId: string, sourceListId: string) => {
     const result = moveItemToList(sessionUserId, itemId, targetListId, sourceListId);
     if (!result.ok) {
       if (result.reason === "duplicate") {
-        toast.error("Ja existe item pendente equivalente na lista destino.");
+        notify.alreadyExists();
       } else if (result.reason === "same_list") {
-        toast.error("Selecione uma lista de destino diferente.");
+        notify.error("Selecione uma lista de destino diferente.");
       } else {
-        toast.error("Nao foi possivel mover o item.");
+        notify.error("Não foi possível mover o item.");
       }
       return false;
     }
@@ -118,11 +119,11 @@ export function useLocalShoppingListActions(sessionUserId: string | null | undef
     const result = copyItemToList(sessionUserId, itemId, targetListId, sourceListId);
     if (!result.ok) {
       if (result.reason === "duplicate") {
-        toast.error("Ja existe item pendente equivalente na lista destino.");
+        notify.alreadyExists();
       } else if (result.reason === "same_list") {
-        toast.error("Selecione uma lista de destino diferente.");
+        notify.error("Selecione uma lista de destino diferente.");
       } else {
-        toast.error("Nao foi possivel copiar o item.");
+        notify.error("Não foi possível copiar o item.");
       }
       return false;
     }
@@ -132,12 +133,12 @@ export function useLocalShoppingListActions(sessionUserId: string | null | undef
   const confirmClearChecked = (onConfirm: () => void) => {
     setConfirmDialog({
       title: "Limpar itens marcados?",
-      message: "Todos os itens ja marcados como comprados serao removidos da lista.",
+      message: "Todos os itens já marcados como comprados serão removidos da lista.",
       confirmText: "Limpar marcados",
       danger: true,
       onConfirm: () => {
         onConfirm();
-        toast.success("Itens comprados removidos!");
+        notify.success("Itens comprados removidos!");
       },
     });
   };
@@ -145,12 +146,12 @@ export function useLocalShoppingListActions(sessionUserId: string | null | undef
   const confirmClearAll = (onConfirm: () => void) => {
     setConfirmDialog({
       title: "Limpar lista completa?",
-      message: "Essa acao remove todos os itens da lista atual e nao pode ser desfeita.",
+      message: "Esta ação remove todos os itens da lista atual e não pode ser desfeita.",
       confirmText: "Limpar lista",
       danger: true,
       onConfirm: () => {
         onConfirm();
-        toast.success("Lista limpa!");
+        notify.success("Lista limpa!");
       },
     });
   };
@@ -160,8 +161,8 @@ export function useLocalShoppingListActions(sessionUserId: string | null | undef
       title: "Excluir lista?",
       message:
         listsCount <= 1
-          ? "Voce precisa ter pelo menos uma lista."
-          : `A lista "${listName}" e seus itens serao removidos.`,
+          ? "Você precisa ter pelo menos uma lista."
+          : `A lista "${listName}" e seus itens serão removidos.`,
       confirmText: "Excluir lista",
       danger: true,
       onConfirm: () => {

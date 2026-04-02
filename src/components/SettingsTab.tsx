@@ -11,7 +11,7 @@ import {
   Wifi,
   RefreshCw,
 } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { notify } from "../utils/notifications";
 import { logout } from "../services/authService";
 import {
   clearReceiptsAndItemsFromDB,
@@ -54,31 +54,31 @@ export default function SettingsTab({ onOpenAiConfig }: SettingsTabProps) {
 
   const handleLogout = async () => {
     setConfirmDialog({
-      title: "Encerrar sessao?",
-      message: "Voce precisara fazer login novamente para acessar seus dados.",
+      title: "Encerrar sessão?",
+      message: "Você precisará fazer login novamente para acessar seus dados.",
       confirmText: "Sair",
       danger: true,
       onConfirm: async () => {
         resetScannerState();
         await logout();
-        toast.success("Sessao encerrada.");
+        notify.sessionEnded();
       },
     });
   };
 
   const handleClearHistory = async () => {
     setConfirmDialog({
-      title: "Limpar historico?",
-      message: "Esta acao nao pode ser desfeita. Todas as notas fiscais serao apagadas.",
+      title: "Limpar histórico?",
+      message: "Esta ação não pode ser desfeita. Todas as notas fiscais serão apagadas.",
       confirmText: "Limpar",
       danger: true,
       onConfirm: async () => {
         setLoading(true);
         try {
           await clearReceiptsAndItemsFromDB();
-          toast.success("Historico limpo com sucesso!");
+          notify.success("Histórico limpo com sucesso!");
         } catch {
-          toast.error("Erro ao limpar historico.");
+          notify.errorByKey("SETTINGS_CLEAR_HISTORY_FAILED");
         } finally {
           setLoading(false);
         }
@@ -88,17 +88,17 @@ export default function SettingsTab({ onOpenAiConfig }: SettingsTabProps) {
 
   const handleClearDictionary = async () => {
     setConfirmDialog({
-      title: "Limpar dicionario?",
-      message: "Esta acao nao pode ser desfeita. Todas as normalizacoes serao apagadas.",
+      title: "Limpar dicionário?",
+      message: "Esta ação não pode ser desfeita. Todas as normalizações serão apagadas.",
       confirmText: "Limpar",
       danger: true,
       onConfirm: async () => {
         setLoading(true);
         try {
           await clearDictionaryInDB();
-          toast.success("Dicionario limpo com sucesso!");
+          notify.success("Dicionário limpo com sucesso!");
         } catch {
-          toast.error("Erro ao limpar dicionario.");
+          notify.errorByKey("SETTINGS_CLEAR_DICTIONARY_FAILED");
         } finally {
           setLoading(false);
         }
@@ -108,17 +108,17 @@ export default function SettingsTab({ onOpenAiConfig }: SettingsTabProps) {
 
   const handleClearCanonicalProducts = async () => {
     setConfirmDialog({
-      title: "Limpar produtos canonicos?",
-      message: "Esta acao nao pode ser desfeita. Todos os produtos canonicos serao apagados.",
+      title: "Limpar produtos canônicos?",
+      message: "Esta ação não pode ser desfeita. Todos os produtos canônicos serão apagados.",
       confirmText: "Limpar",
       danger: true,
       onConfirm: async () => {
         setLoading(true);
         try {
           await clearCanonicalProductsInDB();
-          toast.success("Produtos canonicos limpos com sucesso!");
+          notify.success("Produtos canônicos limpos com sucesso!");
         } catch {
-          toast.error("Erro ao limpar produtos canonicos.");
+          notify.errorByKey("SETTINGS_CLEAR_PRODUCTS_FAILED");
         } finally {
           setLoading(false);
         }
@@ -132,9 +132,9 @@ export default function SettingsTab({ onOpenAiConfig }: SettingsTabProps) {
     setLoading(false);
 
     if (success) {
-      toast.success("Conexao com Supabase estabelecida com sucesso!");
+      notify.success("Conexão com Supabase estabelecida com sucesso!");
     } else {
-      toast.error("Falha ao conectar com Supabase. Verifique as variaveis de ambiente.");
+      notify.errorByKey("SUPABASE_NOT_CONFIGURED");
     }
   };
 
@@ -143,21 +143,21 @@ export default function SettingsTab({ onOpenAiConfig }: SettingsTabProps) {
     setSyncListsEnabled(next);
     setShoppingListCloudSyncEnabled(next);
 
-    toast.success(
+    notify.success(
       next
-        ? "Sincronizacao de listas com nuvem ativada."
-        : "Sincronizacao de listas com nuvem desativada.",
+        ? "Sincronização de listas com nuvem ativada."
+        : "Sincronização de listas com nuvem desativada.",
     );
   };
 
   const handleSyncListsNow = async () => {
     if (!syncListsEnabled) {
-      toast.error("Ative a sincronizacao de listas para continuar.");
+      notify.errorByKey("SETTINGS_SYNC_REQUIRED");
       return;
     }
 
     if (!sessionUserId) {
-      toast.error("Sessao invalida para sincronizar listas.");
+      notify.errorByKey("AUTH_SESSION_INVALID");
       return;
     }
 
@@ -165,16 +165,16 @@ export default function SettingsTab({ onOpenAiConfig }: SettingsTabProps) {
     try {
       const result = await syncShoppingListsWithCloud(sessionUserId);
       if (result.status === "pushed") {
-        toast.success("Listas enviadas para a nuvem.");
+        notify.success("Listas enviadas para a nuvem.");
       } else if (result.status === "pulled") {
-        toast.success("Listas atualizadas a partir da nuvem.");
+        notify.success("Listas atualizadas a partir da nuvem.");
       } else if (result.status === "unchanged") {
-        toast("Listas ja estavam sincronizadas.");
+        notify.warning("Listas já estavam sincronizadas.");
       } else {
-        toast.error("Nao foi possivel sincronizar listas agora.");
+        notify.errorByKey("SETTINGS_SYNC_FAILED");
       }
     } catch {
-      toast.error("Erro ao sincronizar listas.");
+      notify.errorByKey("SETTINGS_SYNC_FAILED");
     } finally {
       setLoading(false);
     }

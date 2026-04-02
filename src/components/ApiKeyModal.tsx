@@ -9,7 +9,7 @@ import {
   Cpu,
   RefreshCw,
 } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { notify } from "../utils/notifications";
 import { detectProvider, getApiModel, setApiModel } from "../utils/aiConfig";
 import { testAiConnection } from "../utils/aiClient";
 import type { ApiKeyModalProps } from "../types/ui";
@@ -65,24 +65,24 @@ export default function ApiKeyModal({
   const handleSave = () => {
     const trimmedKey = key.trim();
     if (!trimmedKey) {
-      toast.error("Por favor, informe a API Key");
+      notify.errorByKey("API_KEY_REQUIRED");
       return;
     }
     setApiModel(selectedModel);
     onSave(trimmedKey);
-    toast.success("Configurações de IA salvas!");
+    notify.settingsSaved();
     onClose();
   };
 
   const handleListModels = async () => {
     const trimmedKey = key.trim();
     if (!trimmedKey) {
-      toast.error("Insira a chave para listar modelos");
+      notify.errorByKey("API_KEY_REQUIRED");
       return;
     }
 
     if (provider !== "Google AI Studio") {
-      toast.error("Listagem automática disponível apenas para Google AI Studio");
+      notify.warning("Listagem automática disponível apenas para Google AI Studio");
       return;
     }
 
@@ -105,13 +105,13 @@ export default function ApiKeyModal({
           );
 
         setFetchedModels(names);
-        toast.success(`${names.length} modelos encontrados!`);
+        notify.success(`${names.length} modelos encontrados!`);
       } else {
-        toast.error("Nenhum modelo compatível encontrado");
+        notify.warning("Nenhum modelo compatível encontrado");
       }
     } catch (err) {
       console.error("Erro ao listar modelos:", err);
-      toast.error("Erro ao buscar modelos da conta. Verifique sua chave.");
+      notify.errorByKey("AI_CONNECTION_FAILED");
     } finally {
       setFetchingModels(false);
     }
@@ -120,7 +120,7 @@ export default function ApiKeyModal({
   const handleTest = async () => {
     const trimmedKey = key.trim();
     if (!trimmedKey) {
-      toast.error("Insira uma chave para testar");
+      notify.errorByKey("API_KEY_REQUIRED");
       return;
     }
     setTesting(true);
@@ -128,12 +128,12 @@ export default function ApiKeyModal({
     try {
       const ok = await testAiConnection(trimmedKey, selectedModel);
       setTestResult(ok ? "success" : "error");
-      if (ok) toast.success("Conexão estabelecida com sucesso!");
-      else toast.error("Falha na conexão. Verifique a chave e o modelo.");
+      if (ok) notify.success("Conexão estabelecida com sucesso!");
+      else notify.aiConnectionFailed();
     } catch (err) {
       console.error("Erro no teste de conexão:", err);
       setTestResult("error");
-      toast.error("Erro ao testar conexão.");
+      notify.aiConnectionFailed();
     } finally {
       setTesting(false);
     }
