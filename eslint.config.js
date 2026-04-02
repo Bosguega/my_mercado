@@ -12,7 +12,7 @@ const tsRecommended = tseslint.configs.recommended.map((config) => ({
 }))
 
 export default [
-  { ignores: ['dist'] },
+  { ignores: ['dist', 'coverage', 'node_modules'] },
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {
@@ -69,15 +69,36 @@ export default [
         'warn',
         { allowConstantExport: true },
       ],
-      '@typescript-eslint/no-explicit-any': 'off',
+
+      // TypeScript strict rules
+      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',
           caughtErrorsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
         },
       ],
+
+      // Best practices
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-debugger': 'warn',
+      'no-var': 'error',
+      'prefer-const': 'error',
+      'no-undef': 'off', // TypeScript handles this
+
+      // React best practices
+      'react/react-in-jsx-scope': 'off',
+      'react/prop-types': 'off', // TypeScript handles this
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+
+      // Code style
+      'no-multiple-empty-lines': ['error', { max: 1, maxEOF: 0 }],
+      'no-trailing-spaces': 'error',
+      'eol-last': 'error',
     },
   },
 ]
