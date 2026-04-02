@@ -18,11 +18,11 @@ interface UseErrorHandlerOptions {
 
 /**
  * Hook para tratamento centralizado de erros
- * 
+ *
  * @example
  * ```tsx
  * const { handleError, handleApiError } = useErrorHandler({ context: "ShoppingList" });
- * 
+ *
  * try {
  *   await saveItem();
  * } catch (err) {
@@ -138,10 +138,10 @@ export function useErrorHandler(options: UseErrorHandlerOptions) {
             if (silent) return;
 
             // Mostrar primeiro erro ou mensagem genérica
-            const message = errors.length > 0 
-                ? errors[0] 
+            const message = errors.length > 0
+                ? errors[0]
                 : errorMessages.VALIDATION_ERROR;
-            
+
             notify.warning(message);
         },
         [context, silent]
@@ -176,11 +176,11 @@ export function useErrorHandler(options: UseErrorHandlerOptions) {
 /**
  * Hook simplificado para tratamento rápido de erros
  * Usa contexto padrão e mensagens fallback genéricas
- * 
+ *
  * @example
  * ```tsx
  * const { onError } = useSimpleErrorHandler("ShoppingList");
- * 
+ *
  * try {
  *   await saveItem();
  * } catch (err) {

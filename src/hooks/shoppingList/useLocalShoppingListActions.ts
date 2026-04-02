@@ -38,7 +38,7 @@ export function useLocalShoppingListActions(sessionUserId: string | null | undef
   const handleRenameList = (listId: string, currentName: string) => {
     const rawName = window.prompt("Novo nome da lista:", currentName);
     if (rawName === null) return false;
-    
+
     const result = renameList(sessionUserId, listId, rawName);
     if (!result.ok) {
       if (result.reason === "duplicate") {
