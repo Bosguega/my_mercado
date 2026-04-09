@@ -9,13 +9,20 @@ import { parseBRL } from "./currency";
 import type { Receipt } from "../types/domain";
 import type { HistoryFilters, SearchFilters } from "../types/ui";
 import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from "date-fns";
+import { filterObjectsByTokens } from "./search";
 
 // ==============================
 // Funções Genéricas
 // ==============================
 
 /**
- * Filtra items por termo de busca em múltiplos campos
+ * Filtra items por termo de busca em múltiplos campos usando busca tokenizada.
+ *
+ * A busca divide o texto por espaços e trata cada parte como token independente.
+ * Tokens com prefixo "-" são negativos (excluem itens).
+ * Ignora maiúsculas/minúsculas e acentos.
+ *
+ * Exemplo: "leite -doce" → mostra "leite 1L", remove "doce de leite"
  */
 export function filterBySearch<T extends object>(
   items: T[],
@@ -23,15 +30,7 @@ export function filterBySearch<T extends object>(
   fields: (keyof T)[],
 ): T[] {
   if (!query) return items;
-
-  const q = query.toLowerCase();
-
-  return items.filter((item) =>
-    fields.some((field) => {
-      const value = (item as Record<string, unknown>)[field as string];
-      return String(value ?? "").toLowerCase().includes(q);
-    })
-  );
+  return filterObjectsByTokens(query, items, fields);
 }
 
 /**

@@ -1,6 +1,10 @@
 import { Search, ArrowDownAZ } from 'lucide-react';
+import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import type { SortDirection } from '../types/ui';
+
+const PLACEHOLDER_IDLE = "Pesquisar por nome ou categoria";
+const PLACEHOLDER_FOCUSED = "Use espaço para separar termos e - para excluir";
 
 type UniversalSearchBarProps = {
   placeholder?: string;
@@ -20,9 +24,13 @@ type UniversalSearchBarProps = {
 /**
  * UniversalSearchBar - Componente centralizado de busca e ordenação
  * Mantém a identidade visual "glassmorphism" e simplifica a manutenção entre abas.
+ *
+ * O placeholder do input muda dinamicamente conforme o foco:
+ * - Sem foco: "Pesquisar por nome ou categoria"
+ * - Com foco: "Use espaço para separar termos e - para excluir"
  */
 const UniversalSearchBar = ({
-  placeholder = "Pesquisar...",
+  placeholder,
   value,
   onChange,
   sortValue,
@@ -35,6 +43,12 @@ const UniversalSearchBar = ({
   containerStyle = {},
   inputStyle = {}
 }: UniversalSearchBarProps) => {
+  const [isFocused, setIsFocused] = useState(false);
+
+  // Placeholder dinâmico: muda conforme o foco
+  // Se o consumidor passar um placeholder customizado, respeita-o
+  const idlePlaceholder = placeholder ?? PLACEHOLDER_IDLE;
+  const activePlaceholder = isFocused ? PLACEHOLDER_FOCUSED : idlePlaceholder;
 
   const defaultContainerStyle: CSSProperties = {
     padding: "1.25rem",
@@ -80,11 +94,13 @@ const UniversalSearchBar = ({
         />
         <input
           type="text"
-          placeholder={placeholder}
+          placeholder={activePlaceholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
           style={commonInputStyle}
-          className="search-input-field" // Classe opcional para estilos globais se necessário
+          className="search-input-field"
         />
       </div>
 

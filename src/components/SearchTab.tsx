@@ -86,7 +86,6 @@ function SearchTab() {
   return (
     <div>
       <UniversalSearchBar
-        placeholder="Pesquisar por nome ou categoria..."
         value={searchQuery}
         onChange={setSearchQuery}
         sortValue={sortOrder}
