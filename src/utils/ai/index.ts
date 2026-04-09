@@ -73,8 +73,8 @@ export async function callAI(
 /**
  * Testa conexão com a IA.
  */
-export async function testAiConnection(apiKey: string, model: string): Promise<boolean> {
-  if (!apiKey) return false;
+export async function testAiConnection(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
+  if (!apiKey) return { success: false, error: "API Key não informada" };
 
   const provider = detectProvider(apiKey);
 
@@ -84,10 +84,11 @@ export async function testAiConnection(apiKey: string, model: string): Promise<b
     } else if (provider === "OpenAI") {
       return await testOpenAIConnection(apiKey, model);
     }
-    return false;
+    return { success: false, error: "Provedor desconhecido. Use AIza... (Google) ou sk-... (OpenAI)" };
   } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : "Erro desconhecido";
     logger.warn('AI', 'Teste de conexao falhou', err);
-    return false;
+    return { success: false, error: errorMessage };
   }
 }
 

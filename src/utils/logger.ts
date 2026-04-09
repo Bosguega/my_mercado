@@ -20,7 +20,11 @@ export const logger = {
     error: (context: string, message: string, error?: unknown, code?: ErrorCode) => {
         if (isDev) {
             const codeStr = code ? ` [${code}]` : "";
-            console.error(`[${context}] ${message}${codeStr}`, error ?? '');
+            if (error !== undefined) {
+                console.error(`[${context}] ${message}${codeStr}`, error);
+            } else {
+                console.error(`[${context}] ${message}${codeStr}`);
+            }
         }
         // TODO: Em produção, enviar para serviço de monitoring (Sentry, etc)
     },
@@ -35,7 +39,11 @@ export const logger = {
     warn: (context: string, message: string, data?: unknown, code?: ErrorCode) => {
         if (isDev) {
             const codeStr = code ? ` [${code}]` : "";
-            console.warn(`[${context}] ${message}${codeStr}`, data ?? '');
+            if (data !== undefined) {
+                console.warn(`[${context}] ${message}${codeStr}`, data);
+            } else {
+                console.warn(`[${context}] ${message}${codeStr}`);
+            }
         }
     },
 
@@ -47,7 +55,11 @@ export const logger = {
      */
     info: (context: string, message: string, data?: unknown) => {
         if (isDev) {
-            console.info(`[${context}] ${message}`, data ?? '');
+            if (data !== undefined) {
+                console.log(`[${context}] ${message}`, data);
+            } else {
+                console.log(`[${context}] ${message}`);
+            }
         }
     },
 
@@ -59,7 +71,11 @@ export const logger = {
      */
     debug: (context: string, message: string, data?: unknown) => {
         if (isDev) {
-            console.debug(`[${context}] ${message}`, data ?? '');
+            if (data !== undefined) {
+                console.debug(`[${context}] ${message}`, data);
+            } else {
+                console.debug(`[${context}] ${message}`);
+            }
         }
     },
 };

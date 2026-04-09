@@ -61,13 +61,14 @@ export async function callOpenAI(
 export async function testOpenAIConnection(
   apiKey: string,
   model: string,
-): Promise<boolean> {
+): Promise<{ success: boolean; error?: string }> {
   const testItems: AiNormalizationInput[] = [{ key: "TEST", raw: "ARROZ BRANCO 5KG" }];
 
   try {
     await callOpenAI(testItems, apiKey, model);
-    return true;
-  } catch {
-    return false;
+    return { success: true };
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : "Erro desconhecido";
+    return { success: false, error: errorMessage };
   }
 }

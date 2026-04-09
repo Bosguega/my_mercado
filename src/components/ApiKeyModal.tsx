@@ -126,14 +126,19 @@ export default function ApiKeyModal({
     setTesting(true);
     setTestResult(null);
     try {
-      const ok = await testAiConnection(trimmedKey, selectedModel);
-      setTestResult(ok ? "success" : "error");
-      if (ok) notify.success("Conexão estabelecida com sucesso!");
-      else notify.aiConnectionFailed();
+      const result = await testAiConnection(trimmedKey, selectedModel);
+      setTestResult(result.success ? "success" : "error");
+      if (result.success) {
+        notify.success("Conexão estabelecida com sucesso!");
+      } else {
+        const errorMsg = result.error || "Falha na conexão";
+        notify.error(`Erro: ${errorMsg}`);
+      }
     } catch (err) {
       console.error("Erro no teste de conexão:", err);
       setTestResult("error");
-      notify.aiConnectionFailed();
+      const errorMsg = err instanceof Error ? err.message : "Erro desconhecido";
+      notify.error(`Erro: ${errorMsg}`);
     } finally {
       setTesting(false);
     }
