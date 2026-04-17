@@ -1,57 +1,63 @@
 /**
  * AI Configuration Utils
- * Handles storage of the AI API key in sessionStorage.
+ * Handles storage of the AI API key in localStorage with encryption.
  */
+
+import CryptoJS from 'crypto-js';
 
 const STORAGE_KEY = "ai_key";
 const MODEL_KEY = "ai_model";
-
-function getSessionStorage(): Storage | null {
-  if (typeof window === "undefined") return null;
-  return window.sessionStorage;
-}
+const ENCRYPTION_KEY = "my-mercado-encryption-key-2024"; // Simple fixed key for encryption
 
 function getLocalStorage(): Storage | null {
   if (typeof window === "undefined") return null;
   return window.localStorage;
 }
 
-/**
- * Recupera a API Key da sessao atual.
- * Se existir chave legada no localStorage, migra para sessionStorage.
- */
-export function getApiKey(): string | null {
-  const session = getSessionStorage();
-  if (!session) return null;
+function encrypt(text: string): string {
+  return CryptoJS.AES.encrypt(text, ENCRYPTION_KEY).toString();
+}
 
-  const inSession = session.getItem(STORAGE_KEY);
-  if (inSession) return inSession;
-
-  const local = getLocalStorage();
-  const legacy = local?.getItem(STORAGE_KEY) ?? null;
-  if (legacy) {
-    session.setItem(STORAGE_KEY, legacy);
-    local?.removeItem(STORAGE_KEY);
-    return legacy;
-  }
-
-  return null;
+function decrypt(encryptedText: string): string {
+  const bytes = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY);
+  return bytes.toString(CryptoJS.enc.Utf8);
 }
 
 /**
- * Salva a API Key no sessionStorage.
+ * Recupera a API Key do localStorage criptografado.
+ * Migra chaves legadas não criptografadas se existirem.
+ */
+export function getApiKey(): string | null {
+  const local = getLocalStorage();
+  if (!local) return null;
+
+  const encryptedKey = local.getItem(STORAGE_KEY);
+  if (!encryptedKey) return null;
+
+  try {
+    // Tenta descriptografar
+    const decrypted = decrypt(encryptedKey);
+    return decrypted;
+  } catch {
+    // Se falhar, pode ser uma chave legada não criptografada
+    // Remove a chave inválida e retorna null
+    local.removeItem(STORAGE_KEY);
+    return null;
+  }
+}
+
+/**
+ * Salva a API Key no localStorage criptografado.
  */
 export function setApiKey(key: string | null | undefined) {
-  const session = getSessionStorage();
   const local = getLocalStorage();
-  if (!session) return;
+  if (!local) return;
 
   if (key) {
-    session.setItem(STORAGE_KEY, key.trim());
-    local?.removeItem(STORAGE_KEY);
+    const encrypted = encrypt(key.trim());
+    local.setItem(STORAGE_KEY, encrypted);
   } else {
-    session.removeItem(STORAGE_KEY);
-    local?.removeItem(STORAGE_KEY);
+    local.removeItem(STORAGE_KEY);
   }
 }
 
@@ -59,14 +65,16 @@ export function setApiKey(key: string | null | undefined) {
  * Recupera o modelo salvo no localStorage.
  */
 export function getApiModel(): string {
-  return localStorage.getItem(MODEL_KEY) || "gemini-2.5-flash-lite";
+  const local = getLocalStorage();
+  return local?.getItem(MODEL_KEY) || "gemini-2.5-flash-lite";
 }
 
 /**
  * Salva o modelo no localStorage.
  */
 export function setApiModel(model: string) {
-  localStorage.setItem(MODEL_KEY, model);
+  const local = getLocalStorage();
+  local?.setItem(MODEL_KEY, model);
 }
 
 /**
