@@ -30,7 +30,9 @@ import ConfirmDialog from "./ConfirmDialog";
 import type { ConfirmDialogConfig } from "../types/ui";
 
 const DictionaryTab = lazy(() => import("./DictionaryTab"));
-const CanonicalProductsTab = lazy(() => import("./CanonicalProductsTab"));
+const CanonicalProductsTab = lazy(() =>
+  import("./CanonicalProductsTab/index").then((module) => ({ default: module.CanonicalProductsTab })),
+);
 
 interface SettingsTabProps {
   onOpenAiConfig: () => void;
@@ -128,13 +130,23 @@ export default function SettingsTab({ onOpenAiConfig }: SettingsTabProps) {
 
   const handleTestConnection = async () => {
     setLoading(true);
-    const success = await testSupabaseConnection();
+    const status = await testSupabaseConnection();
     setLoading(false);
 
-    if (success) {
+    if (!status.configured) {
+      notify.errorByKey("SUPABASE_NOT_CONFIGURED");
+      return;
+    }
+
+    if (!status.authenticated) {
+      notify.errorByKey("AUTH_SESSION_INVALID");
+      return;
+    }
+
+    if (status.databaseAccessible) {
       notify.success("Conexão com Supabase estabelecida com sucesso!");
     } else {
-      notify.errorByKey("SUPABASE_NOT_CONFIGURED");
+      notify.error(status.error ?? "Falha ao validar conexão com o banco de dados.");
     }
   };
 

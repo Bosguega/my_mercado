@@ -35,15 +35,18 @@ export function getApiKey(): string | null {
   if (!encryptedKey) return null;
 
   try {
-    // Tenta descriptografar
     const decrypted = decrypt(encryptedKey);
-    return decrypted;
+    // CryptoJS pode retornar string vazia sem lan�ar erro para conte�do inv�lido.
+    // Nesse caso, tratamos como legado/corrompido e limpamos o storage.
+    if (decrypted.trim()) {
+      return decrypted;
+    }
   } catch {
-    // Se falhar, pode ser uma chave legada não criptografada
-    // Remove a chave inválida e retorna null
-    local.removeItem(STORAGE_KEY);
-    return null;
+    // Ignora e segue para limpeza abaixo.
   }
+
+  local.removeItem(STORAGE_KEY);
+  return null;
 }
 
 /**

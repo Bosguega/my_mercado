@@ -1,7 +1,7 @@
 import { Edit3, X, Save, Plus } from "lucide-react";
 import { formatBRL } from "../../../utils/currency";
 import type { ReceiptItem } from "../../../types/domain";
-import type { ManualReceiptFormProps } from "../ScannerTab.types";
+import type { ManualReceiptFormProps } from "../../../types/scanner";
 
 const styles = {
   header: {

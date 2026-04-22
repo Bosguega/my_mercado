@@ -1,5 +1,5 @@
 import { Zap, ZapOff } from "lucide-react";
-import type { ScannerViewProps } from "../ScannerTab.types";
+import type { ScannerViewProps } from "../../../types/scanner";
 
 const styles = {
   cameraControl: {

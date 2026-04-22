@@ -77,7 +77,6 @@ function findTokenInText(
   const lowerText = normalizedText.toLowerCase();
 
   let index = 0;
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const pos = lowerText.indexOf(lowerToken, index);
     if (pos === -1) break;

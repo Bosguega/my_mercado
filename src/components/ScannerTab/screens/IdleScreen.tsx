@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { Scan, Camera, Image as ImageIcon, Edit3, LinkIcon, Plus, X, Aperture } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { validateNfcUrl } from "../../../utils/validation";
-import type { InitialScannerScreenProps } from "../ScannerTab.types";
+import type { InitialScannerScreenProps } from "../../../types/scanner";
 
 const styles = {
   actionButton: {

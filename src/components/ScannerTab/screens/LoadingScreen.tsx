@@ -1,5 +1,5 @@
 import { Skeleton, SkeletonCard } from "../../Skeleton";
-import type { LoadingScreenProps } from "../ScannerTab.types";
+import type { LoadingScreenProps } from "../../../types/scanner";
 
 export function LoadingScreen({ message = "Extraindo dados da nota fiscal..." }: LoadingScreenProps) {
   return (

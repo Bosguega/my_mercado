@@ -11,7 +11,7 @@ import { ResultScreen } from "./screens/ResultScreen";
 import { ManualReceiptForm } from "./forms/ManualReceiptForm";
 import { DuplicateModal } from "./modals/DuplicateModal";
 import type { Receipt } from "../../types/domain";
-import type { SaveReceiptResponse } from "./ScannerTab.types";
+import type { SaveReceiptResponse } from "../../types/scanner";
 
 function ScannerTab() {
   const saveReceiptMutation = useSaveReceipt();

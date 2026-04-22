@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { Receipt } from "../types/domain";
-import type { ScannerManualData, ScannerManualItem } from "../types/ui";
+import type { ManualReceiptData, ManualReceiptItemInput } from "../types/scanner";
 
 // ==============================
 // Sub-slices
@@ -40,21 +40,21 @@ interface CameraActions {
 
 interface ManualSlice {
   manualMode: boolean;
-  manualData: ScannerManualData;
-  manualItem: ScannerManualItem;
+  manualData: ManualReceiptData;
+  manualItem: ManualReceiptItemInput;
 }
 
 interface ManualActions {
   setManualMode: (value: boolean) => void;
   setManualData: (
     value:
-      | ScannerManualData
-      | ((prev: ScannerManualData) => ScannerManualData),
+      | ManualReceiptData
+      | ((prev: ManualReceiptData) => ManualReceiptData),
   ) => void;
   setManualItem: (
     value:
-      | ScannerManualItem
-      | ((prev: ScannerManualItem) => ScannerManualItem),
+      | ManualReceiptItemInput
+      | ((prev: ManualReceiptItemInput) => ManualReceiptItemInput),
   ) => void;
 }
 
@@ -66,13 +66,13 @@ interface ResetActions {
 // Estado inicial
 // ==============================
 
-const defaultManualData: ScannerManualData = {
+const defaultManualData: ManualReceiptData = {
   establishment: "",
   date: new Date().toLocaleDateString("pt-BR"),
   items: [],
 };
 
-const defaultManualItem: ScannerManualItem = {
+const defaultManualItem: ManualReceiptItemInput = {
   name: "",
   qty: "1",
   unitPrice: "",

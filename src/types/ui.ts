@@ -186,27 +186,3 @@ export interface PurchasedItem extends ReceiptItem {
   purchasedAt?: string;
   store?: string;
 }
-
-// =========================
-// SCANNER (LEGACY)
-// =========================
-
-/**
- * Dados de scanner manual (legacy, usar types/scanner.ts)
- * @deprecated Usar ManualReceiptData de types/scanner.ts
- */
-export interface ScannerManualData {
-  establishment: string;
-  date: string;
-  items: ReceiptItem[];
-}
-
-/**
- * Item de scanner manual (legacy, usar types/scanner.ts)
- * @deprecated Usar ManualReceiptItemInput de types/scanner.ts
- */
-export interface ScannerManualItem {
-  name: string;
-  qty: string;
-  unitPrice: string;
-}

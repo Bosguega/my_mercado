@@ -1,4 +1,4 @@
-import type { DuplicateModalProps } from "../ScannerTab.types";
+import type { DuplicateModalProps } from "../../../types/scanner";
 
 export function DuplicateModal({ duplicateReceipt, onCancel, onForceSave }: DuplicateModalProps) {
   return (

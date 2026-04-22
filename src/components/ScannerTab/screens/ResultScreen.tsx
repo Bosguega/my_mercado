@@ -3,7 +3,7 @@ import { useState } from "react";
 import { formatBRL, parseBRL } from "../../../utils/currency";
 import { formatToBR } from "../../../utils/date";
 import type { ReceiptItem } from "../../../types/domain";
-import type { ReceiptResultProps } from "../ScannerTab.types";
+import type { ReceiptResultProps } from "../../../types/scanner";
 
 export function ResultScreen({ currentReceipt, onReset, calculateReceiptTotal }: ReceiptResultProps) {
   const [isExpanded, setIsExpanded] = useState(true);
