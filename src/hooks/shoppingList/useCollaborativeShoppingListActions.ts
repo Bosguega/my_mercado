@@ -59,12 +59,9 @@ export function useCollaborativeShoppingListActions(_sessionUserId: string | nul
     }
   };
 
-  const handleRenameList = async (listId: string, currentName: string) => {
-    const rawName = window.prompt("Novo nome da lista:", currentName);
-    if (rawName === null) return false;
-
+  const handleRenameList = async (listId: string, nextName: string) => {
     try {
-      await renameCollaborativeList.mutateAsync({ listId, name: rawName });
+      await renameCollaborativeList.mutateAsync({ listId, name: nextName });
       notify.listRenamed();
       return true;
     } catch {

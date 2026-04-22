@@ -12,6 +12,7 @@ import {
 import { useSortedShoppingItems } from "../../hooks/queries/useSortedShoppingItems";
 import { ShoppingListItem } from "../ShoppingListItem";
 import ConfirmDialog from "../ConfirmDialog";
+import InputDialog from "../InputDialog";
 import type { ShoppingListItem as ShoppingListItemType } from "../../types/ui";
 import type { CollaborativeShoppingListItem } from "../../types/domain";
 
@@ -21,6 +22,11 @@ const EMPTY_SHOPPING_ITEMS: ShoppingListItemType[] = [];
 interface CollaborativeShoppingListTabProps {
   onSwitchToLocal?: () => void;
 }
+type CollabInputDialogState =
+  | { mode: "create"; initialValue: string }
+  | { mode: "rename"; initialValue: string }
+  | { mode: "join"; initialValue: string }
+  | null;
 
 function toUiItem(item: CollaborativeShoppingListItem): ShoppingListItemType {
   return {
@@ -73,6 +79,7 @@ export function CollaborativeShoppingListTab({ onSwitchToLocal }: CollaborativeS
 
   const [itemName, setItemName] = useState("");
   const [itemQty, setItemQty] = useState("");
+  const [collabInputDialog, setCollabInputDialog] = useState<CollabInputDialogState>(null);
 
   const actions = useCollaborativeShoppingListActions(sessionUserId);
 
@@ -90,25 +97,43 @@ export function CollaborativeShoppingListTab({ onSwitchToLocal }: CollaborativeS
   };
 
   const handleCreateList = async () => {
-    const rawName = window.prompt("Nome da nova lista colaborativa:");
-    if (rawName === null) return;
-    const created = await actions.handleCreateList(rawName);
-    if (created) {
-      setActiveListId(created.id);
-    }
+    setCollabInputDialog({ mode: "create", initialValue: "" });
   };
 
   const handleRenameList = async () => {
     if (!activeList) return;
-    await actions.handleRenameList(activeList.id, activeList.name);
+    setCollabInputDialog({ mode: "rename", initialValue: activeList.name });
   };
 
   const handleJoinByCode = async () => {
-    const rawCode = window.prompt("Codigo da lista compartilhada:");
-    if (rawCode === null) return;
-    const joined = await actions.handleJoinByCode(rawCode);
-    if (joined) {
-      setActiveListId(joined.id);
+    setCollabInputDialog({ mode: "join", initialValue: "" });
+  };
+
+  const handleConfirmCollabInput = async (rawValue: string) => {
+    const trimmed = rawValue.trim();
+    if (!trimmed) return;
+
+    if (collabInputDialog?.mode === "create") {
+      const created = await actions.handleCreateList(trimmed);
+      if (created) {
+        setActiveListId(created.id);
+        setCollabInputDialog(null);
+      }
+      return;
+    }
+
+    if (collabInputDialog?.mode === "rename" && activeList) {
+      const success = await actions.handleRenameList(activeList.id, trimmed);
+      if (success) setCollabInputDialog(null);
+      return;
+    }
+
+    if (collabInputDialog?.mode === "join") {
+      const joined = await actions.handleJoinByCode(trimmed);
+      if (joined) {
+        setActiveListId(joined.id);
+        setCollabInputDialog(null);
+      }
     }
   };
 
@@ -164,6 +189,7 @@ export function CollaborativeShoppingListTab({ onSwitchToLocal }: CollaborativeS
               color: "#f59e0b",
             }}
             title="Limpar marcados"
+            aria-label="Limpar itens marcados"
             onClick={() => activeList && actions.confirmClearChecked(activeList.id)}
             disabled={checkedCount === 0}
           >
@@ -178,6 +204,7 @@ export function CollaborativeShoppingListTab({ onSwitchToLocal }: CollaborativeS
               color: "#ef4444",
             }}
             title="Limpar lista"
+            aria-label="Limpar lista"
             onClick={() => activeList && actions.confirmClearAll(activeList.id)}
             disabled={collaborativeItems.length === 0}
           >
@@ -454,6 +481,33 @@ export function CollaborativeShoppingListTab({ onSwitchToLocal }: CollaborativeS
           await actions.confirmDialog?.onConfirm?.();
           actions.closeConfirm();
         }}
+      />
+
+      <InputDialog
+        isOpen={Boolean(collabInputDialog)}
+        title={
+          collabInputDialog?.mode === "rename"
+            ? "Renomear lista colaborativa"
+            : collabInputDialog?.mode === "join"
+              ? "Entrar por codigo"
+              : "Nova lista colaborativa"
+        }
+        message={
+          collabInputDialog?.mode === "join"
+            ? "Informe o codigo de compartilhamento da lista."
+            : "Informe um nome para a lista."
+        }
+        placeholder={collabInputDialog?.mode === "join" ? "Codigo da lista" : "Nome da lista"}
+        initialValue={collabInputDialog?.initialValue || ""}
+        confirmText={
+          collabInputDialog?.mode === "rename"
+            ? "Renomear"
+            : collabInputDialog?.mode === "join"
+              ? "Entrar"
+              : "Criar"
+        }
+        onCancel={() => setCollabInputDialog(null)}
+        onConfirm={handleConfirmCollabInput}
       />
     </div>
   );

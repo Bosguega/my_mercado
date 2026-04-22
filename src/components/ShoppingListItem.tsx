@@ -100,6 +100,7 @@ export function ShoppingListItem({
                 flexShrink: 0,
               }}
               title="Remover item"
+              aria-label="Remover item"
             >
               <Trash2 size={15} />
             </button>
@@ -155,6 +156,7 @@ export function ShoppingListItem({
                   cursor: "pointer",
                 }}
                 title="Copiar para lista selecionada"
+                aria-label="Copiar item para lista selecionada"
               >
                 <Copy size={13} /> Copiar
               </button>
@@ -173,6 +175,7 @@ export function ShoppingListItem({
                   cursor: "pointer",
                 }}
                 title="Mover para lista selecionada"
+                aria-label="Mover item para lista selecionada"
               >
                 <ArrowRightLeft size={13} /> Mover
               </button>

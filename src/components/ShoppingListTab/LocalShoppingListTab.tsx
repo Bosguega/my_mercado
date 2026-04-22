@@ -12,12 +12,17 @@ import { normalizeKey } from "../../utils/normalize";
 import { scoreHistoryKeyMatch } from "../../utils/shoppingHistoryMatch";
 import { ShoppingListItem } from "../ShoppingListItem";
 import ConfirmDialog from "../ConfirmDialog";
+import InputDialog from "../InputDialog";
 import type {
   ShoppingListItem as ShoppingListItemType,
 } from "../../types/ui";
 
 const EMPTY_SHOPPING_ITEMS: ShoppingListItemType[] = [];
 type HistoryMatchType = "exact" | "approx" | "none";
+type ListInputDialogState =
+  | { mode: "create"; initialValue: string }
+  | { mode: "rename"; initialValue: string }
+  | null;
 
 interface LocalShoppingListTabProps {
   onSwitchToCollab?: () => void;
@@ -49,6 +54,7 @@ export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: Lo
   const [itemName, setItemName] = useState("");
   const [itemQty, setItemQty] = useState("");
   const [transferTargetByItem, setTransferTargetByItem] = useState<Record<string, string>>({});
+  const [listInputDialog, setListInputDialog] = useState<ListInputDialogState>(null);
 
   const actions = useLocalShoppingListActions(sessionUserId);
 
@@ -75,14 +81,28 @@ export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: Lo
   };
 
   const handleCreateList = () => {
-    const rawName = window.prompt("Nome da nova lista:");
-    if (rawName === null) return;
-    actions.handleCreateList(rawName);
+    setListInputDialog({ mode: "create", initialValue: "" });
   };
 
   const handleRenameList = () => {
     if (!activeLocalList) return;
-    actions.handleRenameList(activeLocalList.id, activeLocalList.name);
+    setListInputDialog({ mode: "rename", initialValue: activeLocalList.name });
+  };
+
+  const handleConfirmListInput = async (rawValue: string) => {
+    const trimmed = rawValue.trim();
+    if (!trimmed) return;
+
+    if (listInputDialog?.mode === "create") {
+      const success = actions.handleCreateList(trimmed);
+      if (success) setListInputDialog(null);
+      return;
+    }
+
+    if (listInputDialog?.mode === "rename" && activeLocalList) {
+      const success = actions.handleRenameList(activeLocalList.id, trimmed);
+      if (success) setListInputDialog(null);
+    }
   };
 
   const getRecentHistory = (
@@ -135,6 +155,7 @@ export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: Lo
               color: "#f59e0b",
             }}
             title="Limpar marcados"
+            aria-label="Limpar itens marcados"
             onClick={() => actions.confirmClearChecked(actions.handleClearChecked)}
             disabled={checkedCount === 0}
           >
@@ -149,6 +170,7 @@ export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: Lo
               color: "#ef4444",
             }}
             title="Limpar lista"
+            aria-label="Limpar lista"
             onClick={() => actions.confirmClearAll(actions.handleClearAll)}
             disabled={shoppingItems.length === 0}
           >
@@ -306,6 +328,21 @@ export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: Lo
           await actions.confirmDialog?.onConfirm?.();
           actions.closeConfirm();
         }}
+      />
+
+      <InputDialog
+        isOpen={Boolean(listInputDialog)}
+        title={listInputDialog?.mode === "rename" ? "Renomear lista" : "Nova lista"}
+        message={
+          listInputDialog?.mode === "rename"
+            ? "Informe o novo nome da lista."
+            : "Informe o nome da nova lista."
+        }
+        placeholder="Nome da lista"
+        initialValue={listInputDialog?.initialValue || ""}
+        confirmText={listInputDialog?.mode === "rename" ? "Renomear" : "Criar"}
+        onCancel={() => setListInputDialog(null)}
+        onConfirm={handleConfirmListInput}
       />
     </div>
   );
