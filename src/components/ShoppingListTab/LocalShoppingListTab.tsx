@@ -114,15 +114,7 @@ export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: Lo
 
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          marginBottom: "1rem",
-          gap: "1rem",
-        }}
-      >
+      <div className="shopping-section-header">
         <div>
           <h2 className="section-title" style={{ marginBottom: "0.2rem" }}>
             <ListChecks size={20} color="var(--primary)" />
@@ -133,7 +125,7 @@ export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: Lo
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div className="shopping-icon-actions">
           <button
             className="btn"
             style={{
@@ -166,15 +158,7 @@ export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: Lo
       </div>
 
       <div className="glass-card" style={{ marginBottom: "1rem", padding: "0.75rem" }}>
-        <div
-          style={{
-            marginBottom: "0.7rem",
-            display: "grid",
-            gridTemplateColumns: "1fr auto auto auto",
-            gap: "0.5rem",
-            alignItems: "center",
-          }}
-        >
+        <div className="shopping-list-toolbar">
           <select
             className="search-input"
             value={activeListId}
@@ -221,14 +205,7 @@ export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: Lo
       </div>
 
       <form className="glass-card" onSubmit={handleAddItem} style={{ marginBottom: "1rem" }}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 110px",
-            gap: "0.5rem",
-            marginBottom: "0.75rem",
-          }}
-        >
+        <div className="shopping-add-form-row">
           <input
             list="suggestion-list-local"
             className="search-input"

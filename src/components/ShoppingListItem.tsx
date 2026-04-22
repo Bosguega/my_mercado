@@ -122,12 +122,9 @@ export function ShoppingListItem({
 
           {transferOptions.length > 0 && (
             <div
+              className="shopping-transfer-row"
               style={{
                 marginTop: "0.55rem",
-                display: "grid",
-                gridTemplateColumns: "1fr auto auto",
-                gap: "0.4rem",
-                alignItems: "center",
               }}
             >
               <select

@@ -37,15 +37,7 @@ export default function ShoppingListTab() {
   return (
     <div>
       {/* Header com seletor de modo */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "1rem",
-          gap: "1rem",
-        }}
-      >
+      <div className="shopping-tab-header">
         <div>
           <h2 className="section-title" style={{ marginBottom: "0.2rem" }}>
             {mode === "local" ? (
@@ -62,7 +54,7 @@ export default function ShoppingListTab() {
           </h2>
         </div>
 
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div className="shopping-mode-actions">
           <button
             className="btn"
             style={{

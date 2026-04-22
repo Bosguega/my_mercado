@@ -118,15 +118,7 @@ export function CollaborativeShoppingListTab({ onSwitchToLocal }: CollaborativeS
   if (!isAuthenticated) {
     return (
       <div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            marginBottom: "1rem",
-            gap: "1rem",
-          }}
-        >
+        <div className="shopping-section-header">
           <div>
             <h2 className="section-title" style={{ marginBottom: "0.2rem" }}>
               <Users size={20} color="var(--primary)" />
@@ -151,15 +143,7 @@ export function CollaborativeShoppingListTab({ onSwitchToLocal }: CollaborativeS
 
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          marginBottom: "1rem",
-          gap: "1rem",
-        }}
-      >
+      <div className="shopping-section-header">
         <div>
           <h2 className="section-title" style={{ marginBottom: "0.2rem" }}>
             <Users size={20} color="var(--primary)" />
@@ -170,7 +154,7 @@ export function CollaborativeShoppingListTab({ onSwitchToLocal }: CollaborativeS
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div className="shopping-icon-actions">
           <button
             className="btn"
             style={{
@@ -203,7 +187,7 @@ export function CollaborativeShoppingListTab({ onSwitchToLocal }: CollaborativeS
       </div>
 
       <div className="glass-card" style={{ marginBottom: "1rem", padding: "0.75rem" }}>
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.7rem" }}>
+        <div className="shopping-collab-top-actions">
           <button
             className="btn"
             style={{
@@ -223,15 +207,7 @@ export function CollaborativeShoppingListTab({ onSwitchToLocal }: CollaborativeS
           </button>
         </div>
 
-        <div
-          style={{
-            marginBottom: "0.7rem",
-            display: "grid",
-            gridTemplateColumns: "1fr auto auto auto",
-            gap: "0.5rem",
-            alignItems: "center",
-          }}
-        >
+        <div className="shopping-list-toolbar">
           <select
             className="search-input"
             value={activeList?.id || ""}
@@ -332,15 +308,7 @@ export function CollaborativeShoppingListTab({ onSwitchToLocal }: CollaborativeS
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
                 {collaborativeMembers.map((member) => (
-                  <div
-                    key={member.user_id}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr auto auto auto",
-                      gap: "0.4rem",
-                      alignItems: "center",
-                    }}
-                  >
+                  <div key={member.user_id} className="shopping-member-row">
                     <span style={{ color: "#e2e8f0", fontSize: "0.8rem" }}>
                       {member.user_id === sessionUserId ? "Voce" : `${member.user_id.slice(0, 8)}...`}
                     </span>
@@ -423,14 +391,7 @@ export function CollaborativeShoppingListTab({ onSwitchToLocal }: CollaborativeS
       </div>
 
       <form className="glass-card" onSubmit={handleAddItem} style={{ marginBottom: "1rem" }}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 110px",
-            gap: "0.5rem",
-            marginBottom: "0.75rem",
-          }}
-        >
+        <div className="shopping-add-form-row">
           <input
             className="search-input"
             placeholder="Ex: Arroz, Leite, Cafe..."

@@ -5,12 +5,6 @@ import { validateNfcUrl } from "../../../utils/validation";
 import type { InitialScannerScreenProps } from "../ScannerTab.types";
 
 const styles = {
-  grid3: {
-    display: "grid" as const,
-    gridTemplateColumns: "1fr 1fr 1fr",
-    gap: "0.75rem",
-    marginBottom: "0.75rem",
-  },
   actionButton: {
     height: "56px",
     fontSize: "0.95rem",
@@ -75,7 +69,7 @@ export function IdleScreen({
         </p>
       </div>
 
-      <div style={styles.grid3}>
+      <div className="scanner-action-grid">
         <button
           className="btn"
           style={styles.actionButton}
@@ -149,7 +143,7 @@ export function IdleScreen({
             className="glass-card"
             style={{ padding: "0.75rem", background: "rgba(15, 23, 42, 0.4)", marginBottom: "0" }}
           >
-            <div style={{ display: "flex", gap: "0.5rem" }}>
+            <div className="scanner-link-row">
               <input
                 type="text"
                 className="search-input"

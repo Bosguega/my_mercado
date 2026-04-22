@@ -37,7 +37,7 @@ export function ScannerView({
         maxWidth: "500px",
         margin: "0 auto",
         position: "relative",
-        minHeight: "400px",
+        minHeight: "clamp(280px, 64vh, 420px)",
       }}
     >
       {/* Elemento div para o html5-qrcode */}
@@ -45,17 +45,18 @@ export function ScannerView({
         id="reader"
         style={{
           width: "100%",
-          minHeight: "400px",
+          minHeight: "clamp(280px, 64vh, 420px)",
         }}
       />
       <div
+        className="scanner-overlay-frame"
         style={{
           position: "absolute",
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
-          width: "220px",
-          height: "220px",
+          width: "clamp(150px, 58vw, 220px)",
+          height: "clamp(150px, 58vw, 220px)",
           border: "2px solid var(--success)",
           borderRadius: "1rem",
           boxShadow: "0 0 0 4000px rgba(15, 23, 42, 0.7)",
@@ -63,6 +64,7 @@ export function ScannerView({
         }}
       >
         <div
+          className="scanner-overlay-text-top"
           style={{
             position: "absolute",
             top: -35,
@@ -76,6 +78,7 @@ export function ScannerView({
           Alinhe o QR Code
         </div>
         <div
+          className="scanner-overlay-text-bottom"
           style={{
             position: "absolute",
             bottom: -35,
