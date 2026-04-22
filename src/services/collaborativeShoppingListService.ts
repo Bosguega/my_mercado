@@ -12,6 +12,34 @@ type MemberRow = {
   role: ShoppingListMemberRole;
 };
 
+const DUPLICATE_PENDING_ITEM_ERROR = "duplicate_pending_item";
+const UNIQUE_PENDING_ITEM_INDEX = "ux_shopping_list_items_pending_normalized_key";
+
+export function isDuplicatePendingItemError(error: unknown): boolean {
+  if (error instanceof Error && error.message === DUPLICATE_PENDING_ITEM_ERROR) {
+    return true;
+  }
+
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as {
+    code?: unknown;
+    message?: unknown;
+    details?: unknown;
+  };
+
+  if (candidate.code !== "23505") return false;
+  const message = typeof candidate.message === "string" ? candidate.message : "";
+  const details = typeof candidate.details === "string" ? candidate.details : "";
+  const text = `${message} ${details}`.toLowerCase();
+
+  return (
+    text.includes(UNIQUE_PENDING_ITEM_INDEX) ||
+    (text.includes("shopping_list_items") &&
+      text.includes("list_id") &&
+      text.includes("normalized_key"))
+  );
+}
+
 export async function getCollaborativeListsFromDB(): Promise<CollaborativeShoppingList[]> {
   const client = requireSupabase();
   const user = await getUserOrThrow();
@@ -120,13 +148,25 @@ export async function addCollaborativeListItemToDB(
   const client = requireSupabase();
   const trimmedName = name.trim();
   if (!trimmedName) throw new Error("Nome do item é obrigatório.");
+  const normalizedName = normalizeKey(trimmedName);
+
+  const { data: duplicateItem, error: duplicateError } = await client
+    .from("shopping_list_items")
+    .select("id")
+    .eq("list_id", listId)
+    .eq("normalized_key", normalizedName)
+    .eq("checked", false)
+    .limit(1)
+    .maybeSingle();
+  if (duplicateError) throw duplicateError;
+  if (duplicateItem) throw new Error(DUPLICATE_PENDING_ITEM_ERROR);
 
   const { data, error } = await client
     .from("shopping_list_items")
     .insert({
       list_id: listId,
       name: trimmedName,
-      normalized_key: normalizeKey(trimmedName),
+      normalized_key: normalizedName,
       quantity: quantity?.trim() || null,
     })
     .select(

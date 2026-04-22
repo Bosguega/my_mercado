@@ -15,6 +15,7 @@ import {
   useRemoveCollaborativeListMember,
   useTransferCollaborativeListOwnership,
 } from "../queries/useCollaborativeShoppingListsQuery";
+import { isDuplicatePendingItemError } from "../../services/collaborativeShoppingListService";
 import type { ConfirmDialogConfig } from "../../types/ui";
 
 /**
@@ -86,29 +87,57 @@ export function useCollaborativeShoppingListActions(_sessionUserId: string | nul
       await addCollaborativeItem.mutateAsync({ listId, name, quantity });
       notify.itemAdded();
       return true;
-    } catch {
-      notify.error(errorMessages.COLLAB_ADD_ITEM_FAILED);
+    } catch (error) {
+      if (isDuplicatePendingItemError(error)) {
+        notify.alreadyExists();
+      } else {
+        notify.error(errorMessages.COLLAB_ADD_ITEM_FAILED);
+      }
       return false;
     }
   };
 
   const handleToggleItem = async (listId: string, itemId: string, nextChecked: boolean) => {
-    await toggleCollaborativeItem.mutateAsync({ listId, itemId, nextChecked });
+    try {
+      await toggleCollaborativeItem.mutateAsync({ listId, itemId, nextChecked });
+      return true;
+    } catch {
+      notify.error(errorMessages.UPDATE_FAILED);
+      return false;
+    }
   };
 
   const handleRemoveItem = async (listId: string, itemId: string) => {
-    await removeCollaborativeItem.mutateAsync({ listId, itemId });
-    notify.itemRemoved();
+    try {
+      await removeCollaborativeItem.mutateAsync({ listId, itemId });
+      notify.itemRemoved();
+      return true;
+    } catch {
+      notify.error(errorMessages.ITEM_REMOVE_FAILED);
+      return false;
+    }
   };
 
   const handleClearChecked = async (listId: string) => {
-    await clearCollaborativeItems.mutateAsync({ listId, onlyChecked: true });
-    notify.listClearChecked();
+    try {
+      await clearCollaborativeItems.mutateAsync({ listId, onlyChecked: true });
+      notify.listClearChecked();
+      return true;
+    } catch {
+      notify.error(errorMessages.OPERATION_FAILED);
+      return false;
+    }
   };
 
   const handleClearAll = async (listId: string) => {
-    await clearCollaborativeItems.mutateAsync({ listId, onlyChecked: false });
-    notify.listClearAll();
+    try {
+      await clearCollaborativeItems.mutateAsync({ listId, onlyChecked: false });
+      notify.listClearAll();
+      return true;
+    } catch {
+      notify.error(errorMessages.OPERATION_FAILED);
+      return false;
+    }
   };
 
   const handleCopyShareCode = async (shareCode: string) => {

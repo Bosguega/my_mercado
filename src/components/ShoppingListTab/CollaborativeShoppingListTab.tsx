@@ -51,7 +51,7 @@ export function CollaborativeShoppingListTab({ onSwitchToLocal }: CollaborativeS
 
   const [activeListId, setActiveListId] = useState<string | null>(null);
 
-  const collaborativeListsQuery = useCollaborativeListsQuery(true);
+  const collaborativeListsQuery = useCollaborativeListsQuery(isAuthenticated);
   const collaborativeLists = useMemo(
     () => collaborativeListsQuery.data || [],
     [collaborativeListsQuery.data]
@@ -65,9 +65,15 @@ export function CollaborativeShoppingListTab({ onSwitchToLocal }: CollaborativeS
     [activeListId, collaborativeLists],
   );
 
-  const collaborativeItemsQuery = useCollaborativeListItemsQuery(activeList?.id || null, true);
-  const collaborativeMembersQuery = useCollaborativeListMembersQuery(activeList?.id || null, true);
-  useCollaborativeListRealtime(activeList?.id || null, true);
+  const collaborativeItemsQuery = useCollaborativeListItemsQuery(
+    activeList?.id || null,
+    isAuthenticated,
+  );
+  const collaborativeMembersQuery = useCollaborativeListMembersQuery(
+    activeList?.id || null,
+    isAuthenticated,
+  );
+  useCollaborativeListRealtime(activeList?.id || null, isAuthenticated);
 
   const collaborativeItems = useMemo(
     () => (collaborativeItemsQuery.data || []).map(toUiItem),
