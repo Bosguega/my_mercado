@@ -16,16 +16,10 @@ const PriceChart = lazy(() => import("./PriceChart"));
 const PAGE_SIZE = 100;
 
 const ChartSkeleton = () => (
-  <div className="glass-card" style={{ padding: "1.25rem", textAlign: "center" }}>
-    <div
-      className="skeleton-line"
-      style={{ width: "100px", height: "36px", margin: "0 auto 1.5rem" }}
-    />
-    <div
-      className="skeleton-line"
-      style={{ width: "200px", height: "24px", margin: "0 auto 1.5rem" }}
-    />
-    <div className="skeleton-line" style={{ width: "100%", height: "300px" }} />
+  <div className="glass-card p-5 text-center">
+    <div className="skeleton-line w-[100px] h-[36px] mx-auto mb-6" />
+    <div className="skeleton-line w-[200px] h-[24px] mx-auto mb-6" />
+    <div className="skeleton-line w-full h-[300px]" />
   </div>
 );
 
@@ -97,27 +91,17 @@ function SearchTab() {
           { value: "price", label: "Preço" },
         ]}
         extraActions={
-          <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
+          <div className="flex items-center gap-4 flex-wrap">
             <PeriodSelector filters={searchFilters} onChange={setSearchFilters} />
 
             {searchQuery && filteredItems.length > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                <span style={{ fontSize: "0.75rem", color: "#64748b" }}>
+              <div className="flex items-center gap-4">
+                <span className="text-xs text-slate-500">
                   Exibindo {visibleItems.length} de {totalCount} itens
                 </span>
                 <button
                   onClick={() => setShowChart(true)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "var(--success)",
-                    fontSize: "0.8rem",
-                    fontWeight: 600,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    cursor: "pointer",
-                  }}
+                  className="bg-transparent border-none text-[var(--success)] text-[0.8rem] font-semibold flex items-center gap-1 cursor-pointer hover:opacity-80"
                 >
                   <LineChartIcon size={16} /> Gráfico
                 </button>
@@ -133,7 +117,7 @@ function SearchTab() {
         {showSkeleton ? (
           [...Array(6)].map((_, i) => <SearchItemSkeleton key={i} />)
         ) : filteredItems.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "3rem 1rem", color: "#64748b" }}>
+          <div className="text-center py-12 px-4 text-slate-500">
             <p>Nenhum item encontrado.</p>
           </div>
         ) : (
@@ -145,7 +129,7 @@ function SearchTab() {
               />
             ))}
             {hasMore && (
-              <div style={{ display: "flex", justifyContent: "center", marginTop: "0.5rem" }}>
+              <div className="flex justify-center mt-2">
                 <button className="btn" onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}>
                   Carregar mais
                 </button>

@@ -15,10 +15,10 @@ export function PWAUpdateNotification() {
     if (updateAvailable && readyToInstall) {
       toast(
         (t) => (
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div className="flex items-center gap-3">
             <div>
               <strong>Nova versão disponível!</strong>
-              <p style={{ fontSize: "0.875rem", opacity: 0.9, marginTop: "4px" }}>
+              <p className="text-sm opacity-90 mt-1">
                 Recarregue para aplicar as atualizações.
               </p>
             </div>
@@ -27,30 +27,13 @@ export function PWAUpdateNotification() {
                 updateApp();
                 toast.dismiss(t.id);
               }}
-              style={{
-                background: "var(--primary)",
-                color: "white",
-                border: "none",
-                padding: "8px 16px",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontWeight: 600,
-                fontSize: "0.875rem",
-              }}
+              className="bg-[var(--primary)] text-white border-none px-4 py-2 rounded-md cursor-pointer font-semibold text-sm"
             >
               Atualizar
             </button>
             <button
               onClick={() => toast.dismiss(t.id)}
-              style={{
-                background: "transparent",
-                color: "currentColor",
-                border: "1px solid currentColor",
-                padding: "8px 12px",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "0.875rem",
-              }}
+              className="bg-transparent text-current border border-current px-3 py-2 rounded-md cursor-pointer text-sm"
             >
               Depois
             </button>

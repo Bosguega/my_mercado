@@ -39,66 +39,25 @@ export function ShoppingListItem({
 
   return (
     <div
-      className="glass-card animated-item"
-      style={{
-        padding: "1rem",
-        marginBottom: 0,
-        border: item.checked
-          ? "1px solid rgba(16, 185, 129, 0.3)"
-          : "1px solid var(--card-border)",
-        opacity: item.checked ? 0.75 : 1,
-      }}
+      className={`glass-card animated-item p-4 mb-0 ${item.checked ? "border-emerald-500/30 opacity-75" : "border-[var(--card-border)] opacity-100"}`}
     >
-      <div style={{ display: "flex", gap: "0.8rem", alignItems: "flex-start" }}>
+      <div className="flex gap-3 items-start">
         <button
           onClick={onToggle}
-          style={{
-            background: "transparent",
-            border: "none",
-            padding: 0,
-            color: item.checked ? "var(--success)" : "#64748b",
-            cursor: "pointer",
-            marginTop: "0.2rem",
-          }}
+          className={`bg-transparent border-none p-0 cursor-pointer mt-1 ${item.checked ? "text-[var(--success)]" : "text-slate-500"}`}
           aria-label={item.checked ? "Desmarcar item" : "Marcar item"}
         >
           {item.checked ? <CheckCircle2 size={22} /> : <Circle size={22} />}
         </button>
 
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "0.5rem",
-            }}
-          >
-            <h3
-              style={{
-                color: "#f8fafc",
-                fontSize: "1rem",
-                textDecoration: item.checked ? "line-through" : "none",
-                wordBreak: "break-word",
-              }}
-            >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className={`text-slate-50 text-base break-words ${item.checked ? "line-through" : "no-underline"}`}>
               {item.name}
             </h3>
             <button
               onClick={onRemove}
-              style={{
-                background: "rgba(239, 68, 68, 0.12)",
-                border: "none",
-                width: "30px",
-                height: "30px",
-                borderRadius: "8px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#ef4444",
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
+              className="bg-red-500/10 border-none w-[30px] h-[30px] rounded-lg flex items-center justify-center text-red-500 cursor-pointer shrink-0 hover:bg-red-500/20"
               title="Remover item"
               aria-label="Remover item"
             >
@@ -107,13 +66,13 @@ export function ShoppingListItem({
           </div>
 
           {item.quantity && (
-            <p style={{ color: "#94a3b8", fontSize: "0.8rem", marginTop: "0.15rem" }}>
+            <p className="text-slate-400 text-[0.8rem] mt-0.5">
               Quantidade: {item.quantity}
             </p>
           )}
 
           {item.checked && item.checked_by_user_id && (
-            <p style={{ color: "#94a3b8", fontSize: "0.76rem", marginTop: "0.2rem" }}>
+            <p className="text-slate-400 text-[0.76rem] mt-1">
               Marcado por{" "}
               {item.checked_by_user_id === currentUserId
                 ? "voce"
@@ -122,18 +81,13 @@ export function ShoppingListItem({
           )}
 
           {transferOptions.length > 0 && (
-            <div
-              className="shopping-transfer-row"
-              style={{
-                marginTop: "0.55rem",
-              }}
-            >
+            <div className="shopping-transfer-row mt-2">
               <select
                 className="search-input"
                 value={transferTargetId}
                 onChange={(event) => onTransferTargetChange?.(event.target.value)}
                 aria-label="Selecionar lista destino"
-                style={{ minHeight: "34px", padding: "0.3rem 0.45rem" }}
+                className="search-input min-h-[34px] px-2 py-1"
               >
                 {transferOptions.map((option) => (
                   <option key={option.id} value={option.id}>
@@ -143,18 +97,7 @@ export function ShoppingListItem({
               </select>
               <button
                 onClick={onCopyToList}
-                style={{
-                  background: "rgba(59, 130, 246, 0.15)",
-                  border: "none",
-                  height: "32px",
-                  borderRadius: "8px",
-                  color: "#93c5fd",
-                  padding: "0 0.6rem",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.3rem",
-                  cursor: "pointer",
-                }}
+                className="bg-blue-500/15 border-none h-8 rounded-lg text-blue-300 px-2.5 inline-flex items-center gap-1 cursor-pointer hover:bg-blue-500/25 text-sm"
                 title="Copiar para lista selecionada"
                 aria-label="Copiar item para lista selecionada"
               >
@@ -162,18 +105,7 @@ export function ShoppingListItem({
               </button>
               <button
                 onClick={onMoveToList}
-                style={{
-                  background: "rgba(34, 197, 94, 0.14)",
-                  border: "none",
-                  height: "32px",
-                  borderRadius: "8px",
-                  color: "#86efac",
-                  padding: "0 0.6rem",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.3rem",
-                  cursor: "pointer",
-                }}
+                className="bg-green-500/15 border-none h-8 rounded-lg text-green-300 px-2.5 inline-flex items-center gap-1 cursor-pointer hover:bg-green-500/25 text-sm"
                 title="Mover para lista selecionada"
                 aria-label="Mover item para lista selecionada"
               >
@@ -182,49 +114,15 @@ export function ShoppingListItem({
             </div>
           )}
 
-          <div
-            style={{
-              marginTop: "0.65rem",
-              padding: "0.7rem",
-              borderRadius: "0.8rem",
-              background: "rgba(15, 23, 42, 0.45)",
-              border: "1px solid rgba(255,255,255,0.06)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "0.6rem",
-                marginBottom: "0.35rem",
-                color: "#94a3b8",
-                fontSize: "0.76rem",
-                fontWeight: 600,
-                textTransform: "uppercase",
-              }}
-            >
-              <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+          <div className="mt-2.5 p-3 rounded-xl bg-slate-900/45 border border-white/5">
+            <div className="flex items-center justify-between gap-2.5 mb-1.5 text-slate-400 text-[0.76rem] font-semibold uppercase">
+              <span className="inline-flex items-center gap-1.5">
                 <ReceiptText size={14} />
                 Ultimas Compras
               </span>
               {historyMatchType !== "none" && (
                 <span
-                  style={{
-                    fontSize: "0.68rem",
-                    textTransform: "none",
-                    borderRadius: "999px",
-                    padding: "0.12rem 0.45rem",
-                    border:
-                      historyMatchType === "exact"
-                        ? "1px solid rgba(34, 197, 94, 0.45)"
-                        : "1px solid rgba(250, 204, 21, 0.45)",
-                    background:
-                      historyMatchType === "exact"
-                        ? "rgba(34, 197, 94, 0.18)"
-                        : "rgba(250, 204, 21, 0.16)",
-                    color: historyMatchType === "exact" ? "#86efac" : "#fde68a",
-                  }}
+                  className={`text-[0.68rem] normal-case rounded-full px-2 py-0.5 border ${historyMatchType === "exact" ? "border-green-500/45 bg-green-500/20 text-green-300" : "border-yellow-500/45 bg-yellow-500/15 text-yellow-200"}`}
                   title={
                     historyMatchType === "exact"
                       ? "Historico encontrado por chave exata"
@@ -238,34 +136,20 @@ export function ShoppingListItem({
 
             {latest ? (
               <>
-                <p style={{ color: "#e2e8f0", fontSize: "0.85rem" }}>
+                <p className="text-slate-200 text-[0.85rem]">
                   {formatToBR(latest.date, false)} em {latest.store} por R${" "}
                   {formatBRL(latest.unitPrice)}
                   /un
                 </p>
-                <p style={{ color: "#64748b", fontSize: "0.78rem", marginTop: "0.2rem" }}>
+                <p className="text-slate-500 text-[0.78rem] mt-1">
                   Media recente: R$ {formatBRL(avgPrice)} / un
                 </p>
 
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: "0.4rem",
-                    marginTop: "0.45rem",
-                  }}
-                >
+                <div className="flex flex-wrap gap-1.5 mt-2">
                   {history.map((entry, idx) => (
                     <span
                       key={`${entry.key}_${entry.timestamp}_${idx}`}
-                      style={{
-                        fontSize: "0.72rem",
-                        color: "#93c5fd",
-                        border: "1px solid rgba(59,130,246,0.28)",
-                        background: "rgba(59,130,246,0.12)",
-                        borderRadius: "999px",
-                        padding: "0.15rem 0.5rem",
-                      }}
+                      className="text-[0.72rem] text-blue-300 border border-blue-500/30 bg-blue-500/10 rounded-full px-2 py-0.5"
                     >
                       {formatToBR(entry.date, false)}: R$ {formatBRL(entry.unitPrice)}
                     </span>
@@ -273,7 +157,7 @@ export function ShoppingListItem({
                 </div>
               </>
             ) : (
-              <p style={{ color: "#64748b", fontSize: "0.82rem" }}>
+              <p className="text-slate-500 text-[0.82rem]">
                 Ainda sem historico de compra para este item.
               </p>
             )}

@@ -17,6 +17,8 @@ type UniversalSearchBarProps = {
   sortOptions?: Array<{ value: string; label: string }>;
   sortLabel?: string;
   extraActions?: ReactNode;
+  containerClassName?: string;
+  inputClassName?: string;
   containerStyle?: CSSProperties;
   inputStyle?: CSSProperties;
 };
@@ -40,6 +42,8 @@ const UniversalSearchBar = ({
   sortOptions = [],
   sortLabel = "ORDENAR:",
   extraActions = null,
+  containerClassName = "",
+  inputClassName = "",
   containerStyle = {},
   inputStyle = {}
 }: UniversalSearchBarProps) => {
@@ -50,47 +54,16 @@ const UniversalSearchBar = ({
   const idlePlaceholder = placeholder ?? PLACEHOLDER_IDLE;
   const activePlaceholder = isFocused ? PLACEHOLDER_FOCUSED : idlePlaceholder;
 
-  const defaultContainerStyle: CSSProperties = {
-    padding: "1.25rem",
-    display: "flex",
-    flexDirection: "column",
-    gap: "1rem",
-    marginBottom: "1rem",
-    ...containerStyle
-  };
-
-  const inputWrapperStyle: CSSProperties = {
-    position: "relative",
-    width: "100%",
-  };
-
-  const commonInputStyle: CSSProperties = {
-    height: "48px",
-    borderRadius: "12px",
-    border: "none",
-    background: "rgba(255, 255, 255, 0.05)",
-    fontSize: "0.95rem",
-    width: "100%",
-    padding: "0 1rem 0 3rem",
-    color: "#fff",
-    outline: "none",
-    ...inputStyle
-  };
-
   return (
-    <div className="glass-card" style={defaultContainerStyle}>
+    <div 
+      className={`glass-card p-5 flex flex-col gap-4 mb-4 ${containerClassName}`} 
+      style={containerStyle}
+    >
       {/* Campo de Busca */}
-      <div style={inputWrapperStyle}>
+      <div className="relative w-full">
         <Search
           size={18}
-          style={{
-            position: "absolute",
-            left: "1rem",
-            top: "50%",
-            transform: "translateY(-50%)",
-            color: "#64748b",
-            pointerEvents: "none"
-          }}
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
         />
         <input
           type="text"
@@ -99,25 +72,16 @@ const UniversalSearchBar = ({
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          style={commonInputStyle}
-          className="search-input-field"
+          className={`search-input-field h-12 rounded-xl border-none bg-white/5 text-[0.95rem] w-full pl-12 pr-4 text-white outline-none ${inputClassName}`}
+          style={inputStyle}
         />
       </div>
 
       {/* Seletor de ordenação / Filtros / Ações Extras */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 0.25rem",
-          flexWrap: "wrap",
-          gap: "1rem"
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+      <div className="flex items-center justify-between px-1 flex-wrap gap-4">
+        <div className="flex items-center gap-2">
           {sortLabel && (
-            <span style={{ fontSize: "0.8rem", color: "#64748b", fontWeight: 500 }}>
+            <span className="text-[0.8rem] text-slate-500 font-medium">
               {sortLabel}
             </span>
           )}
@@ -125,17 +89,7 @@ const UniversalSearchBar = ({
             <select
               value={sortValue}
               onChange={(e) => onSortChange?.(e.target.value)}
-              style={{
-                background: "rgba(59, 130, 246, 0.1)",
-                border: "none",
-                borderRadius: "6px",
-                color: "var(--primary)",
-                fontSize: "0.8rem",
-                fontWeight: 600,
-                padding: "0.25rem 0.5rem",
-                cursor: "pointer",
-                outline: "none",
-              }}
+              className="bg-blue-500/10 border-none rounded-md text-primary text-[0.8rem] font-semibold py-1 px-2 cursor-pointer outline-none"
             >
               {sortOptions.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -146,27 +100,11 @@ const UniversalSearchBar = ({
           {sortOrder && onSortOrderChange && (
             <button
               onClick={() => onSortOrderChange(sortOrder === "asc" ? "desc" : "asc")}
-              className="btn"
-              style={{
-                background: "rgba(59, 130, 246, 0.1)",
-                border: "none",
-                borderRadius: "8px",
-                width: "36px",
-                height: "36px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "var(--primary)",
-                transition: "all 0.2s ease"
-              }}
+              className="btn bg-blue-500/10 border-none rounded-lg w-9 h-9 flex items-center justify-center text-primary transition-all duration-200 ease-out"
               title={sortOrder === "asc" ? "Crescente" : "Decrescente"}
             >
               <div
-                style={{
-                  display: "flex",
-                  transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-                  transform: sortOrder === "asc" ? "rotate(180deg)" : "rotate(0deg)"
-                }}
+                className={`flex transition-transform duration-500 ease-in-out ${sortOrder === "asc" ? "rotate-180" : "rotate-0"}`}
               >
                 <ArrowDownAZ size={20} />
               </div>
@@ -176,7 +114,7 @@ const UniversalSearchBar = ({
 
         {/* Espaço para botões de ação (ex: Gráfico) */}
         {extraActions && (
-          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <div className="flex gap-2 items-center">
             {extraActions}
           </div>
         )}

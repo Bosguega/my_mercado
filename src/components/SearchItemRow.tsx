@@ -11,86 +11,45 @@ interface SearchItemRowProps {
 export const SearchItemRow: React.FC<SearchItemRowProps> = ({ item }) => {
   return (
     <div className="item-row animated-item">
-      <div style={{ flex: 1 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+      <div className="flex-1">
+        <div className="flex items-center gap-2">
           <div className="item-name">
             {item.canonical_name || item.normalized_name || item.name}
           </div>
           {item.canonical_product_id && (
             <span
-              style={{
-                fontSize: "0.65rem",
-                background: "rgba(245, 158, 11, 0.1)",
-                padding: "1px 6px",
-                borderRadius: "4px",
-                color: "#f59e0b",
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                fontWeight: 700,
-              }}
+              className="text-[0.65rem] bg-amber-500/10 px-1.5 py-0.5 rounded text-amber-500 flex items-center gap-1 font-bold"
             >
               <Package size={12} /> VIP
             </span>
           )}
           {item.category && (
             <span
-              style={{
-                fontSize: "0.65rem",
-                background: "rgba(59, 130, 246, 0.1)",
-                padding: "1px 6px",
-                borderRadius: "4px",
-                color: "var(--primary)",
-              }}
+              className="text-[0.65rem] bg-blue-500/10 px-1.5 py-0.5 rounded text-[var(--primary)]"
             >
               {item.category}
             </span>
           )}
         </div>
         {item.normalized_name && (
-          <div
-            style={{
-              fontSize: "0.75rem",
-              color: "#64748b",
-              fontStyle: "italic",
-              marginBottom: "4px",
-            }}
-          >
+          <div className="text-xs text-slate-500 italic mb-1">
             {item.name}
           </div>
         )}
-        <div
-          style={{
-            display: "flex",
-            gap: "0.75rem",
-            marginTop: "0.25rem",
-          }}
-        >
-          <span
-            style={{
-              fontSize: "0.75rem",
-              color: "var(--primary)",
-              fontWeight: 500,
-            }}
-          >
+        <div className="flex gap-3 mt-1">
+          <span className="text-xs text-[var(--primary)] font-medium">
             {item.store}
           </span>
-          <span style={{ fontSize: "0.75rem", color: "#475569" }}>
+          <span className="text-xs text-slate-600">
             {formatToBR(item.purchasedAt, false)}
           </span>
         </div>
       </div>
-      <div style={{ textAlign: "right" }}>
-        <div
-          style={{
-            color: "var(--success)",
-            fontWeight: 700,
-            fontSize: "1.2rem",
-          }}
-        >
+      <div className="text-right">
+        <div className="text-[var(--success)] font-bold text-lg">
           R$ {parseBRL(item.price).toFixed(2).replace(".", ",")}
         </div>
-        <div style={{ fontSize: "0.7rem", color: "#475569" }}>
+        <div className="text-[0.7rem] text-slate-600">
           por {item.unit || "un."}
         </div>
       </div>

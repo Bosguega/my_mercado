@@ -7,7 +7,9 @@ import {
   Settings as SettingsIcon,
 } from "lucide-react";
 import Login from "./components/Login";
-import { Toaster, toast } from "react-hot-toast";
+import { Toaster } from "react-hot-toast";
+import { notify } from "./utils/notifications";
+import { logger } from "./utils/logger";
 import { isSupabaseConfigured } from "./services/supabaseClient";
 import { useApiKey } from "./hooks/useApiKey";
 import { useSupabaseSession } from "./hooks/useSupabaseSession";
@@ -94,7 +96,7 @@ function App() {
           const shouldSyncShoppingLists = isShoppingListCloudSyncEnabled();
 
           if (result.synced > 0) {
-            toast.success(`${result.synced} nota(s) sincronizada(s) com a nuvem!`);
+            notify.success(`${result.synced} nota(s) sincronizada(s) com a nuvem!`);
           }
 
           if (shouldSyncShoppingLists && sessionUser?.id) {
@@ -104,11 +106,11 @@ function App() {
             const shoppingSync = await syncShoppingListsWithCloud(sessionUser.id);
 
             if (shoppingSync.status === "pulled") {
-              toast.success("Listas de compras atualizadas com dados da nuvem.");
+              notify.success("Listas de compras atualizadas com dados da nuvem.");
             } else if (shoppingSync.status === "pushed") {
-              toast.success("Listas de compras enviadas para a nuvem.");
+              notify.success("Listas de compras enviadas para a nuvem.");
             } else if (shoppingSync.status === "skipped" && import.meta.env.DEV) {
-              console.warn("Sincronizacao de listas ignorada:", shoppingSync.reason);
+              logger.warn("App", "Sincronizacao de listas ignorada", shoppingSync.reason);
             }
           }
 
@@ -197,7 +199,7 @@ function App() {
 
       // Só mostrar toast se NÃO for erro de autenticação
       if (!isAuthError) {
-        toast.error("Erro ao sincronizar dados com o servidor. Exibindo dados locais.");
+        notify.error("Erro ao sincronizar dados com o servidor. Exibindo dados locais.");
 
         // Debug automático quando há erro
         if (import.meta.env.DEV) {

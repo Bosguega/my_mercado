@@ -68,7 +68,7 @@ export function CollaborativeShoppingListTab({ onSwitchToLocal }: CollaborativeS
         actions={actions}
       />
 
-      <form className="glass-card" onSubmit={handleAddItem} style={{ marginBottom: "1rem" }}>
+      <form className="glass-card mb-4" onSubmit={handleAddItem}>
         <div className="shopping-add-form-row">
           <input
             className="search-input"
@@ -85,8 +85,7 @@ export function CollaborativeShoppingListTab({ onSwitchToLocal }: CollaborativeS
         </div>
 
         <button
-          className="btn"
-          style={{ width: "100%" }}
+          className="btn w-full"
           type="submit"
           disabled={!activeList?.id}
         >
@@ -95,12 +94,12 @@ export function CollaborativeShoppingListTab({ onSwitchToLocal }: CollaborativeS
         </button>
       </form>
 
-      <div className="items-list" style={{ gap: "0.85rem" }}>
+      <div className="items-list gap-3.5">
         {orderedItems.length === 0 ? (
-          <div className="glass-card" style={{ textAlign: "center", padding: "3rem 1rem" }}>
+          <div className="glass-card text-center py-12 px-4">
             <ListChecks size={44} color="#334155" />
-            <h3 style={{ color: "#e2e8f0", marginTop: "0.8rem" }}>Sua lista esta vazia</h3>
-            <p style={{ color: "#94a3b8", fontSize: "0.9rem", marginTop: "0.3rem" }}>
+            <h3 className="text-slate-200 mt-3">Sua lista esta vazia</h3>
+            <p className="text-slate-400 text-sm mt-1">
               Adicione itens para acompanhar o que falta pegar no mercado.
             </p>
           </div>

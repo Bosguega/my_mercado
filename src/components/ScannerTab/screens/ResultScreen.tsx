@@ -19,32 +19,14 @@ export function ResultScreen({ currentReceipt, onReset, calculateReceiptTotal }:
   const total = calculateReceiptTotal(currentReceipt.items);
 
   return (
-    <div className="glass-card" style={{ padding: 0, overflow: "hidden" }}>
+    <div className="glass-card p-0 overflow-hidden">
       {/* Header com ícone de sucesso */}
-      <div
-        style={{
-          background: "rgba(16, 185, 129, 0.1)",
-          padding: "1.5rem",
-          textAlign: "center",
-          borderBottom: "1px solid rgba(16, 185, 129, 0.2)",
-        }}
-      >
-        <div
-          style={{
-            width: "60px",
-            height: "60px",
-            borderRadius: "50%",
-            background: "var(--success)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 1rem",
-          }}
-        >
+      <div className="bg-emerald-500/10 p-6 text-center border-b border-emerald-500/20">
+        <div className="w-[60px] h-[60px] rounded-full bg-[var(--success)] flex items-center justify-center mx-auto mb-4">
           <CheckCircle color="white" size={32} />
         </div>
-        <h2 style={{ color: "#fff", marginBottom: "0.5rem" }}>Nota Escaneada!</h2>
-        <p style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
+        <h2 className="text-white mb-2">Nota Escaneada!</h2>
+        <p className="text-slate-400 text-sm">
           Revise os itens abaixo e confirme
         </p>
       </div>
@@ -54,154 +36,58 @@ export function ResultScreen({ currentReceipt, onReset, calculateReceiptTotal }:
         {/* Header do card */}
         <div
           onClick={() => setIsExpanded(!isExpanded)}
-          style={{
-            padding: "1.25rem",
-            cursor: "pointer",
-            borderBottom: isExpanded ? "1px solid rgba(255,255,255,0.05)" : "none",
-          }}
+          className={`p-5 cursor-pointer ${isExpanded ? "border-b border-white/5" : ""}`}
         >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              marginBottom: "0.5rem",
-            }}
-          >
+          <div className="flex justify-between items-start mb-2">
             <div>
-              <h3
-                style={{
-                  color: "#f8fafc",
-                  fontSize: "1.1rem",
-                  marginBottom: "0.25rem",
-                }}
-              >
+              <h3 className="text-slate-50 text-[1.1rem] mb-1">
                 {currentReceipt.establishment}
               </h3>
-              <div
-                style={{
-                  display: "flex",
-                  gap: "1rem",
-                  alignItems: "center",
-                }}
-              >
-                <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>
+              <div className="flex gap-4 items-center">
+                <span className="text-slate-400 text-xs">
                   {displayDate}
                 </span>
-                <span
-                  style={{
-                    background: "rgba(59, 130, 246, 0.2)",
-                    color: "var(--primary)",
-                    padding: "0.1rem 0.5rem",
-                    borderRadius: "1rem",
-                    fontSize: "0.75rem",
-                  }}
-                >
+                <span className="bg-blue-500/20 text-[var(--primary)] px-2 py-0.5 rounded-full text-xs">
                   {currentReceipt.items.length} itens
                 </span>
               </div>
             </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.75rem",
-              }}
-            >
-              <span
-                style={{
-                  color: "var(--success)",
-                  fontWeight: 700,
-                  fontSize: "1.1rem",
-                  whiteSpace: "nowrap",
-                }}
-              >
+            <div className="flex items-center gap-3">
+              <span className="text-[var(--success)] font-bold text-[1.1rem] whitespace-nowrap">
                 R$ {total.toFixed(2).replace(".", ",")}
               </span>
             </div>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              marginTop: "0.5rem",
-              color: "#64748b",
-            }}
-          >
+          <div className="flex justify-center mt-2 text-slate-500">
             {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
           </div>
         </div>
 
         {/* Lista de itens expandida */}
         {isExpanded && (
-          <div
-            style={{
-              background: "rgba(15, 23, 42, 0.3)",
-              padding: "1rem",
-              maxHeight: "300px",
-              overflowY: "auto",
-            }}
-          >
+          <div className="bg-slate-900/30 p-4 max-h-[300px] overflow-y-auto">
             {currentReceipt.items.map((item: ReceiptItem, idx: number) => (
               <div
                 key={idx}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "0.6rem 0",
-                  borderBottom:
-                    idx === currentReceipt.items.length - 1
-                      ? "none"
-                      : "1px solid rgba(255,255,255,0.05)",
-                }}
+                className={`flex justify-between py-2.5 ${idx === currentReceipt.items.length - 1 ? "" : "border-b border-white/5"}`}
               >
-                <div style={{ flex: 1 }}>
-                  <div
-                    style={{
-                      fontSize: "0.9rem",
-                      color: "#e2e8f0",
-                      fontWeight: 500,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
+                <div className="flex-1">
+                  <div className="text-sm text-slate-200 font-medium flex items-center gap-2">
                     {item.normalized_name || item.name}
                     {item.category && (
-                      <span
-                        style={{
-                          fontSize: "0.65rem",
-                          background: "rgba(255,255,255,0.1)",
-                          padding: "1px 6px",
-                          borderRadius: "4px",
-                          color: "#94a3b8",
-                          fontWeight: "normal",
-                        }}
-                      >
+                      <span className="text-[0.65rem] bg-white/10 px-1.5 py-px rounded text-slate-400 font-normal">
                         {item.category}
                       </span>
                     )}
                   </div>
-                  <div
-                    style={{
-                      fontSize: "0.75rem",
-                      color: "#64748b",
-                      fontStyle: item.normalized_name ? "italic" : "normal",
-                    }}
-                  >
+                  <div className={`text-xs text-slate-500 ${item.normalized_name ? "italic" : "not-italic"}`}>
                     {item.normalized_name
                       ? `${item.quantity} x R$ ${formatBRL(item.price)}`
                       : `${item.quantity} x R$ ${formatBRL(item.price)}`}
                   </div>
                 </div>
-                <div
-                  style={{
-                    color: "#cbd5e1",
-                    fontWeight: 600,
-                    fontSize: "0.9rem",
-                  }}
-                >
+                <div className="text-slate-300 font-semibold text-sm">
                   R$ {formatItemTotal(item)}
                 </div>
               </div>
@@ -211,32 +97,16 @@ export function ResultScreen({ currentReceipt, onReset, calculateReceiptTotal }:
       </div>
 
       {/* Total e Botões de ação */}
-      <div
-        style={{
-          padding: "1.25rem",
-          borderTop: "1px solid rgba(255,255,255,0.05)",
-          background: "rgba(15, 23, 42, 0.3)",
-        }}
-      >
-        <div
-          className="total-summary"
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "1rem",
-            fontSize: "1.25rem",
-          }}
-        >
-          <span style={{ color: "#94a3b8", fontWeight: 500 }}>Total da Nota</span>
-          <span style={{ color: "var(--success)", fontWeight: 700 }}>
+      <div className="p-5 border-t border-white/5 bg-slate-900/30">
+        <div className="total-summary flex justify-between items-center mb-4 text-xl">
+          <span className="text-slate-400 font-medium">Total da Nota</span>
+          <span className="text-[var(--success)] font-bold">
             R$ {total.toFixed(2).replace(".", ",")}
           </span>
         </div>
 
         <button
-          className="btn btn-success"
-          style={{ width: "100%", padding: "1rem", fontSize: "1rem", fontWeight: 600 }}
+          className="btn btn-success w-full p-4 text-base font-semibold"
           onClick={onReset}
         >
           <CheckCircle size={20} />

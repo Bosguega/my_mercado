@@ -190,11 +190,10 @@ export default function SettingsTab({ onOpenAiConfig }: SettingsTabProps) {
     if (activeSubTab === "dictionary") {
       return (
         <Suspense fallback={<SubTabSkeleton />}>
-          <div style={{ position: "relative" }}>
+          <div className="relative">
             <button
               onClick={() => setActiveSubTab("main")}
-              className="btn btn-secondary"
-              style={{ marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}
+              className="btn btn-secondary flex items-center gap-2 mb-4"
             >
               Voltar para Configuracoes
             </button>
@@ -207,11 +206,10 @@ export default function SettingsTab({ onOpenAiConfig }: SettingsTabProps) {
     if (activeSubTab === "products") {
       return (
         <Suspense fallback={<SubTabSkeleton />}>
-          <div style={{ position: "relative" }}>
+          <div className="relative">
             <button
               onClick={() => setActiveSubTab("main")}
-              className="btn btn-secondary"
-              style={{ marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}
+              className="btn btn-secondary flex items-center gap-2 mb-4"
             >
               Voltar para Configuracoes
             </button>
@@ -225,19 +223,18 @@ export default function SettingsTab({ onOpenAiConfig }: SettingsTabProps) {
   };
 
   const renderMainScreen = () => (
-    <div className="settings-container" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-      <section className="glass-card" style={{ padding: "1.5rem" }}>
-        <h2 style={{ fontSize: "1.25rem", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+    <div className="settings-container flex flex-col gap-4">
+      <section className="glass-card p-6">
+        <h2 className="text-xl flex items-center gap-2 mb-4">
           <Settings size={20} />
           Conta
         </h2>
 
         <button
           onClick={handleLogout}
-          className="btn btn-danger"
-          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between" }}
+          className="btn btn-danger w-full flex items-center justify-between"
         >
-          <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <span className="flex items-center gap-2">
             <LogOut size={18} />
             Encerrar Sessao
           </span>
@@ -245,19 +242,18 @@ export default function SettingsTab({ onOpenAiConfig }: SettingsTabProps) {
         </button>
       </section>
 
-      <section className="glass-card" style={{ padding: "1.5rem" }}>
-        <h2 style={{ fontSize: "1.25rem", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+      <section className="glass-card p-6">
+        <h2 className="text-xl flex items-center gap-2 mb-4">
           <Database size={20} />
           Gerenciar Dados
         </h2>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+        <div className="flex flex-col gap-3">
           <button
             onClick={() => setActiveSubTab("dictionary")}
-            className="btn btn-secondary"
-            style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
+            className="btn btn-secondary flex items-center justify-between"
           >
-            <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span className="flex items-center gap-2">
               <BookOpen size={18} />
               Dicionario de Produtos
             </span>
@@ -266,10 +262,9 @@ export default function SettingsTab({ onOpenAiConfig }: SettingsTabProps) {
 
           <button
             onClick={() => setActiveSubTab("products")}
-            className="btn btn-secondary"
-            style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
+            className="btn btn-secondary flex items-center justify-between"
           >
-            <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span className="flex items-center gap-2">
               <Package size={18} />
               Produtos Canonicos
             </span>
@@ -278,11 +273,10 @@ export default function SettingsTab({ onOpenAiConfig }: SettingsTabProps) {
 
           <button
             onClick={handleClearHistory}
-            className="btn btn-danger"
+            className="btn btn-danger flex items-center justify-between"
             disabled={loading}
-            style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
           >
-            <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span className="flex items-center gap-2">
               <Trash2 size={18} />
               Limpar Historico
             </span>
@@ -291,11 +285,10 @@ export default function SettingsTab({ onOpenAiConfig }: SettingsTabProps) {
 
           <button
             onClick={handleClearDictionary}
-            className="btn btn-danger"
+            className="btn btn-danger flex items-center justify-between"
             disabled={loading}
-            style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
           >
-            <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span className="flex items-center gap-2">
               <Trash2 size={18} />
               Limpar Dicionario
             </span>
@@ -304,11 +297,10 @@ export default function SettingsTab({ onOpenAiConfig }: SettingsTabProps) {
 
           <button
             onClick={handleClearCanonicalProducts}
-            className="btn btn-danger"
+            className="btn btn-danger flex items-center justify-between"
             disabled={loading}
-            style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
           >
-            <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span className="flex items-center gap-2">
               <Trash2 size={18} />
               Limpar Produtos Canonicos
             </span>
@@ -317,18 +309,17 @@ export default function SettingsTab({ onOpenAiConfig }: SettingsTabProps) {
         </div>
       </section>
 
-      <section className="glass-card" style={{ padding: "1.5rem" }}>
-        <h2 style={{ fontSize: "1.25rem", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+      <section className="glass-card p-6">
+        <h2 className="text-xl flex items-center gap-2 mb-4">
           <Cpu size={20} />
           Inteligencia Artificial
         </h2>
 
         <button
           onClick={onOpenAiConfig}
-          className="btn btn-primary"
-          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between" }}
+          className="btn btn-primary w-full flex items-center justify-between"
         >
-          <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <span className="flex items-center gap-2">
             <Cpu size={18} />
             Configurar API Key
           </span>
@@ -336,47 +327,30 @@ export default function SettingsTab({ onOpenAiConfig }: SettingsTabProps) {
         </button>
       </section>
 
-      <section className="glass-card" style={{ padding: "1.5rem" }}>
-        <h2 style={{ fontSize: "1.25rem", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+      <section className="glass-card p-6">
+        <h2 className="text-xl flex items-center gap-2 mb-4">
           <Wifi size={20} />
           Conexao
         </h2>
 
         <button
           onClick={handleTestConnection}
-          className="btn btn-secondary"
+          className="btn btn-secondary w-full"
           disabled={loading}
-          style={{ width: "100%" }}
         >
           Testar Conexao com Supabase
         </button>
 
-        <div
-          style={{
-            marginTop: "0.8rem",
-            paddingTop: "0.8rem",
-            borderTop: "1px solid rgba(148,163,184,0.2)",
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.6rem",
-          }}
-        >
-          <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#cbd5e1" }}>
+        <div className="mt-3 pt-3 border-t border-slate-400/20 flex flex-col gap-2.5">
+          <label className="flex items-center gap-2 text-slate-300">
             <input type="checkbox" checked={syncListsEnabled} onChange={handleToggleCloudSync} />
             Sincronizar listas de compras com nuvem
           </label>
 
           <button
             onClick={handleSyncListsNow}
-            className="btn btn-secondary"
+            className="btn btn-secondary w-full flex items-center justify-center gap-2"
             disabled={loading || !syncListsEnabled}
-            style={{
-              width: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "0.5rem",
-            }}
           >
             <RefreshCw size={16} />
             Sincronizar listas agora

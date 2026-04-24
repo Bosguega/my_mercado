@@ -1,20 +1,6 @@
 import { Zap, ZapOff } from "lucide-react";
 import type { ScannerViewProps } from "../../../types/scanner";
 
-const styles = {
-  cameraControl: {
-    width: "52px",
-    height: "52px",
-    borderRadius: "50%",
-    border: "2px solid var(--primary)",
-    color: "white",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
-  },
-};
 
 export function ScannerView({
   isScanning,
@@ -26,90 +12,32 @@ export function ScannerView({
 
   return (
     <div
-      className="scanner-container"
-      style={{
-        display: "block",
-        background: "#000",
-        borderRadius: "1rem",
-        overflow: "hidden",
-        border: "2px solid var(--primary)",
-        width: "100%",
-        maxWidth: "500px",
-        margin: "0 auto",
-        position: "relative",
-        minHeight: "clamp(280px, 64vh, 420px)",
-      }}
+      className="scanner-container block bg-black rounded-2xl overflow-hidden border-2 border-[var(--primary)] w-full max-w-[500px] mx-auto relative min-h-[clamp(280px,64vh,420px)]"
     >
       {/* Elemento div para o html5-qrcode */}
       <div
         id="reader"
-        style={{
-          width: "100%",
-          minHeight: "clamp(280px, 64vh, 420px)",
-        }}
+        className="w-full min-h-[clamp(280px,64vh,420px)]"
       />
       <div
-        className="scanner-overlay-frame"
-        style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: "clamp(150px, 58vw, 220px)",
-          height: "clamp(150px, 58vw, 220px)",
-          border: "2px solid var(--success)",
-          borderRadius: "1rem",
-          boxShadow: "0 0 0 4000px rgba(15, 23, 42, 0.7)",
-          pointerEvents: "none",
-        }}
+        className="scanner-overlay-frame absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[clamp(150px,58vw,220px)] h-[clamp(150px,58vw,220px)] border-2 border-[var(--success)] rounded-2xl pointer-events-none shadow-[0_0_0_4000px_rgba(15,23,42,0.7)]"
       >
         <div
-          className="scanner-overlay-text-top"
-          style={{
-            position: "absolute",
-            top: -35,
-            width: "100%",
-            textAlign: "center",
-            color: "#fff",
-            fontSize: "0.85rem",
-            fontWeight: "bold",
-          }}
+          className="scanner-overlay-text-top absolute -top-9 w-full text-center text-white text-[0.85rem] font-bold"
         >
           Alinhe o QR Code
         </div>
-        <div
-          className="scanner-overlay-text-bottom"
-          style={{
-            position: "absolute",
-            bottom: -35,
-            width: "100%",
-            textAlign: "center",
-            color: "#94a3b8",
-            fontSize: "0.75rem",
-          }}
+          className="scanner-overlay-text-bottom absolute -bottom-9 w-full text-center text-slate-400 text-xs"
         >
           Dica: Afaste um pouco para melhor leitura
         </div>
       </div>
 
-      <div
-        style={{
-          position: "absolute",
-          bottom: "1.25rem",
-          right: "1.25rem",
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.75rem",
-          zIndex: 10,
-        }}
-      >
+      <div className="absolute bottom-5 right-5 flex flex-col gap-3 z-10">
         {torchSupported && (
           <button
             onClick={() => applyTorch(!torch)}
-            style={{
-              ...styles.cameraControl,
-              background: torch ? "var(--primary)" : "rgba(15, 23, 42, 0.9)",
-            }}
+            className={`w-[52px] h-[52px] rounded-full border-2 border-[var(--primary)] text-white flex items-center justify-center cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.6)] ${torch ? "bg-[var(--primary)]" : "bg-slate-900/90"}`}
           >
             {torch ? <ZapOff size={24} /> : <Zap size={24} />}
           </button>

@@ -205,7 +205,7 @@ function HistoryTab() {
             hasNoResults={hasNoResults}
           />
           {hasMore && (
-            <div style={{ display: "flex", justifyContent: "center", marginTop: "1rem" }}>
+            <div className="flex justify-center mt-4">
               <button className="btn" onClick={loadMore}>
                 Carregar mais
               </button>

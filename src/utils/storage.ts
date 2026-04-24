@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+import { logger } from "./logger";
 /**
  * Storage Unificado com Fallback Automático
  *
@@ -249,7 +250,7 @@ export function localStorageSet<T>(key: string, value: T): void {
     const fullKey = `${STORAGE_PREFIX}${key}`;
     localStorage.setItem(fullKey, JSON.stringify(value));
   } catch (error) {
-    console.error("localStorage cheio ou não disponível:", error);
+    logger.error("UnifiedStorage", "localStorage cheio ou não disponível", error);
     throw error;
   }
 }
@@ -263,7 +264,7 @@ export function localStorageGet<T>(key: string): T | null {
     const item = localStorage.getItem(fullKey);
     return item ? (JSON.parse(item) as T) : null;
   } catch (error) {
-    console.error("Erro ao ler localStorage:", error);
+    logger.error("UnifiedStorage", "Erro ao ler localStorage", error);
     return null;
   }
 }
@@ -276,7 +277,7 @@ export function localStorageDelete(key: string): void {
     const fullKey = `${STORAGE_PREFIX}${key}`;
     localStorage.removeItem(fullKey);
   } catch (error) {
-    console.error("Erro ao deletar localStorage:", error);
+    logger.error("UnifiedStorage", "Erro ao deletar localStorage", error);
   }
 }
 
@@ -292,7 +293,7 @@ export function localStorageClear(): void {
       }
     });
   } catch (error) {
-    console.error("Erro ao limpar localStorage:", error);
+    logger.error("UnifiedStorage", "Erro ao limpar localStorage", error);
   }
 }
 
@@ -519,7 +520,7 @@ export async function migrateLocalStorageToIndexedDB(): Promise<{
           migrated++;
         }
       } catch (error) {
-        console.error(`Erro ao migrar ${store}:${key}:`, error);
+        logger.error("UnifiedStorage", `Erro ao migrar ${store}:${key}`, error);
         errors++;
       }
     }

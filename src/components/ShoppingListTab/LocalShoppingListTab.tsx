@@ -136,24 +136,18 @@ export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: Lo
     <div>
       <div className="shopping-section-header">
         <div>
-          <h2 className="section-title" style={{ marginBottom: "0.2rem" }}>
+          <h2 className="section-title mb-1">
             <ListChecks size={20} color="var(--primary)" />
             Lista de Compras Local
           </h2>
-          <p style={{ color: "#64748b", fontSize: "0.8rem", marginLeft: "1.8rem" }}>
+          <p className="text-[0.8rem] text-slate-500 ml-7">
             {pendingCount} pendente(s) de {shoppingItems.length}
           </p>
         </div>
 
         <div className="shopping-icon-actions">
           <button
-            className="btn"
-            style={{
-              padding: "0.45rem 0.6rem",
-              background: "rgba(245, 158, 11, 0.15)",
-              boxShadow: "none",
-              color: "#f59e0b",
-            }}
+            className="btn px-[0.6rem] py-[0.45rem] bg-amber-500/15 shadow-none text-amber-500 hover:bg-amber-500/25"
             title="Limpar marcados"
             aria-label="Limpar itens marcados"
             onClick={() => actions.confirmClearChecked(actions.handleClearChecked)}
@@ -162,13 +156,7 @@ export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: Lo
             <Eraser size={16} />
           </button>
           <button
-            className="btn"
-            style={{
-              padding: "0.45rem 0.6rem",
-              background: "rgba(239, 68, 68, 0.15)",
-              boxShadow: "none",
-              color: "#ef4444",
-            }}
+            className="btn px-[0.6rem] py-[0.45rem] bg-red-500/15 shadow-none text-red-500 hover:bg-red-500/25"
             title="Limpar lista"
             aria-label="Limpar lista"
             onClick={() => actions.confirmClearAll(actions.handleClearAll)}
@@ -179,7 +167,7 @@ export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: Lo
         </div>
       </div>
 
-      <div className="glass-card" style={{ marginBottom: "1rem", padding: "0.75rem" }}>
+      <div className="glass-card mb-4 p-3">
         <div className="shopping-list-toolbar">
           <select
             className="search-input"
@@ -193,25 +181,18 @@ export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: Lo
               </option>
             ))}
           </select>
-          <button className="btn" style={{ padding: "0.5rem 0.7rem" }} onClick={handleCreateList}>
+          <button className="btn px-[0.7rem] py-2" onClick={handleCreateList}>
             <Plus size={15} /> Nova
           </button>
           <button
-            className="btn"
-            style={{ padding: "0.5rem 0.7rem", background: "rgba(255,255,255,0.08)", boxShadow: "none" }}
+            className="btn px-[0.7rem] py-2 bg-white/10 shadow-none hover:bg-white/20"
             onClick={handleRenameList}
             disabled={!activeLocalList}
           >
             <Pencil size={15} /> Renomear
           </button>
           <button
-            className="btn"
-            style={{
-              padding: "0.5rem 0.7rem",
-              background: "rgba(239, 68, 68, 0.12)",
-              boxShadow: "none",
-              color: "#f87171",
-            }}
+            className="btn px-[0.7rem] py-2 bg-red-500/10 shadow-none text-red-400 hover:bg-red-500/20"
             onClick={() =>
               activeLocalList && actions.confirmDeleteList(
                 activeLocalList.id,
@@ -226,7 +207,7 @@ export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: Lo
         </div>
       </div>
 
-      <form className="glass-card" onSubmit={handleAddItem} style={{ marginBottom: "1rem" }}>
+      <form className="glass-card mb-4" onSubmit={handleAddItem}>
         <div className="shopping-add-form-row">
           <input
             list="suggestion-list-local"
@@ -250,8 +231,7 @@ export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: Lo
         </datalist>
 
         <button
-          className="btn"
-          style={{ width: "100%" }}
+          className="btn w-full"
           type="submit"
         >
           <Plus size={18} />
@@ -259,12 +239,12 @@ export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: Lo
         </button>
       </form>
 
-      <div className="items-list" style={{ gap: "0.85rem" }}>
+      <div className="items-list gap-3.5">
         {orderedItems.length === 0 ? (
-          <div className="glass-card" style={{ textAlign: "center", padding: "3rem 1rem" }}>
+          <div className="glass-card text-center py-12 px-4">
             <ListChecks size={44} color="#334155" />
-            <h3 style={{ color: "#e2e8f0", marginTop: "0.8rem" }}>Sua lista esta vazia</h3>
-            <p style={{ color: "#94a3b8", fontSize: "0.9rem", marginTop: "0.3rem" }}>
+            <h3 className="text-slate-200 mt-3">Sua lista esta vazia</h3>
+            <p className="text-slate-400 text-sm mt-1">
               Adicione itens para acompanhar o que falta pegar no mercado.
             </p>
           </div>

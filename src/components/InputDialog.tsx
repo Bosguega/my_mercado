@@ -38,14 +38,14 @@ export default function InputDialog({
   if (!isOpen) return null;
 
   return (
-    <div className="duplicate-modal-overlay" style={{ zIndex: 4600 }}>
+    <div className="duplicate-modal-overlay z-[4600]">
       <div className="glass-card duplicate-modal-card shopping-input-dialog-card">
-        <h3 style={{ color: "#fff", marginBottom: "0.75rem" }}>{title}</h3>
+        <h3 className="text-white mb-3">{title}</h3>
         {message && (
-          <p style={{ color: "#94a3b8", lineHeight: "1.5", marginBottom: "0.85rem" }}>{message}</p>
+          <p className="text-slate-400 leading-relaxed mb-[0.85rem]">{message}</p>
         )}
-        <div style={{ marginBottom: "0.95rem" }}>
-          <label htmlFor={inputId} style={{ display: "none" }}>
+        <div className="mb-[0.95rem]">
+          <label htmlFor={inputId} className="hidden">
             {title}
           </label>
           <input
@@ -63,12 +63,12 @@ export default function InputDialog({
             }}
           />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+        <div className="grid grid-cols-2 gap-3">
           <button
             className="btn"
             onClick={onCancel}
             disabled={busy}
-            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid var(--card-border)" }}
+            className="btn bg-white/5 border border-[var(--card-border)]"
           >
             {cancelText}
           </button>

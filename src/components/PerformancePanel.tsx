@@ -24,32 +24,11 @@ export function PerformancePanel() {
     };
 
     return (
-        <div
-            style={{
-                position: "fixed",
-                bottom: "80px",
-                right: "16px",
-                zIndex: 9999,
-                fontFamily: "monospace",
-                fontSize: "12px",
-            }}
-        >
+        <div className="fixed bottom-[80px] right-4 z-[9999] font-mono text-xs">
             {/* Toggle Button */}
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                style={{
-                    background: "rgba(15, 23, 42, 0.95)",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                    borderRadius: isExpanded ? "8px 8px 0 0" : "8px",
-                    padding: "8px 12px",
-                    color: "#fff",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    backdropFilter: "blur(8px)",
-                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
-                }}
+                className={`bg-slate-900/95 border border-white/10 px-3 py-2 text-white cursor-pointer flex items-center gap-2 backdrop-blur-md shadow-[0_4px_12px_rgba(0,0,0,0.3)] ${isExpanded ? "rounded-t-lg" : "rounded-lg"}`}
             >
                 <Activity size={16} color={scoreColors[score]} />
                 <span style={{ color: scoreColors[score] }}>
@@ -60,45 +39,21 @@ export function PerformancePanel() {
 
             {/* Expanded Panel */}
             {isExpanded && (
-                <div
-                    style={{
-                        background: "rgba(15, 23, 42, 0.95)",
-                        border: "1px solid rgba(255, 255, 255, 0.1)",
-                        borderTop: "none",
-                        borderRadius: "0 0 8px 8px",
-                        padding: "12px",
-                        backdropFilter: "blur(8px)",
-                        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
-                        minWidth: "280px",
-                    }}
-                >
-                    <div
-                        style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            marginBottom: "12px",
-                            paddingBottom: "8px",
-                            borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
-                        }}
-                    >
-                        <span style={{ color: "#fff", fontWeight: "bold" }}>
+                <div className="bg-slate-900/95 border border-white/10 border-t-0 rounded-b-lg p-3 backdrop-blur-md shadow-[0_4px_12px_rgba(0,0,0,0.3)] min-w-[280px]">
+                    <div className="flex justify-between items-center mb-3 pb-2 border-b border-white/10">
+                        <span className="text-white font-bold">
                             Core Web Vitals
                         </span>
                         <div
-                            style={{
-                                width: "8px",
-                                height: "8px",
-                                borderRadius: "50%",
-                                background: scoreColors[score],
-                            }}
+                            className="w-2 h-2 rounded-full"
+                            style={{ background: scoreColors[score] }}
                         />
                     </div>
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <div className="flex flex-col gap-2">
                         {/* FCP */}
-                        <div style={{ display: "flex", justifyContent: "space-between" }}>
-                            <span style={{ color: "#94a3b8" }}>FCP:</span>
+                        <div className="flex justify-between">
+                            <span className="text-slate-400">FCP:</span>
                             <span
                                 style={{
                                     color:
@@ -114,8 +69,8 @@ export function PerformancePanel() {
                         </div>
 
                         {/* LCP */}
-                        <div style={{ display: "flex", justifyContent: "space-between" }}>
-                            <span style={{ color: "#94a3b8" }}>LCP:</span>
+                        <div className="flex justify-between">
+                            <span className="text-slate-400">LCP:</span>
                             <span
                                 style={{
                                     color:
@@ -131,8 +86,8 @@ export function PerformancePanel() {
                         </div>
 
                         {/* FID */}
-                        <div style={{ display: "flex", justifyContent: "space-between" }}>
-                            <span style={{ color: "#94a3b8" }}>FID:</span>
+                        <div className="flex justify-between">
+                            <span className="text-slate-400">FID:</span>
                             <span
                                 style={{
                                     color:
@@ -148,8 +103,8 @@ export function PerformancePanel() {
                         </div>
 
                         {/* CLS */}
-                        <div style={{ display: "flex", justifyContent: "space-between" }}>
-                            <span style={{ color: "#94a3b8" }}>CLS:</span>
+                        <div className="flex justify-between">
+                            <span className="text-slate-400">CLS:</span>
                             <span
                                 style={{
                                     color:
@@ -165,26 +120,18 @@ export function PerformancePanel() {
                         </div>
 
                         {/* TTFB */}
-                        <div style={{ display: "flex", justifyContent: "space-between" }}>
-                            <span style={{ color: "#94a3b8" }}>TTFB:</span>
-                            <span style={{ color: "#e2e8f0" }}>
+                        <div className="flex justify-between">
+                            <span className="text-slate-400">TTFB:</span>
+                            <span className="text-slate-200">
                                 {formatMetric(metrics.ttfb)}
                             </span>
                         </div>
 
                         {/* Memory */}
                         {metrics.memoryUsage !== null && (
-                            <div
-                                style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    marginTop: "8px",
-                                    paddingTop: "8px",
-                                    borderTop: "1px solid rgba(255, 255, 255, 0.1)",
-                                }}
-                            >
-                                <span style={{ color: "#94a3b8" }}>Memória:</span>
-                                <span style={{ color: "#e2e8f0" }}>
+                            <div className="flex justify-between mt-2 pt-2 border-t border-white/10">
+                                <span className="text-slate-400">Memória:</span>
+                                <span className="text-slate-200">
                                     {formatMetric(metrics.memoryUsage, "bytes")}
                                 </span>
                             </div>
@@ -192,9 +139,9 @@ export function PerformancePanel() {
 
                         {/* Render Time */}
                         {metrics.renderTime !== null && (
-                            <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                <span style={{ color: "#94a3b8" }}>Render:</span>
-                                <span style={{ color: "#e2e8f0" }}>
+                            <div className="flex justify-between">
+                                <span className="text-slate-400">Render:</span>
+                                <span className="text-slate-200">
                                     {formatMetric(metrics.renderTime)}
                                 </span>
                             </div>

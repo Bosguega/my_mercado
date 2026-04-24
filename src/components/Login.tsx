@@ -40,20 +40,19 @@ export default function Login({ setSessionUser }: LoginProps) {
   };
 
   return (
-    <div className="app-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', padding: '1rem' }}>
-      <div className="glass-card" style={{ width: '100%', maxWidth: '400px', textAlign: 'center' }}>
-        <h2 style={{ color: '#fff', marginBottom: '1.5rem', fontSize: '1.5rem' }}>
+    <div className="app-container flex justify-center items-center min-h-screen p-4">
+      <div className="glass-card w-full max-w-[400px] text-center">
+        <h2 className="text-white mb-6 text-2xl">
           My Mercado
         </h2>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <input
             type="email"
             placeholder="Seu email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="search-input"
-            style={{ width: '100%' }}
+            className="search-input w-full"
           />
           <input
             type="password"
@@ -61,33 +60,23 @@ export default function Login({ setSessionUser }: LoginProps) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="search-input"
-            style={{ width: '100%' }}
+            className="search-input w-full"
           />
           <button
             type="submit"
             disabled={loading}
-            className="btn btn-success"
-            style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem' }}
+            className="btn btn-success w-full p-3 mt-2"
           >
             {loading ? 'Aguarde...' : isRegistering ? 'Criar Conta' : 'Entrar'}
           </button>
         </form>
 
-        <p style={{ marginTop: '1.5rem', color: '#94a3b8', fontSize: '0.85rem' }}>
+        <p className="mt-6 text-slate-400 text-[0.85rem]">
           {isRegistering ? 'Já tem uma conta?' : 'Ainda não tem conta?'}
           <button
             type="button"
             onClick={() => setIsRegistering(!isRegistering)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--primary)',
-              marginLeft: '0.5rem',
-              cursor: 'pointer',
-              fontWeight: 500,
-              textDecoration: 'underline'
-            }}
+            className="bg-transparent border-none text-[var(--primary)] ml-2 cursor-pointer font-medium underline"
           >
             {isRegistering ? 'Fazer login' : 'Criar uma'}
           </button>

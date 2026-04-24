@@ -13,7 +13,7 @@ export function ReceiptList({
 }: ReceiptListProps) {
   if (isLoading) {
     return (
-      <div className="items-list" style={{ gap: "1.25rem" }}>
+      <div className="items-list gap-5">
         {[...Array(3)].map((_, i) => (
           <ReceiptSkeleton key={i} />
         ))}
@@ -27,14 +27,11 @@ export function ReceiptList({
 
   if (hasNoResults) {
     return (
-      <div
-        className="glass-card"
-        style={{ textAlign: "center", padding: "3rem 1rem" }}
-      >
-        <h3 style={{ color: "#e2e8f0", marginTop: "1rem" }}>
+      <div className="glass-card text-center py-12 px-4">
+        <h3 className="text-slate-200 mt-4">
           Nenhuma nota encontrada
         </h3>
-        <p style={{ color: "#94a3b8", marginTop: "0.5rem" }}>
+        <p className="text-slate-400 mt-2">
           Tente buscar por outro termo ou mercado.
         </p>
       </div>
@@ -42,7 +39,7 @@ export function ReceiptList({
   }
 
   return (
-    <div className="items-list" style={{ gap: "1rem" }}>
+    <div className="items-list gap-4">
       {receipts.map((receipt) => (
         <ReceiptCard
           key={receipt.id}

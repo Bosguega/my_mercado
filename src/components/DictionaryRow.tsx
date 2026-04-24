@@ -21,90 +21,37 @@ export const DictionaryRow: React.FC<DictionaryRowProps> = ({
     : null;
 
   return (
-    <div
-      className="glass-card animated-item"
-      style={{ marginBottom: 0, padding: "1rem" }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <div style={{ flex: 1 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              marginBottom: "4px",
-            }}
-          >
-            <span style={{ color: "#fff", fontWeight: 600 }}>
+    <div className="glass-card animated-item mb-0 p-4">
+      <div className="flex justify-between items-center">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-white font-semibold">
               {item.normalized_name || "Sem nome"}
             </span>
-            <span
-              style={{
-                fontSize: "0.65rem",
-                background: "rgba(59, 130, 246, 0.1)",
-                padding: "1px 6px",
-                borderRadius: "4px",
-                color: "var(--primary)",
-              }}
-            >
+            <span className="text-[0.65rem] bg-blue-500/10 px-1.5 py-[1px] rounded text-[var(--primary)]">
               {item.category || "Outros"}
             </span>
           </div>
-          <div style={{ fontSize: "0.75rem", color: "#64748b", fontStyle: "italic" }}>
+          <div className="text-xs text-slate-500 italic">
             ID: {item.key}
           </div>
           {item.canonical_product_id && (
-            <div
-              style={{
-                fontSize: "0.75rem",
-                color: "#fbbf24",
-                marginTop: "2px",
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
+            <div className="text-xs text-amber-400 mt-0.5 flex items-center gap-1">
               <Package size={12} />
               Vínculo VIP: {linkedProduct?.name || "Produto Carregando..."}
             </div>
           )}
         </div>
-        <div style={{ display: "flex", gap: "8px" }}>
+        <div className="flex gap-2">
           <button
             onClick={() => onEdit(item)}
-            style={{
-              background: "rgba(59, 130, 246, 0.1)",
-              border: "none",
-              borderRadius: "8px",
-              width: "36px",
-              height: "36px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--primary)",
-            }}
+            className="bg-blue-500/10 border-none rounded-lg w-9 h-9 flex items-center justify-center text-[var(--primary)]"
           >
             <Edit3 size={16} />
           </button>
           <button
             onClick={() => onDelete(item.key)}
-            style={{
-              background: "rgba(239, 68, 68, 0.1)",
-              border: "none",
-              borderRadius: "8px",
-              width: "36px",
-              height: "36px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#ef4444",
-            }}
+            className="bg-red-500/10 border-none rounded-lg w-9 h-9 flex items-center justify-center text-red-500"
           >
             <Trash2 size={16} />
           </button>

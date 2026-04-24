@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Book, RotateCcw, Save, X } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { toast, type Toast } from "react-hot-toast";
+import { notify } from "../utils/notifications";
+import { logger } from "../utils/logger";
 import { CATEGORIES } from "../constants/domain";
 import { DictionaryRow } from "./DictionaryRow";
 import UniversalSearchBar from "./UniversalSearchBar";
@@ -65,7 +67,7 @@ function DictionaryTab() {
     normalizedName: string,
     category: string,
   ) => {
-    const toastId = toast.loading("Atualizando notas salvas...");
+    const toastId = notify.loading("Atualizando notas salvas...");
     try {
       const { updatedCount } = await applyDictionaryChanges.mutateAsync({
         key,
@@ -76,15 +78,16 @@ function DictionaryTab() {
       refetchReceipts();
 
       if (!updatedCount) {
-        toast.success("Nenhum item salvo precisou ser atualizado.", { id: toastId });
+        notify.dismiss(toastId);
+        notify.success("Nenhum item salvo precisou ser atualizado.");
       } else {
-        toast.success(`Atualizado em ${updatedCount} item(ns) nas notas salvas.`, {
-          id: toastId,
-        });
+        notify.dismiss(toastId);
+        notify.success(`Atualizado em ${updatedCount} item(ns) nas notas salvas.`);
       }
     } catch (err) {
-      console.error("Erro ao aplicar correcao nas notas:", err);
-      toast.error("Erro ao atualizar notas salvas.", { id: toastId });
+      logger.error("DictionaryTab", "Erro ao aplicar correcao nas notas", err);
+      notify.dismiss(toastId);
+      notify.error("Erro ao atualizar notas salvas.");
     }
   };
 
@@ -120,41 +123,25 @@ function DictionaryTab() {
       });
 
       setEditingKey(null);
-      toast.success("Item atualizado!");
+      notify.success("Item atualizado!");
 
       if (shouldOfferApplyToSaved) {
         toast(
-          (t) => (
-            <div
-              className="glass-card"
-              style={{
-                margin: 0,
-                padding: "1rem",
-                width: "100%",
-                maxWidth: "520px",
-                display: "flex",
-                gap: "0.75rem",
-                alignItems: "center",
-              }}
-            >
-              <div style={{ flex: 1 }}>
-                <div style={{ color: "#fff", fontWeight: 700, marginBottom: "0.25rem" }}>
+          (t: Toast) => (
+            <div className="glass-card m-0 p-4 w-full max-w-[520px] flex gap-3 items-center">
+              <div className="flex-1">
+                <div className="text-white font-bold mb-1">
                   Corrigir notas ja salvas?
                 </div>
-                <div style={{ color: "#94a3b8", fontSize: "0.85rem", lineHeight: 1.35 }}>
+                <div className="text-slate-400 text-[0.85rem] leading-[1.35]">
                   Aplica este nome/categoria em todos os itens salvos com a chave{" "}
-                  <strong style={{ color: "#e2e8f0" }}>{key}</strong>.
+                  <strong className="text-slate-200">{key}</strong>.
                 </div>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <div className="flex flex-col gap-2">
                 <button
-                  className="btn btn-success"
-                  style={{
-                    padding: "0.5rem 0.9rem",
-                    borderRadius: "0.9rem",
-                    fontSize: "0.9rem",
-                  }}
+                  className="btn btn-success py-2 px-[0.9rem] rounded-[0.9rem] text-[0.9rem]"
                   onClick={async () => {
                     toast.dismiss(t.id);
                     await applyChangesToSavedReceipts(
@@ -167,14 +154,7 @@ function DictionaryTab() {
                   Corrigir
                 </button>
                 <button
-                  className="btn"
-                  style={{
-                    padding: "0.5rem 0.9rem",
-                    borderRadius: "0.9rem",
-                    fontSize: "0.9rem",
-                    background: "rgba(255,255,255,0.06)",
-                    boxShadow: "none",
-                  }}
+                  className="btn py-2 px-[0.9rem] rounded-[0.9rem] text-[0.9rem] bg-white/5 shadow-none"
                   onClick={() => toast.dismiss(t.id)}
                 >
                   Agora nao
@@ -186,8 +166,8 @@ function DictionaryTab() {
         );
       }
     } catch (err) {
-      console.error("Erro ao atualizar item:", err);
-      toast.error("Erro ao salvar alteracoes.");
+      logger.error("DictionaryTab", "Erro ao atualizar item", err);
+      notify.error("Erro ao salvar alteracoes.");
     }
   };
 
@@ -200,10 +180,10 @@ function DictionaryTab() {
       onConfirm: async () => {
         try {
           await deleteDictionaryEntry.mutateAsync(key);
-          toast.success("Item removido!");
+          notify.success("Item removido!");
         } catch (err) {
-          console.error("Erro ao remover item:", err);
-          toast.error("Erro ao remover item.");
+          logger.error("DictionaryTab", "Erro ao remover item", err);
+          notify.error("Erro ao remover item.");
         }
       },
     });
@@ -218,10 +198,10 @@ function DictionaryTab() {
       onConfirm: async () => {
         try {
           await clearDictionary.mutateAsync();
-          toast.success("Dicionario limpo com sucesso!");
+          notify.success("Dicionario limpo com sucesso!");
         } catch (err) {
-          console.error("Erro ao limpar dicionario:", err);
-          toast.error("Erro ao limpar dicionario.");
+          logger.error("DictionaryTab", "Erro ao limpar dicionario", err);
+          notify.error("Erro ao limpar dicionario.");
         }
       },
     });
@@ -269,28 +249,14 @@ function DictionaryTab() {
   return (
     <>
       <div className="dictionary-tab">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "1.25rem",
-          }}
-        >
-          <h2 className="section-title" style={{ marginBottom: "0" }}>
+        <div className="flex justify-between items-center mb-5">
+          <h2 className="section-title mb-0">
             <Book color="var(--primary)" size={20} />
             Dicionario
           </h2>
           <button
-            className="btn"
+            className="btn bg-red-500/10 border-none text-red-400 p-2 rounded-lg"
             onClick={handleClearDictionary}
-            style={{
-              background: "rgba(239, 68, 68, 0.1)",
-              border: "none",
-              color: "#f87171",
-              padding: "0.5rem",
-              borderRadius: "8px",
-            }}
             title="Limpar Dicionario"
           >
             <RotateCcw size={20} />
@@ -310,25 +276,15 @@ function DictionaryTab() {
             { value: "alpha", label: "A-Z" },
           ]}
           extraActions={
-            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <span style={{ fontSize: "0.8rem", color: "#64748b", fontWeight: 500 }}>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500 font-medium">
                   CATEGORIA:
                 </span>
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  style={{
-                    background: "rgba(59, 130, 246, 0.1)",
-                    border: "none",
-                    borderRadius: "6px",
-                    color: "var(--primary)",
-                    fontSize: "0.8rem",
-                    fontWeight: 600,
-                    padding: "0.25rem 0.5rem",
-                    cursor: "pointer",
-                    outline: "none",
-                  }}
+                  className="bg-blue-500/10 border-none rounded-md text-[var(--primary)] text-xs font-semibold px-2 py-1 cursor-pointer outline-none"
                 >
                   <option value="all">TODAS</option>
                   {CATEGORIES.map((cat) => (
@@ -338,42 +294,36 @@ function DictionaryTab() {
                   ))}
                 </select>
               </div>
-              <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
+              <div className="text-xs text-slate-500">
                 Exibindo {visibleItems.length} de {sortedDictionary.totalCount} itens
               </div>
             </div>
           }
         />
 
-        <div className="items-list" style={{ gap: "1rem" }}>
+        <div className="items-list gap-4">
           {loading ? (
-            <div style={{ textAlign: "center", padding: "3rem" }}>
-              <Skeleton width="100%" height="80px" style={{ marginBottom: "1rem" }} />
+            <div className="text-center p-12">
+              <Skeleton width="100%" height="80px" className="mb-4" />
               <Skeleton width="100%" height="80px" />
             </div>
           ) : visibleItems.length === 0 ? (
-            <div className="glass-card" style={{ textAlign: "center", padding: "3rem" }}>
-              <p style={{ color: "#64748b" }}>Nenhum item encontrado no dicionario.</p>
+            <div className="glass-card text-center p-12">
+              <p className="text-slate-500">Nenhum item encontrado no dicionario.</p>
             </div>
           ) : (
             <>
               {visibleItems.map((item) => (
                 <div key={item.key}>
                   {editingKey === item.key ? (
-                    <div
-                      className="glass-card animated-item"
-                      style={{ marginBottom: 0, padding: "1rem" }}
-                    >
-                      <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                        <div
-                          style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: "bold" }}
-                        >
+                    <div className="glass-card animated-item mb-0 p-4">
+                      <div className="flex flex-col gap-3">
+                        <div className="text-xs text-slate-500 font-bold">
                           CHAVE: {item.key}
                         </div>
                         <input
                           type="text"
-                          className="search-input"
-                          style={{ background: "var(--bg-color)" }}
+                          className="search-input bg-[var(--bg-color)]"
                           value={editForm.normalized_name}
                           onChange={(e) =>
                             setEditForm({ ...editForm, normalized_name: e.target.value })
@@ -381,8 +331,7 @@ function DictionaryTab() {
                           placeholder="Nome normalizado"
                         />
                         <select
-                          className="search-input"
-                          style={{ background: "var(--bg-color)" }}
+                          className="search-input bg-[var(--bg-color)]"
                           value={editForm.category}
                           onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
                         >
@@ -393,8 +342,7 @@ function DictionaryTab() {
                           ))}
                         </select>
                         <select
-                          className="search-input"
-                          style={{ background: "var(--bg-color)" }}
+                          className="search-input bg-[var(--bg-color)]"
                           value={editForm.canonical_product_id}
                           onChange={(e) =>
                             setEditForm({ ...editForm, canonical_product_id: e.target.value })
@@ -407,17 +355,15 @@ function DictionaryTab() {
                             </option>
                           ))}
                         </select>
-                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                        <div className="flex gap-2">
                           <button
-                            className="btn btn-success"
-                            style={{ flex: 1 }}
+                            className="btn btn-success flex-1"
                             onClick={() => handleSaveEdit(item.key)}
                           >
                             <Save size={18} /> Salvar
                           </button>
                           <button
-                            className="btn"
-                            style={{ flex: 1 }}
+                            className="btn flex-1"
                             onClick={() => setEditingKey(null)}
                           >
                             <X size={18} /> Cancelar
@@ -436,7 +382,7 @@ function DictionaryTab() {
                 </div>
               ))}
               {hasMore && (
-                <div style={{ display: "flex", justifyContent: "center", marginTop: "0.5rem" }}>
+                <div className="flex justify-center mt-2">
                   <button className="btn" onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}>
                     Carregar mais
                   </button>

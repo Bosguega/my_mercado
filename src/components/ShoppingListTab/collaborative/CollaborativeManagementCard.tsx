@@ -30,21 +30,16 @@ export function CollaborativeManagementCard({
   actions,
 }: CollaborativeManagementCardProps) {
   return (
-    <div className="glass-card" style={{ marginBottom: "1rem", padding: "0.75rem" }}>
+    <div className="glass-card mb-4 p-3">
       <div className="shopping-collab-top-actions">
         <button
-          className="btn"
-          style={{
-            background: "rgba(255,255,255,0.08)",
-            boxShadow: "none",
-          }}
+          className="btn bg-white/10 shadow-none hover:bg-white/20"
           onClick={onSwitchToLocal}
         >
           Voltar para Lista Local
         </button>
         <button
-          className="btn"
-          style={{ background: "rgba(255,255,255,0.08)", boxShadow: "none" }}
+          className="btn bg-white/10 shadow-none hover:bg-white/20"
           onClick={onJoinByCode}
         >
           <KeyRound size={15} /> Entrar por codigo
@@ -64,25 +59,18 @@ export function CollaborativeManagementCard({
             </option>
           ))}
         </select>
-        <button className="btn" style={{ padding: "0.5rem 0.7rem" }} onClick={onCreateList}>
+        <button className="btn px-[0.7rem] py-2" onClick={onCreateList}>
           <Plus size={15} /> Nova
         </button>
         <button
-          className="btn"
-          style={{ padding: "0.5rem 0.7rem", background: "rgba(255,255,255,0.08)", boxShadow: "none" }}
+          className="btn px-[0.7rem] py-2 bg-white/10 shadow-none hover:bg-white/20"
           onClick={onRenameList}
           disabled={!activeList}
         >
           <Pencil size={15} /> Renomear
         </button>
         <button
-          className="btn"
-          style={{
-            padding: "0.5rem 0.7rem",
-            background: "rgba(239, 68, 68, 0.12)",
-            boxShadow: "none",
-            color: "#f87171",
-          }}
+          className="btn px-[0.7rem] py-2 bg-red-500/10 shadow-none text-red-400 hover:bg-red-500/20"
           onClick={() => activeList && actions.confirmDeleteList(activeList.id, activeList.name)}
           disabled={!activeList || activeList.role !== "owner"}
         >
@@ -92,70 +80,40 @@ export function CollaborativeManagementCard({
 
       {activeList && (
         <>
-          <div
-            style={{
-              marginTop: "0.1rem",
-              padding: "0.65rem",
-              borderRadius: "0.7rem",
-              background: "rgba(14,165,233,0.10)",
-              border: "1px solid rgba(14,165,233,0.22)",
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "0.45rem",
-              alignItems: "center",
-            }}
-          >
-            <span style={{ color: "#7dd3fc", fontSize: "0.82rem" }}>
+          <div className="mt-0.5 p-2.5 rounded-xl bg-sky-500/10 border border-sky-500/20 flex flex-wrap gap-2 items-center">
+            <span className="text-sky-300 text-[0.82rem]">
               Codigo: <strong>{activeList.share_code}</strong>
             </span>
             <button
-              className="btn"
-              style={{ padding: "0.35rem 0.55rem", background: "rgba(255,255,255,0.1)", boxShadow: "none" }}
+              className="btn px-2 py-1.5 bg-white/10 shadow-none hover:bg-white/20 text-xs"
               onClick={() => actions.handleCopyShareCode(activeList.share_code)}
             >
               Copiar codigo
             </button>
             <button
-              className="btn"
-              style={{ padding: "0.35rem 0.55rem", background: "rgba(255,255,255,0.1)", boxShadow: "none" }}
+              className="btn px-2 py-1.5 bg-white/10 shadow-none hover:bg-white/20 text-xs"
               onClick={() => actions.handleRegenerateCode(activeList.id)}
               disabled={activeList.role !== "owner"}
             >
               <RefreshCcw size={13} /> Novo codigo
             </button>
-            <span style={{ color: "#bae6fd", fontSize: "0.74rem" }}>
+            <span className="text-sky-200 text-[0.74rem]">
               Modo colaborativo em tempo real
             </span>
           </div>
 
-          <div
-            style={{
-              marginTop: "0.55rem",
-              padding: "0.65rem",
-              borderRadius: "0.7rem",
-              background: "rgba(2,132,199,0.08)",
-              border: "1px solid rgba(2,132,199,0.18)",
-            }}
-          >
-            <div
-              style={{
-                color: "#bae6fd",
-                fontSize: "0.78rem",
-                textTransform: "uppercase",
-                marginBottom: "0.4rem",
-                fontWeight: 700,
-              }}
-            >
+          <div className="mt-2 p-2.5 rounded-xl bg-sky-600/10 border border-sky-600/20">
+            <div className="text-sky-200 text-[0.78rem] uppercase mb-1.5 font-bold">
               Membros ({collaborativeMembers.length})
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+            <div className="flex flex-col gap-1.5">
               {collaborativeMembers.map((member) => (
                 <div key={member.user_id} className="shopping-member-row">
-                  <span style={{ color: "#e2e8f0", fontSize: "0.8rem" }}>
+                  <span className="text-slate-200 text-sm">
                     {member.user_id === sessionUserId ? "Voce" : `${member.user_id.slice(0, 8)}...`}
                   </span>
                   <select
-                    className="search-input"
+                    className="search-input min-h-[32px] px-2 py-1"
                     value={member.role === "owner" ? "owner" : member.role}
                     disabled={
                       activeList.role !== "owner" ||
@@ -168,20 +126,13 @@ export function CollaborativeManagementCard({
                         event.target.value as "editor" | "viewer",
                       )
                     }
-                    style={{ minHeight: "32px", padding: "0.3rem 0.45rem" }}
                   >
                     {member.role === "owner" && <option value="owner">owner</option>}
                     <option value="editor">editor</option>
                     <option value="viewer">viewer</option>
                   </select>
                   <button
-                    className="btn"
-                    style={{
-                      padding: "0.35rem 0.55rem",
-                      background: "rgba(239,68,68,0.16)",
-                      boxShadow: "none",
-                      color: "#fca5a5",
-                    }}
+                    className="btn px-2 py-1 bg-red-500/15 shadow-none text-red-300 hover:bg-red-500/25 text-xs"
                     disabled={
                       activeList.role !== "owner" ||
                       member.role === "owner"
@@ -191,13 +142,7 @@ export function CollaborativeManagementCard({
                     Remover
                   </button>
                   <button
-                    className="btn"
-                    style={{
-                      padding: "0.35rem 0.55rem",
-                      background: "rgba(16,185,129,0.16)",
-                      boxShadow: "none",
-                      color: "#86efac",
-                    }}
+                    className="btn px-2 py-1 bg-emerald-500/15 shadow-none text-emerald-300 hover:bg-emerald-500/25 text-xs"
                     disabled={
                       activeList.role !== "owner" ||
                       member.role === "owner"
@@ -212,15 +157,9 @@ export function CollaborativeManagementCard({
               ))}
             </div>
             {activeList.role !== "owner" && (
-              <div style={{ marginTop: "0.55rem", display: "flex", justifyContent: "flex-end" }}>
+              <div className="mt-2 flex justify-end">
                 <button
-                  className="btn"
-                  style={{
-                    padding: "0.35rem 0.6rem",
-                    background: "rgba(239,68,68,0.16)",
-                    boxShadow: "none",
-                    color: "#fca5a5",
-                  }}
+                  className="btn px-2.5 py-1.5 bg-red-500/15 shadow-none text-red-300 hover:bg-red-500/25 text-sm"
                   onClick={() => actions.handleLeaveList(activeList.id, sessionUserId!)}
                 >
                   Sair da lista

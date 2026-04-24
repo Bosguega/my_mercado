@@ -37,28 +37,19 @@ export const PriceChart = memo(function PriceChart({
   onBack,
 }: PriceChartProps) {
   return (
-    <div className="glass-card" style={{ padding: "1.25rem" }}>
+    <div className="glass-card p-5">
       <button
         className="btn"
         onClick={onBack}
-        style={{
-          marginBottom: "1.5rem",
-          background: "rgba(255,255,255,0.05)",
-          boxShadow: "none",
-          color: "#94a3b8",
-          padding: "0.5rem 1rem",
-          fontSize: "0.85rem",
-        }}
+        className="btn mb-6 bg-white/5 shadow-none text-slate-400 px-4 py-2 text-[0.85rem]"
       >
         <ArrowLeft size={16} /> Voltar
       </button>
-      <h3
-        style={{ marginBottom: "1.5rem", color: "#fff", fontSize: "1.2rem" }}
-      >
+      <h3 className="mb-6 text-white text-[1.2rem]">
         Tendência de Preços
       </h3>
 
-      <div style={{ width: "100%", height: 300, marginTop: "1rem" }}>
+      <div className="w-full h-[300px] mt-4">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData}>
             <CartesianGrid

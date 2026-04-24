@@ -2,49 +2,25 @@ import { History } from "lucide-react";
 
 export function EmptyState() {
   return (
-    <div
-      className="glass-card"
-      style={{ textAlign: "center", padding: "4rem 1rem" }}
-    >
-      <div style={{ position: "relative", display: "inline-block" }}>
+    <div className="glass-card text-center py-16 px-4">
+      <div className="relative inline-block">
         <History
           size={64}
           color="var(--primary)"
-          style={{ opacity: 0.2 }}
+          className="opacity-20"
         />
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-          }}
-        >
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
           <History size={32} color="var(--primary)" />
         </div>
       </div>
-      <h2 style={{ marginTop: "1.5rem", color: "#e2e8f0" }}>
+      <h2 className="mt-6 text-slate-200">
         Histórico vazio
       </h2>
-      <p
-        style={{
-          color: "#94a3b8",
-          marginTop: "0.5rem",
-          maxWidth: "300px",
-          margin: "0.5rem auto",
-        }}
-      >
+      <p className="text-slate-400 mt-2 max-w-[300px] mx-auto">
         Suas notas fiscais escaneadas aparecerão aqui para você acompanhar
         preços e economizar.
       </p>
-      <p
-        style={{
-          color: "var(--primary)",
-          fontSize: "0.85rem",
-          marginTop: "1.5rem",
-          fontWeight: 500,
-        }}
-      >
+      <p className="text-[var(--primary)] text-[0.85rem] mt-6 font-medium">
         Você também pode restaurar um backup JSON acima.
       </p>
     </div>

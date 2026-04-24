@@ -10,15 +10,9 @@ export function ScanningScreen({
 }: ScanningScreenProps) {
   return (
     <>
-      <div style={{ marginBottom: "1rem" }}>
+      <div className="mb-4">
         <button
-          className="btn"
-          style={{
-            width: "100%",
-            background: "rgba(239, 68, 68, 0.2)",
-            border: "1px solid rgba(239, 68, 68, 0.3)",
-            color: "#f87171",
-          }}
+          className="btn w-full bg-red-500/20 border border-red-500/30 text-red-400"
           onClick={onStopCamera}
         >
           <X size={20} />

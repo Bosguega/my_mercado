@@ -40,18 +40,18 @@ export const SkeletonCard: React.FC<{ children: React.ReactNode; className?: str
 
 export const ReceiptSkeleton: React.FC = () => (
   <SkeletonCard>
-    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1rem" }}>
-      <div style={{ flex: 1 }}>
-        <Skeleton width="70%" height="24px" style={{ marginBottom: "8px" }} />
+    <div className="flex justify-between mb-4">
+      <div className="flex-1">
+        <Skeleton width="70%" height="24px" className="mb-2" />
         <Skeleton width="40%" height="16px" />
       </div>
       <Skeleton width="60px" height="24px" />
     </div>
     <div className="items-list">
       {[...Array(2)].map((_, i) => (
-        <div key={i} className="skeleton-item" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
-          <div style={{ flex: 1 }}>
-            <Skeleton width="80%" height="16px" style={{ marginBottom: "4px" }} />
+        <div key={i} className="skeleton-item flex justify-between items-center gap-4">
+          <div className="flex-1">
+            <Skeleton width="80%" height="16px" className="mb-1" />
             <Skeleton width="50%" height="14px" />
           </div>
           <Skeleton width="50px" height="20px" />
@@ -62,9 +62,9 @@ export const ReceiptSkeleton: React.FC = () => (
 );
 
 export const ProductSkeleton: React.FC = () => (
-  <SkeletonCard style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+  <SkeletonCard className="flex justify-between items-center">
     <div>
-      <Skeleton width="180px" height="20px" style={{ marginBottom: "8px" }} />
+      <Skeleton width="180px" height="20px" className="mb-2" />
       <Skeleton width="120px" height="16px" />
     </div>
     <Skeleton width="80px" height="32px" borderRadius="8px" />
@@ -72,8 +72,8 @@ export const ProductSkeleton: React.FC = () => (
 );
 
 export const TabSkeleton: React.FC = () => (
-  <div className="glass-card" style={{ padding: "2rem", textAlign: "center" }}>
-    <div className="skeleton-line" style={{ width: "60%", height: "20px", margin: "0 auto 1rem" }} />
-    <div className="skeleton-line" style={{ width: "80%", height: "16px", margin: "0 auto" }} />
+  <div className="glass-card p-8 text-center">
+    <div className="skeleton-line w-[60%] h-[20px] mx-auto mb-4" />
+    <div className="skeleton-line w-[80%] h-[16px] mx-auto" />
   </div>
 );

@@ -6,6 +6,7 @@
 
 import { CATEGORIES } from "../../constants/domain";
 import type { AiNormalizationInput } from "../../types/ai";
+import { logger } from "../logger";
 
 /**
  * Constrói o prompt para normalização de itens
@@ -71,7 +72,7 @@ export function parseAiJsonResponse(text: string) {
       };
     });
   } catch (err) {
-    console.error("Erro ao parsear resposta da IA:", err, "\nTexto:", text);
+    logger.error("PromptBuilder", "Erro ao parsear resposta da IA", err);
     throw new Error("Resposta da IA nao e um JSON valido.");
   }
 }

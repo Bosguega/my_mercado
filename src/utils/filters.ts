@@ -12,6 +12,48 @@ import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from "date-fns"
 import { filterObjectsByTokens } from "./search";
 
 // ==============================
+// Utilitários de Período
+// ==============================
+
+export function getPeriodDateRange(
+  period: string,
+  startDate?: string,
+  endDate?: string
+): { start: Date; end: Date } | null {
+  if (period === "all") return null;
+
+  const now = new Date();
+
+  if (period === "this-month") {
+    return {
+      start: startOfMonth(now),
+      end: endOfMonth(now),
+    };
+  }
+
+  if (period === "last-3-months") {
+    // Últimos 3 meses completos (mês atual + 2 anteriores)
+    return {
+      start: startOfMonth(subMonths(now, 2)),
+      end: endOfMonth(now),
+    };
+  }
+
+  if (period === "custom" && startDate && endDate) {
+    const start = parseToDate(startDate);
+    const end = parseToDate(endDate);
+
+    if (start && end && start <= end) {
+      const intervalEnd = new Date(end);
+      intervalEnd.setHours(23, 59, 59, 999);
+      return { start, end: intervalEnd };
+    }
+  }
+
+  return null;
+}
+
+// ==============================
 // Funções Genéricas
 // ==============================
 
@@ -81,36 +123,13 @@ export function filterByPeriod(
   endDate?: string
 ): Receipt[] {
   if (period === "all") return receipts;
-
-  const now = new Date();
-  const thisMonth = { start: startOfMonth(now), end: endOfMonth(now) };
-  // Últimos 3 meses completos (mês atual + 2 meses anteriores)
-  const last3MonthsStart = startOfMonth(subMonths(now, 2));
+  const range = getPeriodDateRange(period, startDate, endDate);
+  if (!range) return [];
 
   return receipts.filter((receipt) => {
     const receiptDate = parseToDate(receipt.date);
     if (!receiptDate) return false;
-
-    if (period === "this-month") {
-      return isWithinInterval(receiptDate, thisMonth);
-    }
-    if (period === "last-3-months") {
-      return receiptDate >= last3MonthsStart;
-    }
-    if (period === "custom" && startDate && endDate) {
-      const start = parseToDate(startDate);
-      const end = parseToDate(endDate);
-
-      // Valida datas e garante que start <= end
-      if (!start || !end || start > end) return false;
-
-      // Ajusta end para incluir o dia final completo
-      const intervalEnd = new Date(end);
-      intervalEnd.setHours(23, 59, 59, 999);
-
-      return isWithinInterval(receiptDate, { start, end: intervalEnd });
-    }
-    return false;
+    return isWithinInterval(receiptDate, range);
   });
 }
 
@@ -124,38 +143,14 @@ export function filterItemsByPeriod<T extends { purchasedAt?: string }>(
   endDate?: string
 ): T[] {
   if (period === "all") return items;
-
-  const now = new Date();
-  const thisMonth = { start: startOfMonth(now), end: endOfMonth(now) };
-  // Últimos 3 meses completos (mês atual + 2 meses anteriores)
-  const last3MonthsStart = startOfMonth(subMonths(now, 2));
+  const range = getPeriodDateRange(period, startDate, endDate);
+  if (!range) return [];
 
   return items.filter((item) => {
     if (!item.purchasedAt) return false;
-
     const itemDate = parseToDate(item.purchasedAt);
     if (!itemDate) return false;
-
-    if (period === "this-month") {
-      return isWithinInterval(itemDate, thisMonth);
-    }
-    if (period === "last-3-months") {
-      return itemDate >= last3MonthsStart;
-    }
-    if (period === "custom" && startDate && endDate) {
-      const start = parseToDate(startDate);
-      const end = parseToDate(endDate);
-
-      // Valida datas e garante que start <= end
-      if (!start || !end || start > end) return false;
-
-      // Ajusta end para incluir o dia final completo
-      const intervalEnd = new Date(end);
-      intervalEnd.setHours(23, 59, 59, 999);
-
-      return isWithinInterval(itemDate, { start, end: intervalEnd });
-    }
-    return false;
+    return isWithinInterval(itemDate, range);
   });
 }
 

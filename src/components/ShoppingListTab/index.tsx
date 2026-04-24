@@ -39,7 +39,7 @@ export default function ShoppingListTab() {
       {/* Header com seletor de modo */}
       <div className="shopping-tab-header">
         <div>
-          <h2 className="section-title" style={{ marginBottom: "0.2rem" }}>
+          <h2 className="section-title mb-1">
             {mode === "local" ? (
               <>
                 <ListChecks size={20} color="var(--primary)" />
@@ -56,23 +56,13 @@ export default function ShoppingListTab() {
 
         <div className="shopping-mode-actions">
           <button
-            className="btn"
-            style={{
-              background: mode === "local" ? "var(--primary-gradient)" : "rgba(255,255,255,0.08)",
-              boxShadow: mode === "local" ? undefined : "none",
-            }}
+            className={`btn ${mode === "local" ? "bg-[var(--primary-gradient)]" : "bg-white/10 shadow-none hover:bg-white/20"}`}
             onClick={handleSwitchToLocal}
           >
             Lista Local
           </button>
           <button
-            className="btn"
-            style={{
-              background:
-                mode === "collab" ? "linear-gradient(135deg,#0ea5e9,#2563eb)" : "rgba(255,255,255,0.08)",
-              boxShadow: mode === "collab" ? undefined : "none",
-              opacity: isAuthenticated ? 1 : 0.7,
-            }}
+            className={`btn ${mode === "collab" ? "bg-gradient-to-br from-sky-500 to-blue-600" : "bg-white/10 shadow-none hover:bg-white/20"} ${!isAuthenticated ? "opacity-70" : ""}`}
             onClick={handleSwitchToCollab}
             disabled={!isAuthenticated}
             title={!isAuthenticated ? "Faca login para usar listas colaborativas" : undefined}

@@ -1,6 +1,6 @@
 import { formatToISO, formatToBR } from "../utils/date";
 import { calc } from "../utils/currency";
-import { startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { getPeriodDateRange } from "../utils/filters";
 import { toUserScopedReceiptId } from "../utils/receiptId";
 import { getUserOrThrow, requireSupabase } from "./authService";
 import { logger } from "../utils/logger";
@@ -140,23 +140,12 @@ export async function getReceiptsPaginated(
 
   // Aplicar filtro de período
   if (filters?.period && filters.period !== "all") {
-    const now = new Date();
-    if (filters.period === "this-month") {
-      const start = startOfMonth(now);
-      const end = endOfMonth(now);
-      const startDate = formatToISO(start);
-      const endDate = formatToISO(end);
-      if (startDate && endDate) {
-        query = query.gte("date", startDate).lte("date", endDate);
-      }
-    } else if (filters.period === "last-3-months") {
-      const start = startOfMonth(subMonths(now, 3));
-      const startDate = formatToISO(start);
-      if (startDate) {
-        query = query.gte("date", startDate);
-      }
-    } else if (filters.period === "custom" && filters.startDate && filters.endDate) {
-      query = query.gte("date", filters.startDate).lte("date", filters.endDate);
+    const range = getPeriodDateRange(filters.period, filters.startDate, filters.endDate);
+    if (range) {
+      const startIso = formatToISO(range.start);
+      const endIso = formatToISO(range.end);
+      if (startIso) query = query.gte("date", startIso);
+      if (endIso) query = query.lte("date", endIso);
     }
   }
 

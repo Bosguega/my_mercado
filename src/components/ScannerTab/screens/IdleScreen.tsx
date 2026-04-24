@@ -4,17 +4,6 @@ import { notify } from "../../../utils/notifications";
 import { validateNfcUrl } from "../../../utils/validation";
 import type { InitialScannerScreenProps } from "../../../types/scanner";
 
-const styles = {
-  actionButton: {
-    height: "56px",
-    fontSize: "0.95rem",
-  },
-  primaryButton: {
-    width: "100%",
-    height: "52px",
-    fontSize: "0.95rem",
-  },
-};
 
 export function IdleScreen({
   onStartCamera,
@@ -44,35 +33,22 @@ export function IdleScreen({
   }, [pastedUrl, handleUrlSubmit]);
 
   return (
-    <div className="glass-card" style={{ textAlign: "center", padding: "2.5rem 1.5rem" }}>
-      <div style={{ marginBottom: "2rem" }}>
-        <div
-          className="pulse-container"
-          style={{
-            margin: "0 auto",
-            width: "80px",
-            height: "80px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "rgba(59, 130, 246, 0.1)",
-            borderRadius: "50%",
-          }}
-        >
+    <div className="glass-card text-center py-10 px-6">
+      <div className="mb-8">
+        <div className="pulse-container mx-auto w-20 h-20 flex items-center justify-center bg-blue-500/10 rounded-full">
           <Scan size={40} color="var(--primary)" />
         </div>
-        <h2 style={{ marginTop: "1.25rem", color: "#f8fafc", fontSize: "1.4rem", fontWeight: 700 }}>
+        <h2 className="mt-5 text-slate-50 text-[1.4rem] font-bold">
           Escanear Nota Fiscal
         </h2>
-        <p style={{ marginTop: "0.5rem", color: "#94a3b8", lineHeight: "1.5", fontSize: "0.95rem" }}>
+        <p className="mt-2 text-slate-400 leading-relaxed text-[0.95rem]">
           Aponte a câmera para o QR Code ou faça upload da galeria.
         </p>
       </div>
 
       <div className="scanner-action-grid">
         <button
-          className="btn"
-          style={styles.actionButton}
+          className="btn h-14 text-[0.95rem]"
           onClick={onStartCamera}
           disabled={isLoading || isScanning}
         >
@@ -81,14 +57,7 @@ export function IdleScreen({
         </button>
 
         <label
-          className="btn"
-          style={{
-            ...styles.actionButton,
-            opacity: isLoading || isScanning ? 0.7 : 1,
-            cursor: "pointer",
-            background: "var(--primary)",
-            borderColor: "var(--primary)",
-          }}
+          className={`btn h-14 text-[0.95rem] bg-[var(--primary)] border-[var(--primary)] cursor-pointer ${isLoading || isScanning ? "opacity-70" : "opacity-100"}`}
         >
           <Aperture size={20} />
           Foto
@@ -98,17 +67,12 @@ export function IdleScreen({
             capture="environment"
             onChange={onFileUpload}
             disabled={isLoading || isScanning}
-            style={{ display: "none" }}
+            className="hidden"
           />
         </label>
 
         <label
-          className="btn btn-success"
-          style={{
-            ...styles.actionButton,
-            opacity: isLoading || isScanning ? 0.7 : 1,
-            cursor: "pointer",
-          }}
+          className={`btn btn-success h-14 text-[0.95rem] cursor-pointer ${isLoading || isScanning ? "opacity-70" : "opacity-100"}`}
         >
           <ImageIcon size={20} />
           Galeria
@@ -117,21 +81,15 @@ export function IdleScreen({
             accept="image/*"
             onChange={onFileUpload}
             disabled={isLoading || isScanning}
-            style={{ display: "none" }}
+            className="hidden"
           />
         </label>
       </div>
 
-      <div style={{ marginBottom: "0.75rem" }}>
+      <div className="mb-3">
         {!pasteMode ? (
           <button
-            className="btn"
-            style={{
-              ...styles.primaryButton,
-              background: "rgba(59, 130, 246, 0.05)",
-              border: "1px solid rgba(59, 130, 246, 0.2)",
-              color: "var(--primary)",
-            }}
+            className="btn w-full h-[52px] text-[0.95rem] bg-blue-500/5 border border-blue-500/20 text-[var(--primary)]"
             onClick={() => setPasteMode(true)}
             disabled={isLoading || isScanning}
           >
@@ -139,10 +97,7 @@ export function IdleScreen({
             Colar Link da Nota
           </button>
         ) : (
-          <div
-            className="glass-card"
-            style={{ padding: "0.75rem", background: "rgba(15, 23, 42, 0.4)", marginBottom: "0" }}
-          >
+          <div className="glass-card p-3 bg-slate-900/40 mb-0">
             <div className="scanner-link-row">
               <input
                 type="text"
@@ -151,20 +106,14 @@ export function IdleScreen({
                 value={pastedUrl}
                 onChange={(e) => setPastedUrl(e.target.value)}
                 autoFocus
-                style={{ fontSize: "0.9rem" }}
+                className="search-input text-sm"
               />
-              <button className="btn btn-success" onClick={onLinkSubmit} style={{ padding: "0 0.75rem" }}>
+              <button className="btn btn-success px-3" onClick={onLinkSubmit}>
                 <Plus size={20} />
               </button>
               <button
-                className="btn"
+                className="btn px-3 bg-red-500/10 border-none text-red-400 hover:bg-red-500/20"
                 onClick={() => setPasteMode(false)}
-                style={{
-                  padding: "0 0.75rem",
-                  background: "rgba(239, 68, 68, 0.1)",
-                  border: "none",
-                  color: "#f87171",
-                }}
               >
                 <X size={20} />
               </button>
@@ -174,13 +123,7 @@ export function IdleScreen({
       </div>
 
       <button
-        className="btn"
-        style={{
-          ...styles.primaryButton,
-          backgroundColor: "transparent",
-          border: "1px solid var(--card-border)",
-          color: "#64748b",
-        }}
+        className="btn w-full h-[52px] text-[0.95rem] bg-transparent border border-[var(--card-border)] text-slate-500"
         onClick={onManualMode}
         disabled={isLoading || isScanning}
       >
@@ -189,17 +132,7 @@ export function IdleScreen({
       </button>
 
       {error && (
-        <div
-          style={{
-            marginTop: "1.5rem",
-            padding: "1rem",
-            background: "rgba(239, 68, 68, 0.1)",
-            border: "1px solid rgba(239, 68, 68, 0.2)",
-            borderRadius: "0.75rem",
-            color: "#f87171",
-            fontSize: "0.9rem",
-          }}
-        >
+        <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
           {error}
         </div>
       )}

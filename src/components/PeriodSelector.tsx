@@ -47,30 +47,13 @@ export function PeriodSelector<T extends HistoryFilters | SearchFilters>({
   selectStyle = {},
   label = "PERÍODO:",
 }: PeriodSelectorProps<T>) {
-  const defaultSelectStyle: CSSProperties = {
-    background: "rgba(59, 130, 246, 0.1)",
-    border: "none",
-    borderRadius: "6px",
-    color: "var(--primary)",
-    fontSize: "0.8rem",
-    fontWeight: 600,
-    padding: "0.25rem 0.5rem",
-    cursor: "pointer",
-    outline: "none",
-    ...selectStyle,
-  };
 
   return (
     <div
-      style={{ display: "flex", alignItems: "center", gap: "0.5rem", ...containerStyle }}
+      className="flex items-center gap-2"
+      style={containerStyle}
     >
-      <span
-        style={{
-          fontSize: "0.8rem",
-          color: "#64748b",
-          fontWeight: 500,
-        }}
-      >
+      <span className="text-xs text-slate-500 font-medium">
         {label}
       </span>
       <select
@@ -81,7 +64,8 @@ export function PeriodSelector<T extends HistoryFilters | SearchFilters>({
             period: e.target.value as PeriodValue,
           } as T)
         }
-        style={defaultSelectStyle}
+        className="bg-blue-500/10 border-none rounded-md text-[var(--primary)] text-xs font-semibold px-2 py-1 cursor-pointer outline-none"
+        style={selectStyle}
       >
         {PERIOD_OPTIONS.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -122,29 +106,6 @@ export function PeriodDatePickers<T extends HistoryFilters | SearchFilters>({
 }: PeriodDatePickersProps<T>) {
   if (filters.period !== "custom") return null;
 
-  const defaultContainerStyle: CSSProperties = {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "0.75rem",
-    marginBottom: "1rem",
-    padding: "1rem",
-    ...containerStyle,
-  };
-
-  const labelStyle: CSSProperties = {
-    display: "block",
-    fontSize: "0.7rem",
-    color: "#64748b",
-    marginBottom: "0.5rem",
-    fontWeight: 600,
-    textTransform: "uppercase",
-  };
-
-  const inputStyle: CSSProperties = {
-    background: "rgba(255,255,255,0.05)",
-    fontSize: "0.85rem",
-    height: "40px",
-  };
 
   const handleChange = (field: "startDate" | "endDate") => (
     e: React.ChangeEvent<HTMLInputElement>
@@ -156,25 +117,23 @@ export function PeriodDatePickers<T extends HistoryFilters | SearchFilters>({
   };
 
   return (
-    <div className="glass-card" style={defaultContainerStyle}>
+    <div className="glass-card grid grid-cols-2 gap-3 mb-4 p-4" style={containerStyle}>
       <div>
-        <label style={labelStyle}>Início</label>
+        <label className="block text-[0.7rem] text-slate-500 mb-2 font-semibold uppercase">Início</label>
         <input
           type="date"
-          className="search-input"
+          className="search-input bg-white/5 text-[0.85rem] h-10"
           value={filters.startDate || ""}
           onChange={handleChange("startDate")}
-          style={inputStyle}
         />
       </div>
       <div>
-        <label style={labelStyle}>Fim</label>
+        <label className="block text-[0.7rem] text-slate-500 mb-2 font-semibold uppercase">Fim</label>
         <input
           type="date"
-          className="search-input"
+          className="search-input bg-white/5 text-[0.85rem] h-10"
           value={filters.endDate || ""}
           onChange={handleChange("endDate")}
-          style={inputStyle}
         />
       </div>
     </div>
