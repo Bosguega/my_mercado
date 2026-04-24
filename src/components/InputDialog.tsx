@@ -65,7 +65,6 @@ export default function InputDialog({
         </div>
         <div className="grid grid-cols-2 gap-3">
           <button
-            className="btn"
             onClick={onCancel}
             disabled={busy}
             className="btn bg-white/5 border border-[var(--card-border)]"

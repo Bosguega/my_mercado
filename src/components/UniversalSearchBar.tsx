@@ -55,8 +55,8 @@ const UniversalSearchBar = ({
   const activePlaceholder = isFocused ? PLACEHOLDER_FOCUSED : idlePlaceholder;
 
   return (
-    <div 
-      className={`glass-card p-5 flex flex-col gap-4 mb-4 ${containerClassName}`} 
+    <div
+      className={`glass-card p-5 flex flex-col gap-4 mb-4 ${containerClassName}`}
       style={containerStyle}
     >
       {/* Campo de Busca */}

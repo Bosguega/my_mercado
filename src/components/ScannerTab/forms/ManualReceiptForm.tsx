@@ -3,8 +3,6 @@ import { formatBRL } from "../../../utils/currency";
 import type { ReceiptItem } from "../../../types/domain";
 import type { ManualReceiptFormProps } from "../../../types/scanner";
 
-
-
 export function ManualReceiptForm({
   manualData,
   setManualData,
@@ -95,6 +93,7 @@ export function ManualReceiptForm({
                 <span className="item-meta">
                   {it.quantity} x R$ {formatBRL(it.price)}
                 </span>
+              </div>
               <div className="item-total text-[1.1rem]">
                 R$ {it.total}
               </div>

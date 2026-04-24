@@ -83,7 +83,6 @@ export function ShoppingListItem({
           {transferOptions.length > 0 && (
             <div className="shopping-transfer-row mt-2">
               <select
-                className="search-input"
                 value={transferTargetId}
                 onChange={(event) => onTransferTargetChange?.(event.target.value)}
                 aria-label="Selecionar lista destino"

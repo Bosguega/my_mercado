@@ -106,7 +106,6 @@ export function PeriodDatePickers<T extends HistoryFilters | SearchFilters>({
 }: PeriodDatePickersProps<T>) {
   if (filters.period !== "custom") return null;
 
-
   const handleChange = (field: "startDate" | "endDate") => (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {

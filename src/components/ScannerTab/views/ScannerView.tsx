@@ -1,7 +1,6 @@
 import { Zap, ZapOff } from "lucide-react";
 import type { ScannerViewProps } from "../../../types/scanner";
 
-
 export function ScannerView({
   isScanning,
   torchSupported,
@@ -27,6 +26,7 @@ export function ScannerView({
         >
           Alinhe o QR Code
         </div>
+        <div
           className="scanner-overlay-text-bottom absolute -bottom-9 w-full text-center text-slate-400 text-xs"
         >
           Dica: Afaste um pouco para melhor leitura

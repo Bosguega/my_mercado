@@ -4,7 +4,6 @@ import { notify } from "../../../utils/notifications";
 import { validateNfcUrl } from "../../../utils/validation";
 import type { InitialScannerScreenProps } from "../../../types/scanner";
 
-
 export function IdleScreen({
   onStartCamera,
   onFileUpload,
@@ -101,7 +100,6 @@ export function IdleScreen({
             <div className="scanner-link-row">
               <input
                 type="text"
-                className="search-input"
                 placeholder="URL da NFC-e..."
                 value={pastedUrl}
                 onChange={(e) => setPastedUrl(e.target.value)}

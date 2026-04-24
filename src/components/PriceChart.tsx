@@ -39,7 +39,6 @@ export const PriceChart = memo(function PriceChart({
   return (
     <div className="glass-card p-5">
       <button
-        className="btn"
         onClick={onBack}
         className="btn mb-6 bg-white/5 shadow-none text-slate-400 px-4 py-2 text-[0.85rem]"
       >
