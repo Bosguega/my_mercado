@@ -1,4 +1,4 @@
-import { toast } from "react-hot-toast";
+import { notify } from "./notifications";
 import { formatBRL } from "./currency";
 import type { Receipt, ReceiptItem } from "../types/domain";
 
@@ -23,7 +23,7 @@ const downloadFile = (content: string, filename: string, type: string) => {
  */
 export const exportToCSV = (items: Receipt[]) => {
   if (items.length === 0) {
-    toast.error("Não há dados para exportar");
+    notify.error("Não há dados para exportar");
     return;
   }
 
@@ -55,7 +55,7 @@ export const exportToCSV = (items: Receipt[]) => {
   ].join("\n");
 
   downloadFile(csvContent, `my_mercado_${getIsoDate()}.csv`, "text/csv;charset=utf-8;");
-  toast.success(`Planilha exportada com ${rows.length} itens!`);
+  notify.success(`Planilha exportada com ${rows.length} itens!`);
 };
 
 /**
@@ -63,7 +63,7 @@ export const exportToCSV = (items: Receipt[]) => {
  */
 export const backupToJSON = (receipts: Receipt[]) => {
   if (receipts.length === 0) {
-    toast.error("Não há dados para backup");
+    notify.error("Não há dados para backup");
     return;
   }
 
@@ -76,5 +76,5 @@ export const backupToJSON = (receipts: Receipt[]) => {
 
   const jsonString = JSON.stringify(backupData, null, 2);
   downloadFile(jsonString, `my_mercado_backup_${getIsoDate()}.json`, "application/json");
-  toast.success(`Backup criado com ${receipts.length} notas!`);
+  notify.success(`Backup criado com ${receipts.length} notas!`);
 };

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Package, Plus } from "lucide-react";
+import { logger } from "../../utils/logger";
 import { getFullDictionaryFromDB } from "../../services";
 import { useCanonicalProductsQuery } from "../../hooks/queries/useCanonicalProductsQuery";
 import { useCanonicalProductActions } from "../../hooks/canonicalProduct/useCanonicalProductActions";
@@ -31,7 +32,7 @@ export function CanonicalProductsTab() {
         getFullDictionaryFromDB()
             .then(setDictionary)
             .catch(err => {
-                console.error("Erro ao carregar dicionário:", err);
+                logger.error("CanonicalProducts", "Erro ao carregar dicionário", err);
             });
     }, [products]);
 

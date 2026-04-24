@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { ListChecks, Plus, Eraser, Trash2, Pencil } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { notify } from "../../utils/notifications";
 import { useAllReceiptsQuery } from "../../hooks/queries/useReceiptsQuery";
 import { useReceiptsSessionStore } from "../../stores/useReceiptsSessionStore";
 import { useShoppingListStore } from "../../stores/useShoppingListStore";
@@ -287,25 +287,25 @@ export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: Lo
                 onMoveToList={() => {
                   const targetListId = getTransferTargetId(item.id);
                   if (!targetListId) {
-                    toast.error("Crie outra lista para mover itens.");
+                    notify.error("Crie outra lista para mover itens.");
                     return;
                   }
                   const success = actions.handleMoveItem(item.id, targetListId, activeListId);
                   if (success) {
                     const destinationName = lists.find((list) => list.id === targetListId)?.name || "outra lista";
-                    toast.success(`Item movido para "${destinationName}".`);
+                    notify.success(`Item movido para "${destinationName}".`);
                   }
                 }}
                 onCopyToList={() => {
                   const targetListId = getTransferTargetId(item.id);
                   if (!targetListId) {
-                    toast.error("Crie outra lista para copiar itens.");
+                    notify.error("Crie outra lista para copiar itens.");
                     return;
                   }
                   const success = actions.handleCopyItem(item.id, targetListId, activeListId);
                   if (success) {
                     const destinationName = lists.find((list) => list.id === targetListId)?.name || "outra lista";
-                    toast.success(`Item copiado para "${destinationName}".`);
+                    notify.success(`Item copiado para "${destinationName}".`);
                   }
                 }}
                 currentUserId={sessionUserId}

@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { notify } from '../utils/notifications';
+import { logger } from '../utils/logger';
 import { useScannerStore } from '../stores/useScannerStore';
 import { validateManualReceiptForm, validateManualItem } from '../utils/validation';
 import { generateManualReceiptId } from '../utils/receiptId';
@@ -124,7 +125,7 @@ export function useManualReceipt(saveReceipt: SaveReceiptFn) {
       }
     } catch (err) {
       notify.errorSaving();
-      console.error(err);
+      logger.error('ManualReceipt', 'Erro ao salvar nota manual', err);
     } finally {
       setLoading(false);
     }

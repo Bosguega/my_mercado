@@ -147,19 +147,6 @@ export async function logout() {
 }
 
 /**
- * Obtém o usuário autenticado ou null
- */
-export async function getCurrentUser() {
-  const client = requireSupabase();
-  const { data: { session }, error } = await client.auth.getSession();
-  if (error) {
-    logger.error("authService", "Get session failed", error, ErrorCodes.AUTH_SESSION_INVALID);
-    throw error;
-  }
-  return session?.user || null;
-}
-
-/**
  * Obtém o usuário autenticado ou lança erro
  */
 export async function getUserOrThrow() {
@@ -190,7 +177,7 @@ export async function isAuthenticated(): Promise<boolean> {
 }
 
 /**
- * Obtém o usuário autenticado ou null (alias para getCurrentUser)
+ * Obtém o usuário autenticado ou null
  */
 export async function getUserOrNull() {
   try {

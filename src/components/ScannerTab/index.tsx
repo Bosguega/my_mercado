@@ -1,5 +1,6 @@
 import { useCallback } from "react";
-import { toast } from "react-hot-toast";
+import { notify } from "../../utils/notifications";
+import { logger } from "../../utils/logger";
 import { useReceiptScanner } from "../../hooks/useReceiptScanner";
 import { useReceiptsSessionStore } from "../../stores/useReceiptsSessionStore";
 import { useUiStore } from "../../stores/useUiStore";
@@ -82,7 +83,7 @@ function ScannerTab() {
         await handleScanSuccess(imageUrl);
         URL.revokeObjectURL(imageUrl);
       } catch (err) {
-        console.error('Erro ao processar arquivo:', err);
+        logger.error('ScannerTab', 'Erro ao processar arquivo', err);
       }
     },
     [handleScanSuccess]
@@ -118,7 +119,7 @@ function ScannerTab() {
     if ("success" in result && result.success) {
       setCurrentReceipt(result.receipt);
       setDuplicateReceipt(null);
-      toast.success('Nota atualizada com sucesso!');
+      notify.success('Nota atualizada com sucesso!');
     }
   }, [duplicateReceipt, saveReceipt, setCurrentReceipt, setDuplicateReceipt]);
 

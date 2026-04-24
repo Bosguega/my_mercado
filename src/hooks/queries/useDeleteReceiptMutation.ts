@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "react-hot-toast";
+import { notify } from "../../utils/notifications";
 import { deleteReceiptFromDB } from "../../services";
 import { logger } from "../../utils/logger";
 import type { Receipt } from "../../types/domain";
@@ -34,11 +34,11 @@ export function useDeleteReceiptMutation() {
             // Invalidar todas as queries de receipts
             queryClient.invalidateQueries({ queryKey: ["receipts"] });
 
-            toast.success("Nota removida com sucesso!");
+            notify.deleted();
         },
         onError: (err) => {
             logger.error('DeleteReceipt', 'Erro ao remover nota', err);
-            toast.error("Erro ao remover nota no banco remoto.");
+            notify.error("Erro ao remover nota no banco remoto.");
         },
     });
 }

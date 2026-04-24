@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { Scan, Camera, Image as ImageIcon, Edit3, LinkIcon, Plus, X, Aperture } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { notify } from "../../../utils/notifications";
 import { validateNfcUrl } from "../../../utils/validation";
 import type { InitialScannerScreenProps } from "../../../types/scanner";
 
@@ -34,7 +34,7 @@ export function IdleScreen({
     const validation = validateNfcUrl(rawUrl);
 
     if (!validation.success) {
-      toast.error(validation.error);
+      notify.error(validation.error);
       return;
     }
 

@@ -27,6 +27,7 @@ import {
   setShoppingListCloudSyncEnabled,
 } from "../utils/shoppingListCloudSync";
 import ConfirmDialog from "./ConfirmDialog";
+import { TabSkeleton as SubTabSkeleton } from "./Skeleton";
 import type { ConfirmDialogConfig } from "../types/ui";
 
 const DictionaryTab = lazy(() => import("./DictionaryTab"));
@@ -37,13 +38,6 @@ const CanonicalProductsTab = lazy(() =>
 interface SettingsTabProps {
   onOpenAiConfig: () => void;
 }
-
-const SubTabSkeleton = () => (
-  <div className="glass-card" style={{ padding: "2rem", textAlign: "center" }}>
-    <div className="skeleton-line" style={{ width: "60%", height: "20px", margin: "0 auto 1rem" }} />
-    <div className="skeleton-line" style={{ width: "80%", height: "16px", margin: "0 auto" }} />
-  </div>
-);
 
 export default function SettingsTab({ onOpenAiConfig }: SettingsTabProps) {
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);

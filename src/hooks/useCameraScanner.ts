@@ -1,6 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { toast } from 'react-hot-toast';
+import { notify } from '../utils/notifications';
+import { logger } from '../utils/logger';
 import { useScannerStore } from '../stores/useScannerStore';
 
 /**
@@ -111,10 +112,10 @@ export function useCameraScanner() {
         setZoomSupported(false);
       } catch (err) {
         setScanning(false);
-        toast.error(
+        notify.error(
           'Câmera não disponível. Verifique as permissões ou se o site usa HTTPS.',
         );
-        console.error('Camera fail:', err);
+        logger.error('CameraScanner', 'Camera fail', err);
       }
     },
     [setScanning, setTorchSupported, setZoomSupported, stopCamera],

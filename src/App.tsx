@@ -14,6 +14,7 @@ import { useSupabaseSession } from "./hooks/useSupabaseSession";
 import ApiKeyModal from "./components/ApiKeyModal";
 import { PerformancePanel } from "./components/PerformancePanel";
 import { PWAUpdateNotification } from "./components/PWAUpdateNotification";
+import { TabSkeleton } from "./components/Skeleton";
 import { logPWADebugInfo } from "./utils/pwaDebug";
 import { debugDatabaseConnection } from "./utils/dbDebug";
 import type { AppTab } from "./types/ui";
@@ -61,14 +62,6 @@ const ShoppingListTab = lazyWithRetry(() => import("./components/ShoppingListTab
 const HistoryTab = lazyWithRetry(() => import("./components/HistoryTab"));
 const SearchTab = lazyWithRetry(() => import("./components/SearchTab"));
 const SettingsTab = lazyWithRetry(() => import("./components/SettingsTab"));
-
-// Componente de loading para Suspense
-const TabSkeleton = () => (
-  <div className="glass-card" style={{ padding: "2rem", textAlign: "center" }}>
-    <div className="skeleton-line" style={{ width: "60%", height: "20px", margin: "0 auto 1rem" }} />
-    <div className="skeleton-line" style={{ width: "80%", height: "16px", margin: "0 auto" }} />
-  </div>
-);
 
 function App() {
   const { sessionUser, setSessionUser, authLoading } = useSupabaseSession();
@@ -169,33 +162,25 @@ function App() {
       }
     };
 
-    let previousUpdatedAt: string | null = null;
+    let previousUpdatedAt: string | null =
+      useShoppingListStore.getState().dataByUser[sessionUser.id]?.updatedAt ?? null;
 
-    const unsubscribe = useShoppingListStore.subscribe(
-      (state) => state.dataByUser[sessionUser.id]?.updatedAt ?? null,
-    );
-
-    // Criar observer manual para detectar mudancas
-    const checkForUpdates = () => {
-      const currentUpdatedAt = useShoppingListStore.getState().dataByUser[sessionUser.id]?.updatedAt ?? null;
+    const unsubscribe = useShoppingListStore.subscribe((state) => {
+      const currentUpdatedAt = state.dataByUser[sessionUser.id]?.updatedAt ?? null;
       if (currentUpdatedAt && currentUpdatedAt !== previousUpdatedAt) {
         previousUpdatedAt = currentUpdatedAt;
         if (isShoppingListCloudSyncEnabled()) {
           if (syncTimer) clearTimeout(syncTimer);
-          syncTimer = setTimeout(async () => {
+          syncTimer = setTimeout(() => {
             void runSync();
           }, 2500);
         }
       }
-    };
-
-    // Checar atualizacoes periodicamente
-    const updateInterval = setInterval(checkForUpdates, 1000);
+    });
 
     return () => {
       disposed = true;
       if (syncTimer) clearTimeout(syncTimer);
-      if (updateInterval) clearInterval(updateInterval);
       unsubscribe();
     };
   }, [sessionUser]);

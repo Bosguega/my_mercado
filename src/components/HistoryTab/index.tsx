@@ -1,5 +1,6 @@
-import { useMemo, useState, useCallback, type ChangeEvent } from "react";
-import { toast } from "react-hot-toast";
+import { useMemo, type ChangeEvent } from "react";
+import { notify } from "../../utils/notifications";
+import { logger } from "../../utils/logger";
 import { parseBRL } from "../../utils/currency";
 import { calculateTotalSpent } from "../../utils/analytics";
 import { backupToJSON, exportToCSV } from "../../utils/backupRegistry";
@@ -13,49 +14,10 @@ import { HeaderSection } from "./HeaderSection";
 import { SummaryCard } from "./SummaryCard";
 import { EmptyState } from "./EmptyState";
 import { ReceiptList } from "./ReceiptList";
+import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import type { Receipt } from "../../types/domain";
 import type { HistoryFilters } from "../../types/ui";
 import { parseBackupJson } from "../../utils/validation/backupSchema";
-
-// =========================
-// HOOK: USE CONFIRM DIALOG
-// =========================
-
-function useConfirmDialog() {
-  const [dialog, setDialog] = useState<{
-    title: string;
-    message: string;
-    confirmText?: string;
-    cancelText?: string;
-    danger?: boolean;
-    onConfirm: () => Promise<void>;
-    onCancel?: () => void;
-  } | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  const open = useCallback((newDialog: typeof dialog) => {
-    setDialog(newDialog);
-  }, []);
-
-  const close = useCallback(() => {
-    dialog?.onCancel?.();
-    setDialog(null);
-    setBusy(false);
-  }, [dialog]);
-
-  const run = useCallback(async () => {
-    if (!dialog) return;
-    setBusy(true);
-    try {
-      await dialog.onConfirm();
-      setDialog(null);
-    } finally {
-      setBusy(false);
-    }
-  }, [dialog]);
-
-  return { dialog, isOpen: !!dialog, busy, open, close, run };
-}
 
 // =========================
 // CONSTANTES
@@ -110,7 +72,7 @@ function HistoryTab() {
     if (!file) return;
 
     if (!file.name.endsWith(".json")) {
-      toast.error("Arquivo inválido! Selecione um arquivo .json");
+      notify.error("Arquivo inválido! Selecione um arquivo .json");
       return;
     }
 
@@ -124,7 +86,7 @@ function HistoryTab() {
 
         const parsedBackup = parseBackupJson(resultText);
         if (!parsedBackup.ok) {
-          toast.error(parsedBackup.error);
+          notify.error(parsedBackup.error);
           return;
         }
 
@@ -143,20 +105,21 @@ function HistoryTab() {
               await restoreReceiptsMutation.mutateAsync(restoredReceipts);
               event.target.value = "";
             } catch (syncErr) {
-              console.warn(
-                "Não foi possível sincronizar backup com o Supabase:",
+              logger.warn(
+                "HistoryTab",
+                "Não foi possível sincronizar backup com o Supabase",
                 syncErr
               );
             }
           },
         });
       } catch (error) {
-        console.error("Error restoring backup:", error);
-        toast.error("Erro ao ler arquivo de backup");
+        logger.error("HistoryTab", "Erro ao ler backup", error);
+        notify.error("Erro ao ler arquivo de backup");
       }
     };
     reader.onerror = () => {
-      toast.error("Erro ao ler arquivo");
+      notify.error("Erro ao ler arquivo");
     };
 
     reader.readAsText(file);

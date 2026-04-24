@@ -70,3 +70,10 @@ export const ProductSkeleton: React.FC = () => (
     <Skeleton width="80px" height="32px" borderRadius="8px" />
   </SkeletonCard>
 );
+
+export const TabSkeleton: React.FC = () => (
+  <div className="glass-card" style={{ padding: "2rem", textAlign: "center" }}>
+    <div className="skeleton-line" style={{ width: "60%", height: "20px", margin: "0 auto 1rem" }} />
+    <div className="skeleton-line" style={{ width: "80%", height: "16px", margin: "0 auto" }} />
+  </div>
+);

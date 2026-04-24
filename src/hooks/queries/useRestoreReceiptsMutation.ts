@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "react-hot-toast";
+import { notify } from "../../utils/notifications";
 import { restoreReceiptsToDB } from "../../services";
 import { logger } from "../../utils/logger";
 import type { Receipt } from "../../types/domain";
@@ -30,11 +30,11 @@ export function useRestoreReceiptsMutation() {
             // Invalidar todas as queries de receipts
             queryClient.invalidateQueries({ queryKey: ["receipts"] });
 
-            toast.success(`Backup restaurado com ${restoredReceipts.length} notas!`);
+            notify.success(`Backup restaurado com ${restoredReceipts.length} notas!`);
         },
         onError: (err) => {
             logger.error('RestoreReceipts', 'Erro ao restaurar backup', err);
-            toast.error("Erro ao restaurar backup.");
+            notify.error("Erro ao restaurar backup.");
         },
     });
 }

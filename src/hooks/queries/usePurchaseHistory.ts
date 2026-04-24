@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { parseToDate } from "../../utils/date";
+import { logger } from "../../utils/logger";
 import { toText } from "../../utils/shoppingList";
 import { normalizeKey } from "../../utils/normalize";
 import type { Receipt, ReceiptItem } from "../../types/domain";
@@ -131,7 +132,7 @@ export function usePurchaseHistory(savedReceipts: Receipt[]): UsePurchaseHistory
 
       return { historyByKey: map, suggestions: suggestionItems };
     } catch (err) {
-      console.error("Falha ao montar historico de compras para a lista:", err);
+      logger.error("PurchaseHistory", "Falha ao montar historico de compras para a lista", err);
       return { historyByKey: new Map<string, PurchaseHistoryEntry[]>(), suggestions: [] };
     }
   }, [savedReceipts]);

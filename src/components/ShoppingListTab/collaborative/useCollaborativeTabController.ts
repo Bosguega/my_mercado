@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { toast } from "react-hot-toast";
+import { notify } from "../../../utils/notifications";
 import { useReceiptsSessionStore } from "../../../stores/useReceiptsSessionStore";
 import { useCollaborativeShoppingListActions } from "../../../hooks/shoppingList/useCollaborativeShoppingListActions";
 import {
@@ -80,7 +80,7 @@ export function useCollaborativeTabController() {
   const handleAddItem = async (event: FormEvent) => {
     event.preventDefault();
     if (!activeList?.id) {
-      toast.error("Crie ou entre em uma lista colaborativa primeiro.");
+      notify.error("Crie ou entre em uma lista colaborativa primeiro.");
       return;
     }
     const success = await actions.handleAddItem(activeList.id, itemName, itemQty);

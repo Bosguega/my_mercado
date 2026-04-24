@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "react-hot-toast";
+import { notify } from "../../utils/notifications";
 import {
     saveReceiptToDB,
     deleteReceiptFromDB
@@ -114,7 +114,7 @@ export function useSaveReceiptMutation() {
         },
         onError: (err) => {
             logger.error('SaveReceipt', 'Erro ao salvar nota', err);
-            toast.error("Erro técnico ao salvar a nota.");
+            notify.error("Erro técnico ao salvar a nota.");
         },
     });
 }

@@ -102,7 +102,7 @@ export async function saveReceiptToDBWithFallback(
     }
 
     // Se chegou aqui, fallback falhou mas supabase funcionou (caso raro)
-    return { status: "supabase", data: { id: receiptData.id, date: receiptData.date }! };
+    return { status: "supabase", data: { id: receiptData.id, date: receiptData.date } };
   }
 }
 

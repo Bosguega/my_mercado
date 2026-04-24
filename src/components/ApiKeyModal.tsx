@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Key,
   ShieldCheck,
@@ -12,6 +12,7 @@ import {
 import { notify } from "../utils/notifications";
 import { detectProvider, getApiModel, setApiModel } from "../utils/aiConfig";
 import { testAiConnection } from "../utils/aiClient";
+import { logger } from "../utils/logger";
 import type { ApiKeyModalProps } from "../types/ui";
 
 export default function ApiKeyModal({
@@ -110,7 +111,7 @@ export default function ApiKeyModal({
         notify.warning("Nenhum modelo compatível encontrado");
       }
     } catch (err) {
-      console.error("Erro ao listar modelos:", err);
+      logger.error("ApiKeyModal", "Erro ao listar modelos", err);
       notify.errorByKey("AI_CONNECTION_FAILED");
     } finally {
       setFetchingModels(false);
@@ -135,7 +136,7 @@ export default function ApiKeyModal({
         notify.error(`Erro: ${errorMsg}`);
       }
     } catch (err) {
-      console.error("Erro no teste de conexão:", err);
+      logger.error("ApiKeyModal", "Erro no teste de conexão", err);
       setTestResult("error");
       const errorMsg = err instanceof Error ? err.message : "Erro desconhecido";
       notify.error(`Erro: ${errorMsg}`);
