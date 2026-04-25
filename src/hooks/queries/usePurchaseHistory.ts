@@ -3,7 +3,7 @@ import { parseToDate } from "../../utils/date";
 import { logger } from "../../utils/logger";
 import { toText } from "../../utils/shoppingList";
 import { normalizeKey } from "../../utils/normalize";
-import type { Receipt, ReceiptItem } from "../../types/domain";
+import type { Receipt, ReceiptItem, CanonicalProduct } from "../../types/domain";
 
 export type PurchaseHistoryEntry = {
   key: string;
