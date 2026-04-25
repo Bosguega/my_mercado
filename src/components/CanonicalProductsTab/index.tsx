@@ -4,6 +4,7 @@ import { logger } from "../../utils/logger";
 import { getFullDictionaryFromDB } from "../../services";
 import { useCanonicalProductsQuery } from "../../hooks/queries/useCanonicalProductsQuery";
 import { useCanonicalProductActions } from "../../hooks/canonicalProduct/useCanonicalProductActions";
+import { filterBySearch, SEARCH_CONFIG } from "../../utils/filters";
 import UniversalSearchBar from "../UniversalSearchBar";
 import ConfirmDialog from "../ConfirmDialog";
 import { ProductSkeleton } from "../Skeleton";
@@ -38,15 +39,7 @@ export function CanonicalProductsTab() {
 
     // Filtrar produtos
     const filteredProducts = useMemo(() => {
-        if (!searchQuery.trim()) return products;
-        const query = searchQuery.toLowerCase();
-        return products.filter(
-            (product) =>
-                product.name.toLowerCase().includes(query) ||
-                product.slug.toLowerCase().includes(query) ||
-                product.category?.toLowerCase().includes(query) ||
-                product.brand?.toLowerCase().includes(query)
-        );
+        return filterBySearch(products, searchQuery, SEARCH_CONFIG.canonicalProduct);
     }, [products, searchQuery]);
 
     const handleCreate = async (formData: { slug: string; name: string; category: string; brand: string }) => {

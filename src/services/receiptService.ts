@@ -135,7 +135,8 @@ export async function getReceiptsPaginated(
 
   // Aplicar filtro de busca
   if (filters?.search) {
-    query = query.ilike("establishment", `%${filters.search}%`);
+    const searchTerm = `%${filters.search}%`;
+    query = query.or(`establishment.ilike.${searchTerm},items.name.ilike.${searchTerm}`);
   }
 
   // Aplicar filtro de período

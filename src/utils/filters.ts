@@ -6,10 +6,21 @@
 
 import { parseToDate } from "./date";
 import { parseBRL } from "./currency";
-import type { Receipt } from "../types/domain";
+import type { Receipt, CanonicalProduct, DictionaryEntry } from "../types/domain";
 import type { HistoryFilters, SearchFilters } from "../types/ui";
 import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from "date-fns";
 import { filterObjectsByTokens } from "./search";
+
+// Configuração centralizada de campos pesquisáveis por entidade
+export const SEARCH_CONFIG: {
+  receipt: (keyof Receipt)[];
+  canonicalProduct: (keyof CanonicalProduct)[];
+  dictionary: (keyof DictionaryEntry)[];
+} = {
+  receipt: ["establishment"],
+  canonicalProduct: ["name", "slug", "category", "brand"],
+  dictionary: ["key", "normalized_name"],
+};
 
 // ==============================
 // Utilitários de Período
@@ -106,11 +117,7 @@ export function sortItems<T extends object>(
  * Filtra receipts por termo de busca (estabelecimento)
  */
 export function filterReceiptsBySearch(receipts: Receipt[], search: string): Receipt[] {
-  if (!search.trim()) return receipts;
-  const searchLower = search.toLowerCase();
-  return receipts.filter((receipt) =>
-    receipt.establishment?.toLowerCase().includes(searchLower)
-  );
+  return filterBySearch(receipts, search, SEARCH_CONFIG.receipt);
 }
 
 /**

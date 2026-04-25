@@ -180,7 +180,7 @@ export function usePurchaseHistory(
             b.lastTimestamp - a.lastTimestamp ||
             a.label.localeCompare(b.label),
         )
-        .slice(0, 100)
+        .slice(0, 1000)
         .map(({ key, label, count, category, canonical_name }) => ({
           key,
           label,

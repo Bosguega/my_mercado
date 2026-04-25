@@ -8,7 +8,7 @@ import { DictionaryRow } from "./DictionaryRow";
 import UniversalSearchBar from "./UniversalSearchBar";
 import ConfirmDialog from "./ConfirmDialog";
 import { Skeleton } from "./Skeleton";
-import { filterBySearch, sortItems } from "../utils/filters";
+import { filterBySearch, sortItems, SEARCH_CONFIG } from "../utils/filters";
 import type { ConfirmDialogConfig, SortDirection } from "../types/ui";
 import type { DictionaryEntry } from "../types/domain";
 import { useAllReceiptsQuery } from "../hooks/queries/useReceiptsQuery";
@@ -208,7 +208,7 @@ function DictionaryTab() {
   };
 
   const filteredDictionary = useMemo(() => {
-    const baseItems = filterBySearch(dictionary, searchQuery, ["key", "normalized_name"]);
+    const baseItems = filterBySearch(dictionary, searchQuery, SEARCH_CONFIG.dictionary);
     return baseItems.filter(
       (item) => selectedCategory === "all" || item.category === selectedCategory,
     );
