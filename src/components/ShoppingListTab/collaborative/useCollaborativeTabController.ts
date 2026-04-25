@@ -9,6 +9,10 @@ import {
   useCollaborativeListsQuery,
 } from "../../../hooks/queries/useCollaborativeShoppingListsQuery";
 import { useSortedShoppingItems } from "../../../hooks/queries/useSortedShoppingItems";
+import { useAllReceiptsQuery } from "../../../hooks/queries/useReceiptsQuery";
+import { useCanonicalProductsQuery } from "../../../hooks/queries/useCanonicalProductsQuery";
+import { usePurchaseHistory } from "../../../hooks/queries/usePurchaseHistory";
+import { filterBySearch } from "../../../utils/filters";
 import type { ShoppingListItem as ShoppingListItemType } from "../../../types/ui";
 import type { CollaborativeShoppingListItem } from "../../../types/domain";
 
@@ -38,6 +42,7 @@ export function useCollaborativeTabController() {
   const [activeListId, setActiveListId] = useState<string | null>(null);
   const [itemName, setItemName] = useState("");
   const [itemQty, setItemQty] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [collabInputDialog, setCollabInputDialog] = useState<CollabInputDialogState>(null);
 
   const collaborativeListsQuery = useCollaborativeListsQuery(isAuthenticated);
@@ -71,6 +76,16 @@ export function useCollaborativeTabController() {
   );
   const collaborativeMembers = collaborativeMembersQuery.data || [];
   const orderedItems = useSortedShoppingItems(collaborativeItems);
+
+  // Sugestões para o input
+  const { data: savedReceipts = [] } = useAllReceiptsQuery();
+  const { data: canonicalProducts = [] } = useCanonicalProductsQuery();
+  const { suggestions: allSuggestions } = usePurchaseHistory(savedReceipts, canonicalProducts);
+
+  const suggestions = useMemo(() => {
+    if (!itemName.trim()) return allSuggestions.slice(0, 50);
+    return filterBySearch(allSuggestions, itemName, ["label", "category", "canonical_name"]).slice(0, 50);
+  }, [allSuggestions, itemName]);
 
   const actions = useCollaborativeShoppingListActions(sessionUserId);
 
@@ -141,8 +156,11 @@ export function useCollaborativeTabController() {
     collaborativeItems,
     collaborativeMembers,
     orderedItems,
+    suggestions,
     itemName,
     setItemName,
+    showSuggestions,
+    setShowSuggestions,
     itemQty,
     setItemQty,
     collabInputDialog,

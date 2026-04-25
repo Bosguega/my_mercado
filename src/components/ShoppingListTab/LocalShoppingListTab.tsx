@@ -7,8 +7,10 @@ import { useShoppingListStore } from "../../stores/useShoppingListStore";
 import { useLocalShoppingListActions } from "../../hooks/shoppingList/useLocalShoppingListActions";
 import { useSortedShoppingItems } from "../../hooks/queries/useSortedShoppingItems";
 import { usePurchaseHistory, type PurchaseHistoryEntry } from "../../hooks/queries/usePurchaseHistory";
+import { useCanonicalProductsQuery } from "../../hooks/queries/useCanonicalProductsQuery";
 import { sanitizeShoppingList, toText } from "../../utils/shoppingList";
 import { normalizeKey } from "../../utils/normalize";
+import { filterBySearch } from "../../utils/filters";
 import { scoreHistoryKeyMatch } from "../../utils/shoppingHistoryMatch";
 import { ShoppingListItem } from "../ShoppingListItem";
 import ConfirmDialog from "../ConfirmDialog";
@@ -35,6 +37,7 @@ interface LocalShoppingListTabProps {
 export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: LocalShoppingListTabProps) {
   const sessionUserId = useReceiptsSessionStore((state) => state.sessionUserId);
   const { data: savedReceipts = [] } = useAllReceiptsQuery();
+  const { data: canonicalProducts = [] } = useCanonicalProductsQuery();
 
   const lists = useShoppingListStore((state) => state.getLists(sessionUserId));
   const activeListId = useShoppingListStore((state) => state.getActiveListId(sessionUserId));
@@ -49,12 +52,18 @@ export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: Lo
 
   const setActiveList = useShoppingListStore((state) => state.setActiveList);
   const orderedItems = useSortedShoppingItems(shoppingItems);
-  const { historyByKey, suggestions } = usePurchaseHistory(savedReceipts);
-
   const [itemName, setItemName] = useState("");
   const [itemQty, setItemQty] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [transferTargetByItem, setTransferTargetByItem] = useState<Record<string, string>>({});
   const [listInputDialog, setListInputDialog] = useState<ListInputDialogState>(null);
+
+  const { historyByKey, suggestions: allSuggestions } = usePurchaseHistory(savedReceipts, canonicalProducts);
+
+  const suggestions = useMemo(() => {
+    if (!itemName.trim()) return allSuggestions.slice(0, 50);
+    return filterBySearch(allSuggestions, itemName, ["label", "category", "canonical_name"]).slice(0, 50);
+  }, [allSuggestions, itemName]);
 
   const actions = useLocalShoppingListActions(sessionUserId);
 
@@ -207,15 +216,46 @@ export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: Lo
         </div>
       </div>
 
-      <form className="glass-card mb-4" onSubmit={handleAddItem}>
+      <form className="glass-card mb-4 relative z-20" onSubmit={handleAddItem}>
         <div className="shopping-add-form-row">
-          <input
-            list="suggestion-list-local"
-            className="search-input"
-            placeholder="Ex: Arroz, Leite, Cafe..."
-            value={itemName}
-            onChange={(e) => setItemName(e.target.value)}
-          />
+          <div className="relative">
+            <input
+              className="search-input"
+              placeholder="Ex: Arroz, Leite, Cafe..."
+              value={itemName}
+              onChange={(e) => setItemName(e.target.value)}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+            />
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute left-0 right-0 z-[100] mt-2 bg-[#1e293b] border border-white/10 rounded-xl p-1 max-h-64 overflow-auto shadow-2xl animated-item">
+                {suggestions.map((suggestion) => (
+                  <div
+                    key={suggestion.key}
+                    className="p-3 hover:bg-white/10 cursor-pointer rounded-lg text-[0.9rem] text-slate-200 transition-colors flex justify-between items-center"
+                    onClick={() => {
+                      setItemName(suggestion.label);
+                      setShowSuggestions(false);
+                    }}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">{suggestion.label}</span>
+                      {suggestion.category && (
+                        <span className="text-[0.65rem] text-slate-500 uppercase tracking-wider">
+                          {suggestion.category}
+                        </span>
+                      )}
+                    </div>
+                    {suggestion.count > 0 && (
+                      <span className="text-[0.7rem] bg-blue-500/20 px-2 py-1 rounded text-blue-400 font-bold">
+                        {suggestion.count}x
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <input
             className="search-input"
             placeholder="Qtd"
@@ -223,12 +263,6 @@ export function LocalShoppingListTab({ onSwitchToCollab: _onSwitchToCollab }: Lo
             onChange={(e) => setItemQty(e.target.value)}
           />
         </div>
-
-        <datalist id="suggestion-list-local">
-          {suggestions.map((suggestion) => (
-            <option key={suggestion.key} value={suggestion.label} />
-          ))}
-        </datalist>
 
         <button
           className="btn w-full"

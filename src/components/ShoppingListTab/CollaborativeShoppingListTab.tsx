@@ -25,8 +25,11 @@ export function CollaborativeShoppingListTab({ onSwitchToLocal }: CollaborativeS
     collaborativeItems,
     collaborativeMembers,
     orderedItems,
+    suggestions,
     itemName,
     setItemName,
+    showSuggestions,
+    setShowSuggestions,
     itemQty,
     setItemQty,
     collabInputDialog,
@@ -68,14 +71,46 @@ export function CollaborativeShoppingListTab({ onSwitchToLocal }: CollaborativeS
         actions={actions}
       />
 
-      <form className="glass-card mb-4" onSubmit={handleAddItem}>
+      <form className="glass-card mb-4 relative z-20" onSubmit={handleAddItem}>
         <div className="shopping-add-form-row">
-          <input
-            className="search-input"
-            placeholder="Ex: Arroz, Leite, Cafe..."
-            value={itemName}
-            onChange={(e) => setItemName(e.target.value)}
-          />
+          <div className="relative">
+            <input
+              className="search-input"
+              placeholder="Ex: Arroz, Leite, Cafe..."
+              value={itemName}
+              onChange={(e) => setItemName(e.target.value)}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+            />
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute left-0 right-0 z-[100] mt-2 bg-[#1e293b] border border-white/10 rounded-xl p-1 max-h-64 overflow-auto shadow-2xl animated-item">
+                {suggestions.map((suggestion) => (
+                  <div
+                    key={suggestion.key}
+                    className="p-3 hover:bg-white/10 cursor-pointer rounded-lg text-[0.9rem] text-slate-200 transition-colors flex justify-between items-center"
+                    onClick={() => {
+                      setItemName(suggestion.label);
+                      setShowSuggestions(false);
+                    }}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">{suggestion.label}</span>
+                      {suggestion.category && (
+                        <span className="text-[0.65rem] text-slate-500 uppercase tracking-wider">
+                          {suggestion.category}
+                        </span>
+                      )}
+                    </div>
+                    {suggestion.count > 0 && (
+                      <span className="text-[0.7rem] bg-blue-500/20 px-2 py-1 rounded text-blue-400 font-bold">
+                        {suggestion.count}x
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <input
             className="search-input"
             placeholder="Qtd"
