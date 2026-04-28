@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Scan, Camera, Image as ImageIcon, Edit3, LinkIcon, Plus, X, Aperture } from "lucide-react";
+import { Scan, Camera, Image as ImageIcon, Edit3, LinkIcon, Plus, X, Aperture, FileText } from "lucide-react";
 import { notify } from "../../../utils/notifications";
 import { validateNfcUrl } from "../../../utils/validation";
 import type { InitialScannerScreenProps } from "../../../types/scanner";
@@ -9,12 +9,15 @@ export function IdleScreen({
   onFileUpload,
   onManualMode,
   handleUrlSubmit,
+  handleTextSubmit,
   isLoading,
   isScanning,
   error,
 }: InitialScannerScreenProps) {
   const [pasteMode, setPasteMode] = useState(false);
+  const [textPasteMode, setTextPasteMode] = useState(false);
   const [pastedUrl, setPastedUrl] = useState("");
+  const [pastedText, setPastedText] = useState("");
 
   const onLinkSubmit = useCallback(() => {
     const rawUrl = pastedUrl.trim();
@@ -30,6 +33,18 @@ export function IdleScreen({
     setPastedUrl("");
     setPasteMode(false);
   }, [pastedUrl, handleUrlSubmit]);
+
+  const onTextSubmit = useCallback(() => {
+    const text = pastedText.trim();
+    if (!text) {
+      notify.error("Por favor, cole o conteúdo da nota.");
+      return;
+    }
+
+    handleTextSubmit(text);
+    setPastedText("");
+    setTextPasteMode(false);
+  }, [pastedText, handleTextSubmit]);
 
   return (
     <div className="glass-card text-center py-10 px-6">
@@ -85,11 +100,14 @@ export function IdleScreen({
         </label>
       </div>
 
-      <div className="mb-3">
+      <div className="mb-3 space-y-3">
         {!pasteMode ? (
           <button
             className="btn w-full h-[52px] text-[0.95rem] bg-blue-500/5 border border-blue-500/20 text-[var(--primary)]"
-            onClick={() => setPasteMode(true)}
+            onClick={() => {
+              setPasteMode(true);
+              setTextPasteMode(false);
+            }}
             disabled={isLoading || isScanning}
           >
             <LinkIcon size={18} />
@@ -115,6 +133,45 @@ export function IdleScreen({
               >
                 <X size={20} />
               </button>
+            </div>
+          </div>
+        )}
+
+        {!textPasteMode ? (
+          <button
+            className="btn w-full h-[52px] text-[0.95rem] bg-emerald-500/5 border border-emerald-500/20 text-emerald-400"
+            onClick={() => {
+              setTextPasteMode(true);
+              setPasteMode(false);
+            }}
+            disabled={isLoading || isScanning}
+          >
+            <FileText size={18} />
+            Colar Texto da Nota
+          </button>
+        ) : (
+          <div className="glass-card p-3 bg-slate-900/40 mb-0">
+            <div className="flex flex-col gap-3">
+              <textarea
+                placeholder="Cole aqui o conteúdo copiado da nota..."
+                value={pastedText}
+                onChange={(e) => setPastedText(e.target.value)}
+                autoFocus
+                rows={4}
+                className="search-input text-sm w-full resize-none bg-slate-800/50 border border-slate-700/50 p-3"
+              />
+              <div className="flex gap-2">
+                <button className="btn btn-success flex-1 h-12" onClick={onTextSubmit}>
+                  <Plus size={18} />
+                  Processar Texto
+                </button>
+                <button
+                  className="btn px-4 bg-red-500/10 border-none text-red-400 hover:bg-red-500/20"
+                  onClick={() => setTextPasteMode(false)}
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
           </div>
         )}

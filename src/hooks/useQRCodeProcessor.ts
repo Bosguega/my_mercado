@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { notify } from '../utils/notifications';
 import { errorMessages } from '../utils/errorMessages';
-import { parseNFCeSP } from '../services/receiptParser';
+import { parseNFCeSP, parseRawTextReceipt } from '../services/receiptParser';
 import { useScannerStore } from '../stores/useScannerStore';
 import { logger } from '../utils/logger';
 import type { Receipt } from '../types/domain';
@@ -104,7 +104,38 @@ export function useQRCodeProcessor(saveReceipt: SaveReceiptFn) {
     [saveReceipt, setLoading, setCurrentReceipt, setDuplicateReceipt, setError],
   );
 
+  const processRawText = useCallback(
+    async (text: string) => {
+      logger.debug('QRProcessor', 'Processando texto manual');
+      setLoading(true);
+      setError(null);
+
+      try {
+        const extractedData = parseRawTextReceipt(text);
+
+        const result = await saveReceipt(extractedData);
+
+        if (isDuplicateResult(result)) {
+          setDuplicateReceipt(extractedData);
+          notify.nfceDuplicate(result.existingReceipt.date.split(' ')[0]);
+        } else if (isSuccessResult(result)) {
+          setCurrentReceipt(result.receipt);
+          notify.success('Nota processada com sucesso!');
+        }
+      } catch (err: unknown) {
+        logger.error('QRProcessor', 'Erro ao processar texto', err);
+        const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
+        notify.error(errorMessage);
+        setError(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [saveReceipt, setLoading, setCurrentReceipt, setDuplicateReceipt, setError]
+  );
+
   return {
     processQRCode,
+    processRawText,
   };
 }

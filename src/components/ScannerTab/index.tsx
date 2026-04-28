@@ -61,6 +61,7 @@ function ScannerTab() {
     stopCamera,
     applyTorch,
     handleScanSuccess,
+    processRawText,
     handleAddManualItem,
     handleSaveManualReceipt,
     handleCancelManualReceipt,
@@ -164,6 +165,7 @@ function ScannerTab() {
           onFileUpload={handleFileUpload}
           onManualMode={() => setManualMode(true)}
           handleUrlSubmit={handleUrlSubmit}
+          handleTextSubmit={processRawText}
           isLoading={isLoading}
           isScanning={isScanning}
           error={error}

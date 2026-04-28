@@ -89,6 +89,7 @@ export interface InitialScannerScreenProps {
   onFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onManualMode: () => void;
   handleUrlSubmit: (url: string) => void;
+  handleTextSubmit: (text: string) => void;
   isLoading: boolean;
   isScanning: boolean;
   error: string | null;
