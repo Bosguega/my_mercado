@@ -362,8 +362,29 @@ export function parseRawTextReceipt(text: string): Receipt {
     throw new Error("Não foi possível encontrar itens no texto fornecido. Verifique o formato.");
   }
 
+  // 3. Tentar extrair identificadores únicos para evitar duplicatas
+  let uniqueSuffix = Date.now().toString();
+  const metaLine = lines.find(l => l.includes("Número:") && l.includes("Série:"));
+  const protocolLine = lines.find(l => l.includes("Protocolo de Autorização:"));
+
+  if (metaLine || protocolLine) {
+    const numMatch = metaLine?.match(/Número:\s*(\d+)/i);
+    const serieMatch = metaLine?.match(/Série:\s*(\d+)/i);
+    const protMatch = protocolLine?.match(/Protocolo de Autorização:\s*(\d+)/i);
+
+    if (numMatch || protMatch) {
+      uniqueSuffix = `${numMatch?.[1] || ""}-${serieMatch?.[1] || ""}-${protMatch?.[1] || ""}`;
+    }
+  } else {
+    // Fallback: usar fingerprint de estabelecimento + data + total
+    const totalValue = items.reduce((acc, item) => {
+      return acc + (parseFloat(item.total.replace(",", ".")) || 0);
+    }, 0);
+    uniqueSuffix = `${establishment}-${date}-${totalValue.toFixed(2)}`.replace(/\s+/g, "");
+  }
+
   return {
-    id: `pasted-${Date.now()}`,
+    id: `pasted-${uniqueSuffix}`,
     establishment,
     date,
     items: items.map((rawItem) => ({
