@@ -25,11 +25,15 @@ export async function callGemini(
   apiKey: string,
   model: string,
 ): Promise<AiNormalizationResult[]> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const key = apiKey.trim();
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
 
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": key,
+    },
     body: JSON.stringify({
       contents: [{ parts: [{ text: buildNormalizationPrompt(items) }] }],
       generationConfig: {
@@ -41,6 +45,15 @@ export async function callGemini(
 
   if (!res.ok) {
     const err = await res.text();
+    if (
+      err.includes("API_KEY_INVALID") ||
+      err.includes("API Key not found") ||
+      err.includes('"reason": "API_KEY_INVALID"')
+    ) {
+      throw new Error(
+        "Chave inválida para o Gemini. Gere uma API key em https://aistudio.google.com/apikey. Se usar chave do Google Cloud, habilite a API Generative Language para esse projeto.",
+      );
+    }
     throw new Error(`Gemini API Error (${res.status}): ${err}`);
   }
 

@@ -12,6 +12,7 @@ import {
 import { notify } from "../utils/notifications";
 import { detectProvider, getApiModel, setApiModel } from "../utils/aiConfig";
 import { testAiConnection } from "../utils/aiClient";
+import { validateApiKey } from "../utils/validation";
 import { logger } from "../utils/logger";
 import type { ApiKeyModalProps } from "../types/ui";
 
@@ -41,6 +42,10 @@ export default function ApiKeyModal({
   // Detectar provedor com base na chave atual (estado local)
   const provider = useMemo(() => detectProvider(key), [key]);
 
+  const providerDefaultModel = useMemo(() => {
+    return provider === "Google AI Studio" ? "gemini-2.5-flash-lite" : "gpt-4o-mini";
+  }, [provider]);
+
   // Gerar lista de modelos combinando hardcoded + buscados da API
   const models = useMemo(() => {
     const isGoogle = provider === "Google AI Studio";
@@ -63,13 +68,37 @@ export default function ApiKeyModal({
     return all;
   }, [provider, fetchedModels, selectedModel]);
 
+  useEffect(() => {
+    if (!selectedModel) {
+      setSelectedModel(providerDefaultModel);
+      return;
+    }
+
+    const isGoogleModel = selectedModel.startsWith("gemini-");
+    const isOpenAIModel = selectedModel.startsWith("gpt-");
+    const providerChanged =
+      (provider === "Google AI Studio" && isOpenAIModel) ||
+      (provider === "OpenAI" && isGoogleModel);
+
+    if (providerChanged) {
+      setSelectedModel(providerDefaultModel);
+    }
+  }, [provider, providerDefaultModel, selectedModel]);
+
   const handleSave = () => {
     const trimmedKey = key.trim();
     if (!trimmedKey) {
       notify.errorByKey("API_KEY_REQUIRED");
       return;
     }
-    setApiModel(selectedModel);
+
+    const validation = validateApiKey(trimmedKey);
+    if (!validation.success) {
+      notify.error(validation.error);
+      return;
+    }
+
+    setApiModel(selectedModel || providerDefaultModel);
     onSave(trimmedKey);
     notify.settingsSaved();
     onClose();
@@ -89,8 +118,9 @@ export default function ApiKeyModal({
 
     setFetchingModels(true);
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${trimmedKey}`;
-      const res = await fetch(url);
+      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models", {
+        headers: { "x-goog-api-key": trimmedKey },
+      });
 
       if (!res.ok) {
         throw new Error(`Erro na API (${res.status})`);
@@ -124,10 +154,15 @@ export default function ApiKeyModal({
       notify.errorByKey("API_KEY_REQUIRED");
       return;
     }
+    const validation = validateApiKey(trimmedKey);
+    if (!validation.success) {
+      notify.error(validation.error);
+      return;
+    }
     setTesting(true);
     setTestResult(null);
     try {
-      const result = await testAiConnection(trimmedKey, selectedModel);
+      const result = await testAiConnection(trimmedKey, selectedModel || providerDefaultModel);
       setTestResult(result.success ? "success" : "error");
       if (result.success) {
         notify.success("Conexão estabelecida com sucesso!");

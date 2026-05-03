@@ -95,7 +95,11 @@ export function useQRCodeProcessor(saveReceipt: SaveReceiptFn) {
       } catch (err: unknown) {
         logger.error('QRProcessor', 'Erro ao processar QR Code', err);
         const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
-        notify.error(`Erro ao processar QR Code: ${errorMessage}`);
+        if (errorMessage.includes('Falha ao acessar Sefaz via proxies')) {
+          notify.error(errorMessages.NFC_E_PROXY_ERROR, 15000);
+        } else {
+          notify.error(`Erro ao processar QR Code: ${errorMessage}`);
+        }
         setError(errorMessage);
       } finally {
         setLoading(false);
