@@ -12,7 +12,7 @@ const tsRecommended = tseslint.configs.recommended.map((config) => ({
 }))
 
 export default [
-  { ignores: ['dist', 'coverage', 'node_modules'] },
+  { ignores: ['dist', 'coverage', 'node_modules', 'supabase/functions/**'] },
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {

@@ -8,6 +8,7 @@
     "dev:https": "node scripts/dev.mjs --https",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
+    "typecheck:functions": "tsc --noEmit -p supabase/functions/tsconfig.json",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",

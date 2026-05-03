@@ -1,5 +1,6 @@
 import { logger } from "../utils/logger";
 import type { RawReceiptItem, Receipt } from "../types/domain";
+import { fetchNfceHtmlFromEdge } from "./nfceEdgeFetch";
 
 const PROXIES = [
   (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
@@ -140,49 +141,62 @@ export async function parseNFCeSP(url: string): Promise<Receipt> {
   const attemptErrors: string[] = [];
 
   if (import.meta.env.DEV) {
-    logger.info('Parser', '🔍 Tentando buscar via proxies...');
+    logger.info('Parser', '🔍 Tentando buscar via Edge Function fetch-nfce...');
   }
 
-  for (let index = 0; index < PROXIES.length; index += 1) {
-    const getProxyUrl = PROXIES[index];
-    try {
-      const proxyUrl = getProxyUrl(targetUrl);
+  const edgeResult = await fetchNfceHtmlFromEdge(targetUrl);
+  if (edgeResult.ok) {
+    html = edgeResult.html;
+  } else if (edgeResult.detail !== "supabase_desabilitado") {
+    attemptErrors.push(`Edge: ${edgeResult.detail}`);
+  }
 
-      if (import.meta.env.DEV) {
-        logger.info('Parser', `🔍 Tentativa ${index + 1}/${PROXIES.length}: ${proxyUrl.substring(0, 80)}...`);
-      }
+  if (!html) {
+    if (import.meta.env.DEV) {
+      logger.info('Parser', '🔍 Tentando buscar via proxies (fallback)...');
+    }
 
-      const response = await fetchWithTimeout(proxyUrl, PROXY_TIMEOUT_MS);
+    for (let index = 0; index < PROXIES.length; index += 1) {
+      const getProxyUrl = PROXIES[index];
+      try {
+        const proxyUrl = getProxyUrl(targetUrl);
 
-      if (response.ok) {
-        const text = await response.text();
-
-        if (text && (text.includes("tabResult") || text.includes("txtTopo"))) {
-          html = text;
-          break;
+        if (import.meta.env.DEV) {
+          logger.info('Parser', `🔍 Tentativa ${index + 1}/${PROXIES.length}: ${proxyUrl.substring(0, 80)}...`);
         }
 
-        attemptErrors.push(`Proxy ${index + 1}: resposta sem dados da NFC-e.`);
-      } else {
-        attemptErrors.push(`Proxy ${index + 1}: HTTP ${response.status}.`);
+        const response = await fetchWithTimeout(proxyUrl, PROXY_TIMEOUT_MS);
+
+        if (response.ok) {
+          const text = await response.text();
+
+          if (text && (text.includes("tabResult") || text.includes("txtTopo"))) {
+            html = text;
+            break;
+          }
+
+          attemptErrors.push(`Proxy ${index + 1}: resposta sem dados da NFC-e.`);
+        } else {
+          attemptErrors.push(`Proxy ${index + 1}: HTTP ${response.status}.`);
+        }
+      } catch (err) {
+        const errorName = err instanceof Error ? err.name : "";
+        const errorMessage = err instanceof Error ? err.message : "falha desconhecida";
+        if (errorName === "AbortError") {
+          attemptErrors.push(`Proxy ${index + 1}: timeout após ${PROXY_TIMEOUT_MS}ms.`);
+        } else {
+          attemptErrors.push(`Proxy ${index + 1}: ${errorMessage}.`);
+        }
+        logger.warn('Parser', 'Proxy falhou', err);
       }
-    } catch (err) {
-      const errorName = err instanceof Error ? err.name : "";
-      const errorMessage = err instanceof Error ? err.message : "falha desconhecida";
-      if (errorName === "AbortError") {
-        attemptErrors.push(`Proxy ${index + 1}: timeout após ${PROXY_TIMEOUT_MS}ms.`);
-      } else {
-        attemptErrors.push(`Proxy ${index + 1}: ${errorMessage}.`);
-      }
-      logger.warn('Parser', 'Proxy falhou', err);
     }
   }
 
   if (!html) {
     if (import.meta.env.DEV) {
-      logger.error('Parser', '❌ Todos os proxies falharam:', attemptErrors);
+      logger.error('Parser', '❌ Edge e proxies falharam:', attemptErrors);
     }
-    throw new Error(`Falha ao acessar Sefaz via proxies. ${attemptErrors.join(" ")}`.trim());
+    throw new Error(`Falha ao obter HTML da NFC-e. ${attemptErrors.join(" ")}`.trim());
   }
 
   if (import.meta.env.DEV) {
