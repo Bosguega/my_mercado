@@ -16,6 +16,14 @@ const MAX_FETCH_ATTEMPTS = 3;
 const RATE_LIMIT_IP_PER_MINUTE = 45;
 const RATE_LIMIT_USER_PER_MINUTE = 80;
 
+/**
+ * Throttle do cleanup em memória do worker Deno.
+ * Evita chamar o banco em toda requisição — o worker reutiliza a variável
+ * enquanto estiver vivo (tipicamente minutos a horas em produção).
+ */
+const CLEANUP_INTERVAL_MS = 10 * 60 * 1000; // 10 minutos
+let lastCleanupAt = 0;
+
 const BROWSER_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
@@ -130,6 +138,15 @@ function getClientIp(req: Request): string {
   );
 }
 
+/**
+ * Decodifica o campo `sub` do JWT para usar como chave de rate-limit por usuário.
+ *
+ * ⚠️ ATENÇÃO: Esta função NÃO verifica a assinatura do token.
+ * Ela é usada EXCLUSIVAMENTE para rate-limiting por userId, não para autenticação.
+ * A autenticação real já foi feita pelo gateway do Supabase antes desta função ser
+ * chamada. Um atacante que forje o sub do JWT poderá alterar seu bucket de
+ * rate-limit de usuário, mas o limite por IP permanece intacto como segunda barreira.
+ */
 function decodeJwtSub(req: Request): string | null {
   const auth = req.headers.get("Authorization");
   if (!auth?.startsWith("Bearer ")) return null;
@@ -505,7 +522,16 @@ Deno.serve(async (req: Request) => {
     return finish(live.body, { cacheHit: false });
   }
 
-  await tryCleanupStale(supabase);
+
+  // Cleanup com throttle: evita call ao banco em toda requisição
+  const now = Date.now();
+  if (now - lastCleanupAt > CLEANUP_INTERVAL_MS) {
+    lastCleanupAt = now;
+    // Fire-and-forget: não aguarda para não adicionar latência
+    tryCleanupStale(supabase).catch((e: unknown) =>
+      console.warn(JSON.stringify({ event: "nfce_cleanup_unhandled", error: String(e) })),
+    );
+  }
 
   const rate = await tryRateLimit(supabase, clientIp, userId);
   if (!rate.ok) {

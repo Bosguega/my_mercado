@@ -8,6 +8,7 @@
 import { getApiKey, getApiModel, detectProvider } from "../aiConfig";
 import { callGemini, testGeminiConnection } from "./geminiClient";
 import { callOpenAI, testOpenAIConnection } from "./openaiClient";
+import { AiApiError } from "./aiApiError";
 import { logger } from "../logger";
 import type { AiNormalizationInput, AiNormalizationResult } from "../../types/ai";
 
@@ -54,8 +55,8 @@ export async function callAI(
       lastError = err instanceof Error ? err : new Error(String(err));
       logger.warn('AI', `Erro na tentativa ${attempt + 1}: ${lastError.message}`);
 
-      // Don't retry on client errors (4xx)
-      if (lastError.message.includes("400") || lastError.message.includes("401")) {
+      // Não retentar em erros de cliente (4xx exceto 429 — rate limit pode ter retry)
+      if (lastError instanceof AiApiError && lastError.isClientError()) {
         break;
       }
     }

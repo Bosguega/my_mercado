@@ -6,6 +6,7 @@
 
 import { buildNormalizationPrompt, parseAiJsonResponse } from "./promptBuilder";
 import type { AiNormalizationInput, AiNormalizationResult } from "../../types/ai";
+import { AiApiError } from "./aiApiError";
 
 interface OpenAIResponse {
   choices?: Array<{
@@ -46,7 +47,7 @@ export async function callOpenAI(
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`OpenAI API Error (${res.status}): ${err}`);
+    throw new AiApiError(`OpenAI API Error (${res.status}): ${err}`, res.status);
   }
 
   const data = (await res.json()) as OpenAIResponse;

@@ -68,8 +68,8 @@ function validateNfceSpUrl(rawUrl: string): string {
     throw new Error("QR Code inválido: URL não reconhecida.");
   }
 
-  if (!["http:", "https:"].includes(parsed.protocol)) {
-    throw new Error("URL inválida para consulta da NFC-e.");
+  if (parsed.protocol !== "https:") {
+    throw new Error("URL inválida para consulta da NFC-e. Somente HTTPS é permitido.");
   }
 
   const host = parsed.hostname.toLowerCase();
@@ -280,8 +280,26 @@ export async function parseNFCeSP(url: string): Promise<Receipt> {
       // noop
     }
 
+    // Fallback determinístico: hash dos dados da nota evita colisões por timestamp
+    let receiptId: string;
+    if (accessKey) {
+      receiptId = accessKey;
+    } else {
+      const fingerprint = [
+        establishment,
+        date,
+        ...items.map((i) => `${i.name}:${i.total}`),
+      ].join("|");
+      const data = new TextEncoder().encode(fingerprint);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+      const hashHex = Array.from(new Uint8Array(hashBuffer))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+      receiptId = `nfce-${hashHex.slice(0, 16)}`;
+    }
+
     return {
-      id: accessKey || Date.now().toString(),
+      id: receiptId,
       establishment,
       date,
       items: items.map((rawItem) => ({

@@ -6,6 +6,7 @@
 
 import { buildNormalizationPrompt, parseAiJsonResponse } from "./promptBuilder";
 import type { AiNormalizationInput, AiNormalizationResult } from "../../types/ai";
+import { AiApiError } from "./aiApiError";
 
 interface GeminiResponse {
   candidates?: Array<{
@@ -50,11 +51,12 @@ export async function callGemini(
       err.includes("API Key not found") ||
       err.includes('"reason": "API_KEY_INVALID"')
     ) {
-      throw new Error(
+      throw new AiApiError(
         "Chave inválida para o Gemini. Gere uma API key em https://aistudio.google.com/apikey. Se usar chave do Google Cloud, habilite a API Generative Language para esse projeto.",
+        res.status,
       );
     }
-    throw new Error(`Gemini API Error (${res.status}): ${err}`);
+    throw new AiApiError(`Gemini API Error (${res.status}): ${err}`, res.status);
   }
 
   const data = (await res.json()) as GeminiResponse;
